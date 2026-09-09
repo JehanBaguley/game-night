@@ -34,7 +34,7 @@
    ========================================================================== */
 :root{
   --ground:#F7F7F8; --surface:#FFFFFF; --surface-2:#F1F1F2; --surface-3:#E4E5E8;
-  --ink:#1C1D1F; --ink-2:#484A4F; --muted:#7A7E87;
+  --ink:#1C1D1F; --ink-2:#484A4F; --muted:#61646B;
   --line:#E8E9EB; --line-strong:#D0D2D5;
 
   /* violet is the only action colour: picked, voted, live, primary buttons */
@@ -62,7 +62,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --ground:#1C1D1F; --surface:#26272A; --surface-2:#313337; --surface-3:#3E4045;
-    --ink:#F1F1F2; --ink-2:#B3B6BB; --muted:#9699A0;
+    --ink:#F1F1F2; --ink-2:#C7C9CD; --muted:#B3B6BB;
     --line:#313337; --line-strong:#484A4F;
     --accent:#B79BF0; --accent-ink:#1B0B33; --accent-soft:#2A1A47;
     --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
@@ -75,7 +75,7 @@
 }
 :root[data-theme="dark"]{
   --ground:#1C1D1F; --surface:#26272A; --surface-2:#313337; --surface-3:#3E4045;
-  --ink:#F1F1F2; --ink-2:#B3B6BB; --muted:#9699A0;
+  --ink:#F1F1F2; --ink-2:#C7C9CD; --muted:#B3B6BB;
   --line:#313337; --line-strong:#484A4F;
   --accent:#B79BF0; --accent-ink:#1B0B33; --accent-soft:#2A1A47;
   --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
@@ -143,7 +143,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 }
 .top .inner{display:flex;align-items:center;gap:8px;min-height:54px}
 .brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:1}
-.brand .gn{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .gn{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.01em}
 .brand .code{font-size:10px;color:var(--muted);letter-spacing:.09em;flex:none;font-weight:600}
 .iconbtn{
   min-width:38px;min-height:38px;display:grid;place-items:center;flex:none;
@@ -174,6 +174,10 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .progress{height:4px;background:var(--surface-3);border-radius:999px;overflow:hidden}
 .progress i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .5s cubic-bezier(.2,.7,.3,1)}
 .round .line2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+@media (max-width:480px){
+  .round .line2 > span{flex:1 0 100%}
+  .round .line2 .btn{flex:1 1 0;margin-left:0!important}
+}
 .flash{
   background:var(--accent-soft);color:var(--accent);border-radius:var(--r-md);
   padding:9px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;
@@ -189,12 +193,12 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* the banner carries white text over the placeholder as well as over real
    cover art, so darken the generated tile here specifically */
 .leader .art .gen{filter:brightness(.72) saturate(.85)}
-.leader .scrim{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,.5) 40%,rgba(0,0,0,.92) 100%)}
+.leader .scrim{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.25) 0%,rgba(0,0,0,.62) 45%,rgba(0,0,0,.95) 100%)}
 .leader .cap{
   position:absolute;left:14px;right:14px;bottom:11px;z-index:2;color:#fff;
   text-shadow:0 1px 3px rgba(0,0,0,.9);
 }
-.leader .cap .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;color:var(--accent)}
+.leader .cap .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;color:#fff;opacity:.92}
 .leader .cap .t{font-size:22px;font-weight:650;line-height:1.12;letter-spacing:-.015em}
 .leader .cap .m{font-size:12px;opacity:.85}
 
@@ -268,7 +272,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
    off the screen when several filter groups are open */
 .fpanel{
   margin-top:8px;background:var(--surface);border-radius:var(--r-lg);
-  padding:15px;display:grid;gap:15px 26px;grid-template-columns:1fr;
+  padding:15px;display:grid;gap:13px 26px;grid-template-columns:1fr;
 }
 @media (min-width:820px){
   .fpanel{grid-template-columns:1fr 1fr}
@@ -286,6 +290,18 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .chip .n{font-size:10.5px;opacity:.65;font-weight:500}
 .chip:disabled{opacity:.35;cursor:not-allowed}
+/* thumbs, not cursors: the controls you actually tap get the 44px floor on a
+   phone, while desktop keeps its tighter density */
+@media (max-width:640px){
+  .chip{min-height:40px}
+  .btn--sm{min-height:40px}
+  .iconbtn,.mepill{min-height:44px}
+  .mini,.pick{min-height:44px}
+  .rowx{width:32px;height:32px}
+  .abchip{min-height:32px}
+  .abchip button{width:26px;height:26px}
+  .more{padding:9px 2px;font-size:12.5px}
+}
 
 .stepper{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .stepper .sbtn{width:42px;height:42px;border-radius:var(--r-md);display:grid;place-items:center;font-size:18px;color:var(--ink-2);background:var(--surface-2)}
@@ -310,6 +326,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
    CARDS  - cover led, no border, denser than before
    ========================================================================== */
 .grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+@media (max-width:459px){ .card .art{aspect-ratio:auto;height:112px} }
 @media (min-width:460px){ .grid{grid-template-columns:repeat(2,1fr)} }
 @media (min-width:620px){ .grid{grid-template-columns:repeat(3,1fr)} }
 @media (min-width:1000px){ .grid{grid-template-columns:repeat(4,1fr);gap:12px} }
@@ -332,7 +349,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
     repeating-linear-gradient(var(--ang), rgba(255,255,255,.10) 0 2px, transparent 2px 13px),
     linear-gradient(150deg, color-mix(in oklab, var(--tile) 82%, white), var(--tile) 55%, color-mix(in oklab, var(--tile) 68%, black));
 }
-.art .gen span{font-size:26px;font-weight:700;letter-spacing:-.02em;color:rgba(255,255,255,.9)}
+.art .gen span{font-size:26px;font-weight:700;letter-spacing:-.02em;color:rgba(255,255,255,.34)}
 .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s}
 .art img.in{opacity:1}
 .art .badges{position:absolute;z-index:2;top:6px;left:6px;right:6px;display:flex;gap:5px;align-items:flex-start}
@@ -528,6 +545,44 @@ td.r{text-align:right;white-space:nowrap}
 .eopt:not([data-e])[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .eopt[aria-pressed="true"] span{color:inherit;opacity:.8}
 
+/* A tap should feel like it landed. 90ms of scale is the whole trick, and the
+   reduced-motion block at the bottom turns all of it off. */
+.chip,.pick,.rowpick,.eopt,.btn,.tbtn{transition:background .12s,color .12s,filter .12s,transform .09s}
+.chip:active,.pick:active,.rowpick:active,.eopt:active,.btn:active,.tbtn:active{transform:scale(.97)}
+
+/* when a game takes the lead, one sheen across the banner and the count ticks
+   up. It marks the only moment in the app where something actually changed. */
+.leader .art::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:0}
+.leader.tookover .art::after{
+  background:linear-gradient(105deg,transparent 34%,rgba(255,255,255,.42) 50%,transparent 66%);
+  opacity:1;transform:translateX(-100%);
+  animation:sheen 1.15s cubic-bezier(.32,.72,.3,1) 1;
+}
+@keyframes sheen{to{transform:translateX(100%)}}
+@keyframes tick{from{transform:translateY(-.4em);opacity:0}to{transform:none;opacity:1}}
+.n.bump{display:inline-block;animation:tick .3s cubic-bezier(.2,.8,.3,1)}
+
+/* filter sheet: the lead block is the one filter that maps to the real
+   decision, so it gets a surface of its own instead of a fifth grey label */
+.fgroup--lead{background:var(--surface-2);border-radius:var(--r-md);padding:11px 12px;gap:6px}
+.fpanel .fgroup--lead{grid-column:1/-1}
+.fhint{font-size:12px;color:var(--ink-2);line-height:1.35}
+.fset--seg{display:flex;gap:0;background:var(--surface-2);border-radius:var(--r-md);padding:3px;width:fit-content;max-width:100%}
+.fset--seg .chip{background:transparent;flex:1;min-height:36px}
+.fset--seg .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+@media (max-width:640px){ .fset--seg .chip{min-height:40px} }
+.acts .lbl{margin-left:5px}
+/* "The shelf" over the shelf is a label nobody needed. On a phone the row is
+   worth more as two labelled actions than as a heading restating the obvious,
+   so the heading goes to screen readers only and the buttons keep their words. */
+@media (max-width:560px){
+  .sechead--shelf h2{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .sechead--shelf{margin-top:20px;justify-content:flex-start}
+  .sechead--shelf .acts{flex:1}
+  .sechead--shelf .acts .btn{flex:1}
+}
+.sechead .acts{display:flex;gap:6px;align-items:center}
+
 .share pre{
   margin:0 0 9px;white-space:pre-wrap;word-break:break-word;
   font-size:11.5px;line-height:1.6;background:var(--surface-2);border-radius:var(--r-md);
@@ -641,7 +696,9 @@ td.r{text-align:right;white-space:nowrap}
 
 <div id="app"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"
+        integrity="sha384-0w2KAL2YHP6wKOkUDzkCDGgVvfmHnj02DHeQ6XcHOgTfFsGyonKOpShMH1x6nk9o"
+        crossorigin="anonymous"></script>
 <script>
 /* ============================================================================
    CONFIG - paste your two values here, commit, done.
@@ -654,7 +711,12 @@ const CONFIG = {
 };
 
 const CONFIGURED = CONFIG.SUPABASE_URL.startsWith("http") && CONFIG.SUPABASE_ANON_KEY.length > 30;
-const sb = CONFIGURED ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
+/* If the CDN is blocked, offline, or the integrity hash does not match, the
+   supabase global never arrives. Reading .createClient off undefined throws
+   before anything renders, and you get a blank white page with no clue what
+   happened. Check for it instead and say so. */
+const SDK_OK = typeof window.supabase !== "undefined" && !!window.supabase.createClient;
+const sb = (CONFIGURED && SDK_OK) ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
 const FN_URL = CONFIG.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/enrich";
 
 /* ============================================================================
@@ -888,6 +950,24 @@ let F = {             // every filter, all combinable
 // sections by state is the default: everything is on one shelf, but the stuff
 // you can actually vote for is still what you hit first
 
+/* Filters are remembered per group. Coming back to the same crew should not
+   mean setting up "six of us, nothing heavy" from scratch every single time.
+   The search box and the bench view are deliberately not saved: a search term
+   you cannot see the source of, or a shelf that opens showing only benched
+   games, both read as the app being broken. */
+function saveF(){
+  if(!code) return;
+  store.set("f."+code, { crew:F.crew, mine:F.mine, played:F.played, wellrated:F.wellrated,
+    energy:[...F.energy], shape:[...F.shape], vibe:[...F.vibe], setup:[...F.setup] });
+}
+function loadF(){
+  const v = code && store.get("f."+code, null);
+  if(!v) return;
+  F.crew = v.crew ?? null; F.mine = !!v.mine; F.played = v.played ?? null; F.wellrated = !!v.wellrated;
+  F.energy = new Set(v.energy||[]); F.shape = new Set(v.shape||[]);
+  F.vibe   = new Set(v.vibe||[]);   F.setup = new Set(v.setup||[]);
+}
+
 let fDraft = null;   // staged copy of the filters while the phone sheet is open
 /** Whichever filter set edits should land on: the draft on a phone, live on desktop. */
 const FT = () => fDraft || F;
@@ -899,6 +979,8 @@ const cloneF = f => ({
 
 
 let view = store.get("view", "cards");
+let lastCounts = {};      // vote tallies as of the previous render, for the tick animation
+let tookover  = null;     // appid that has just taken the lead, for the one-off sheen
 
 const app = document.getElementById("app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -1198,6 +1280,7 @@ function sections(list, d){
 /** Never gate the shelf behind a name. Park the action, ask, then run it. */
 function needName(action){
   if(myMemberId) return false;
+  focusReturn = document.activeElement;
   pending = action;
   sheet = { kind:"name", step:"enter", typed: myName };
   render();
@@ -1213,8 +1296,14 @@ async function refresh(){
     }
     const next = await rpc("get_state", { p_code: code });
     const before = S ? derive() : null;
+    const unchanged = S !== null && JSON.stringify(next) === JSON.stringify(S);
     S = next;
     const after = derive();
+
+    // Nothing came back different, so leave the DOM alone. This is what stops
+    // the covers flashing every ten seconds, and it keeps your scroll position
+    // and your place in a text field.
+    if(unchanged && !sheet) return;
 
     if(before && after && after.ranked.length){
       const nl = after.ranked[0].appid;
@@ -1222,6 +1311,7 @@ async function refresh(){
       if(ol && nl !== ol){
         const g = after.gamesById[nl];
         flash = (g ? g.name : "Something") + " just took the lead";
+        tookover = nl;
         setTimeout(() => { flash = ""; render(); }, 9000);
       }
     }
@@ -1241,7 +1331,15 @@ async function togglePick(appid){
   let picks = d.myPicks.slice();
   const at = picks.indexOf(appid);
   if(at > -1) picks.splice(at,1);
-  else { if(picks.length >= 3) picks.shift(); picks.push(appid); pulse = appid; }
+  else {
+    if(picks.length >= 3){
+      const dropped = d.gamesById[picks[0]];
+      picks.shift();
+      flash = (dropped ? dropped.name : "Your oldest pick") + " made way for it";
+      setTimeout(() => { flash = ""; render(); }, 4500);
+    }
+    picks.push(appid); pulse = appid;
+  }
   // optimistic: the tap registers instantly, the write reconciles behind it
   const mine = (S.ballots||[]).find(b => b.member_id === myMemberId);
   if(mine) mine.picks = picks;
@@ -1464,14 +1562,25 @@ function render(){
   // Nothing behind a sheet should scroll. Without this the shelf drifts around
   // under your thumb while you are trying to use the sheet on top of it.
   document.body.classList.toggle("locked", !!sheet);
+  if(!SDK_OK) return renderNoSDK();
   if(!CONFIGURED) return renderSetup();
   const m = location.hash.match(/^#\/g\/([A-Za-z0-9]+)/);
   if(!m){ code=""; return renderLanding(); }
+  const wasCode = code;
   code = m[1].toUpperCase();
+  if(code !== wasCode) loadF();
   if(!S || S.group.code !== code) return renderLoading();
   renderGroup();
 }
 
+function renderNoSDK(){
+  app.innerHTML = `<div class="wrap"><div class="hero"><h1>Can't load the app</h1>
+    <p>The Supabase library did not load, so nothing can talk to the database.
+       Usually that is a network blocking <code>cdn.jsdelivr.net</code>, or being offline.
+       Try again on a different connection.</p>
+    <p style="margin-top:12px"><button class="btn" onclick="location.reload()">Try again</button></p>
+    </div></div>`;
+}
 function renderSetup(){
   app.innerHTML = `<div class="wrap"><div class="hero"><h1>Almost there</h1>
     <p>Open <code>index.html</code>, find the <code>CONFIG</code> block near the top of the script,
@@ -1501,7 +1610,7 @@ function renderLanding(){
         <div class="sechead"><div><h2>Your crews</h2></div></div>
         <div class="mygroups">${myGroups.map(g => `
           <button class="mygroup" data-open="${esc(g.code)}">
-            <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 38% 48%)">${esc(monogram(g.name))}</span>
+            <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 44% 32%)">${esc(monogram(g.name))}</span>
             <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span>
           </button>`).join("")}</div>` : ""}
 
@@ -1562,9 +1671,9 @@ function renderGroup(){
 
   app.innerHTML = `
     <header class="top"><div class="wrap inner">
-      <div class="brand"><span class="gn">${esc(g.name)}</span><span class="code">${esc(g.code)}</span></div>
+      <div class="brand"><h1 class="gn">${esc(g.name)}</h1><span class="code">${esc(g.code)}</span></div>
       ${d.meMember ? `<button class="mepill" id="mebtn" title="That's you">
-        <span class="dot" style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(d.meMember.name)} 38% 48%)">${esc(d.meMember.name[0].toUpperCase())}</span>
+        <span class="dot" style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(d.meMember.name)} 44% 32%)">${esc(d.meMember.name[0].toUpperCase())}</span>
         <span class="nm">${esc(d.meMember.name)}</span></button>` : ""}
       <button class="iconbtn" id="switchbtn" aria-label="Switch group"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
       ${themeBtn()}
@@ -1613,8 +1722,11 @@ function renderGroup(){
 
       <div class="cols">
         <main>
-          <div class="sechead"><div><h2>The shelf</h2></div>
-            <button class="btn btn--ghost btn--sm" id="shufflebtn">🎲 Just pick one</button>
+          <div class="sechead sechead--shelf"><div><h2>The shelf</h2></div>
+            <div class="acts">
+              <button class="btn btn--ghost btn--sm" id="addjump" aria-label="Add a game">+<span class="lbl">Add a game</span></button>
+              <button class="btn btn--ghost btn--sm" id="shufflebtn" title="Pick one at random" aria-label="Pick one at random">🎲<span class="lbl">Roll for it</span></button>
+            </div>
           </div>
 
           <div class="shelfbar">
@@ -1661,10 +1773,11 @@ function renderGroup(){
                  <br><button class="clearall" id="clearall2">Clear the lot</button>
                </div>`}
 
-          <div class="sechead"><div><h2>Add something</h2><p>Search Steam, or paste a link.</p></div></div>
+          <div class="sechead" id="addsec"><div><h2>Add a game</h2><p>This one searches Steam, not the shelf above.</p></div></div>
           <div class="add">
             <div class="addfield">
-              <input class="input" id="addq" placeholder="Game name, or a Steam link"
+              <input class="input" id="addq" aria-label="Search Steam by name, or paste a store link"
+                     placeholder="Search Steam, or paste a link"
                      enterkeyhint="search" ${busy?"disabled":""}>
               <button class="addgo" id="addgo" aria-label="Look it up" ${busy||addBusy?"disabled":""}>
                 ${addBusy
@@ -1675,7 +1788,7 @@ function renderGroup(){
             ${addResults.length ? `<div class="results">${addResults.map(r => `
               <div class="res">
                 ${r.header ? `<img src="${esc(r.header)}" alt="" loading="lazy">`
-                  : `<span style="width:62px;height:29px;border-radius:4px;flex:none;background:hsl(${hueOf(r.name)} 38% 48%)"></span>`}
+                  : `<span style="width:62px;height:29px;border-radius:4px;flex:none;background:hsl(${hueOf(r.name)} 44% 32%)"></span>`}
                 <span class="nm">${esc(r.name)}</span>
                 <span class="resbtns">
                   <button class="btn btn--sm" data-add="${r.appid}">Add it</button>
@@ -1706,7 +1819,7 @@ function renderGroup(){
               const voted = (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
               return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
                 ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
-                <span class="dot" style="background:hsl(${hueOf(mm.name)} 38% 48%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
+                <span class="dot" style="background:hsl(${hueOf(mm.name)} 44% 32%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
                 ${mm.device_count>1 ? `<span class="devs" title="${mm.device_count} devices linked">${mm.device_count}</span>` : ""}
               </span>`;
             }).join("") : `<span class="empty">Just you so far.</span>`}</div>
@@ -1736,47 +1849,90 @@ function renderGroup(){
     ${sheet ? renderSheet(d) : ""}`;
 
   wireGroup(d, filtered);
+  settleImages();
+  lastCounts = {...d.counts};
+  if(tookover){ const t = tookover; setTimeout(() => { if(tookover === t) tookover = null; }, 1400); }
+}
+
+/* An image the browser already has does not need a fade. Without this, every
+   re-render restarts the transition from transparent and the shelf blinks. */
+function settleImages(){
+  app.querySelectorAll(".art img").forEach(img => {
+    if(img.complete && img.naturalWidth){
+      img.style.transition = "none";
+      img.classList.add("in");
+      requestAnimationFrame(() => { img.style.transition = ""; });
+    }
+  });
 }
 
 function filterPanel(d, pool, counts){
   const n = (fn) => pool.filter(fn).length;
   counts = counts || {};
-  const grp = (key, map, getter) => `
-    <div class="fgroup"><div class="lab"><span class="eyebrow">${key.label}</span></div>
-      <div class="fset">${Object.keys(map).map(k => {
-        const count = n(s => getter(s, d) === (isNaN(+k) ? k : +k));
-        const val = isNaN(+k) ? k : +k;
-        return `<button class="chip ${key.cls?key.cls+val:""}" data-f="${key.f}" data-v="${k}"
-                  aria-pressed="${FT()[key.f].has(val)}" ${count?"":"disabled"}>
-                  ${esc(map[k])}<span class="n num">${count}</span></button>`;
-      }).join("")}</div></div>`;
 
-  return `<div class="fpanel">
-    <div class="fgroup">
-      <div class="lab"><span class="eyebrow">How many of us</span></div>
+  /* A chip with nothing behind it is noise. Zero-count options are dropped
+     rather than sat there greyed out, with one exception: an option you have
+     already selected has to stay visible or you cannot turn it back off. */
+  const grp = (label, key, map, getter) => {
+    const chips = Object.keys(map).map(k => {
+      const val = isNaN(+k) ? k : +k;
+      const on = FT()[key].has(val);
+      const count = n(s => getter(s, d) === val);
+      if(!count && !on) return "";
+      return `<button class="chip" data-f="${key}" data-v="${k}" aria-pressed="${on}">
+                ${esc(map[k])}<span class="n num">${count}</span></button>`;
+    }).join("");
+    if(!chips.trim()) return "";
+    return `<div class="fgroup"><span class="eyebrow">${label}</span>
+              <div class="fset">${chips}</div></div>`;
+  };
+
+  const crew = FT().crew;
+  // The crew filter is the only one that maps to the actual decision on the
+  // night, so it gets a surface of its own rather than a fifth identical
+  // grey label, and it says in words what it is doing to the shelf.
+  const lead = `
+    <div class="fgroup fgroup--lead">
+      <span class="eyebrow">How many of us tonight</span>
       <div class="stepper">
         <button class="sbtn" data-crew="-" aria-label="Fewer players">\u2212</button>
-        <span class="val${F.crew ? " num" : ""}">${FT().crew ?? "Any"}</span>
+        <span class="val${crew ? " num" : ""}">${crew ?? "Any"}</span>
         <button class="sbtn" data-crew="+" aria-label="More players">+</button>
-        ${FT().crew ? `<button class="clearall" data-crew="off">Any</button>`
-                 : `<span class="off">${d.lookedCount} in the group</span>`}
+        ${crew ? `<button class="clearall" data-crew="off">Any</button>`
+               : `<span class="off">${d.lookedCount} in the group</span>`}
       </div>
-    </div>
+      <p class="fhint">${crew
+        ? `Hiding anything that cannot seat ${crew}.`
+        : `Every game, whatever its player cap.`}</p>
+    </div>`;
 
-    ${grp({label:"Energy", f:"energy"}, ENERGY, (s,dd) => energyOf(s, dd))}
-    ${grp({label:"How long", f:"shape"}, SHAPE, (s,dd) => (dd.gamesById[s.appid]||{}).shape)}
-    ${grp({label:"Vibe", f:"vibe"}, VIBE, (s,dd) => vibeOf(s, dd))}
-    ${grp({label:"Faff", f:"setup"}, SETUP, s => s.setup)}
+  const played = `
+    <div class="fgroup"><span class="eyebrow">Have we played it</span>
+      <div class="fset fset--seg">
+        ${[["","Either"],["fresh","Never"],["again","We have"]].map(([v,l]) =>
+          `<button class="chip" data-played="${v}" aria-pressed="${(FT().played||"") === v}">${l}</button>`).join("")}
+      </div>
+    </div>`;
 
-    <div class="fgroup"><div class="lab"><span class="eyebrow">Shortcuts</span></div>
+  // "Shortcuts" was a junk drawer. These are the two or three that narrow the
+  // shelf to a specific pile, and they say so.
+  const only = `
+    <div class="fgroup"><span class="eyebrow">Only show</span>
       <div class="fset">
-        <button class="chip" data-toggle="mine" aria-pressed="${FT().mine}" ${d.myPicks.length?"":"disabled"}>Only my picks</button>
-        <button class="chip" data-played="fresh" aria-pressed="${FT().played==="fresh"}">Never played</button>
-        <button class="chip" data-played="again" aria-pressed="${FT().played==="again"}">Played before</button>
-        <button class="chip" data-toggle="wellrated" aria-pressed="${FT().wellrated}">85%+ on Steam</button>
-        ${counts.benched ? `<button class="chip" data-toggle="benched" aria-pressed="${FT().benched}">Benched<span class="n num">${counts.benched}</span></button>` : ""}
+        <button class="chip" data-toggle="mine" aria-pressed="${FT().mine}" ${d.myPicks.length?"":"disabled"}>My picks<span class="n num">${d.myPicks.length}</span></button>
+        <button class="chip" data-toggle="wellrated" aria-pressed="${FT().wellrated}">85%+ on Steam<span class="n num">${n(s => ((d.gamesById[s.appid]||{}).review_pct ?? 0) >= 85)}</span></button>
+        ${counts.benched ? `<button class="chip" data-toggle="benched" aria-pressed="${FT().benched}">The bench<span class="n num">${counts.benched}</span></button>` : ""}
       </div>
-    </div>
+    </div>`;
+
+  return `<div class="fpanel">
+    ${lead}
+    ${grp("Energy", "energy", ENERGY, (s,dd) => energyOf(s, dd))}
+    ${grp("How long", "shape", SHAPE, (s,dd) => (dd.gamesById[s.appid]||{}).shape)}
+    ${grp("Vibe", "vibe", VIBE, (s,dd) => vibeOf(s, dd))}
+    ${grp("Faff to get going", "setup", SETUP, s => s.setup)}
+    ${played}
+    ${only}
   </div>`;
 }
 
@@ -1804,7 +1960,7 @@ function listView(list, d){
         <td class="opt">${esc(s.added_name || "\u2014")}</td>
         <td class="r opt num">${g.review_pct!=null?g.review_pct+"%":"—"}</td>
         <td class="r num">${n}</td>
-        <td class="r"><button class="rowpick" data-pick="${s.appid}" aria-pressed="${on}">${on?"Picked":"Pick"}</button></td>
+        <td class="r"><button class="rowpick" data-pick="${s.appid}" aria-pressed="${on}">${on?"Picked":d.myPicks.length>=3?"Swap":"Pick"}</button></td>
       </tr>`;
     }).join("")}</tbody></table></div>`;
 }
@@ -1816,9 +1972,9 @@ function renderLeader(d, g){
   if(!game) return "";
   const n = d.counts[appid] || 0;
   const tied = d.ranked.filter(r => r.n === n && !g.locked_appid);
-  return `<div class="leader">
+  return `<div class="leader${tookover === appid ? " tookover" : ""}">
     <div class="art" style="--tile:hsl(${hueOf(game.name)} 40% 47%);--ang:${20+(appid%120)}deg">
-      <div class="gen"><span>${esc(monogram(game.name))}</span></div>
+      <div class="gen" aria-hidden="true"><span>${esc(monogram(game.name))}</span></div>
       ${game.header ? `<img src="${esc(game.header)}" alt="" onload="this.classList.add('in')">` : ""}
       <div class="scrim"></div>
       <div class="cap">
@@ -1845,7 +2001,7 @@ function card(s, d){
   const isNow = d.nowPlaying && d.nowPlaying.appid === s.appid;
   return `<article class="card card--${state}${on?" on":""}${pulse===s.appid?" pulse":""}">
     <div class="art" style="--tile:hsl(${hueOf(game.name)} 40% 47%);--ang:${20+(s.appid%120)}deg">
-      <div class="gen"><span>${esc(monogram(game.name))}</span></div>
+      <div class="gen" aria-hidden="true"><span>${esc(monogram(game.name))}</span></div>
       ${game.header ? `<img src="${esc(game.header)}" alt="" loading="lazy" onload="this.classList.add('in')">` : ""}
       <div class="badges">
         ${isNow ? `<span class="bdg bdg--now">\u25B6 playing now</span>`
@@ -1886,7 +2042,9 @@ function card(s, d){
           ? `<button class="pick" data-unbench="${s.appid}">Put it back</button>`
           : state === "playing"
           ? `<span class="pick pick--static">On right now</span>`
-          : `<button class="pick" data-pick="${s.appid}" aria-pressed="${on}">${on?"Picked":"Pick this"}<span class="n num">${n}</span></button>`}
+          : `<button class="pick" data-pick="${s.appid}" aria-pressed="${on}">${
+              on ? "Picked" : d.myPicks.length >= 3 ? "Swap in" : "Pick this"
+            }<span class="n num${lastCounts[s.appid] != null && lastCounts[s.appid] !== n ? " bump" : ""}">${n}</span></button>`}
         <button class="mini" data-take="${s.appid}" aria-label="Add your take on ${esc(game.name)}">
           <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
       </div>
@@ -1914,7 +2072,7 @@ function renderSheet(d){
           bits.push("last here " + ago(c.last_seen));
           if(c.device_count>1) bits.push(c.device_count+" devices");
           return `<button class="cand" data-claim="${esc(c.member_id)}">
-            <span class="dot" style="background:hsl(${hueOf(c.name)} 38% 48%)">${esc(monogram(c.name))}</span>
+            <span class="dot" style="background:hsl(${hueOf(c.name)} 44% 32%)">${esc(monogram(c.name))}</span>
             <span class="txt"><b>${esc(c.name)}</b><span>${esc(bits.join(" · "))}</span></span>
             <span style="color:var(--muted)">→</span></button>`;
         }).join("")}
@@ -2095,14 +2253,14 @@ function renderSheet(d){
     return shell(`<h3>That's you</h3>
       <p>You're <b>${esc(me.name||"")}</b>${me.device_count>1?" on "+me.device_count+" devices":""}.
          Rename yourself here and your votes come with you.</p>
-      <input class="input" id="renameinput" maxlength="24" value="${esc(me.name||"")}">
+      <input class="input" id="renameinput" maxlength="24" aria-label="Your name" value="${esc(me.name||"")}">
       <div class="row"><button class="btn" id="renamego">Save name</button></div>`);
   }
 
   if(sheet.kind === "switch"){
     return shell(`<h3>Your crews</h3>
       <div class="mygroups">${myGroups.map(g => `<button class="mygroup" data-open="${esc(g.code)}">
-        <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 38% 48%)">${esc(monogram(g.name))}</span>
+        <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 44% 32%)">${esc(monogram(g.name))}</span>
         <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span></button>`).join("")}</div>
       <div class="row"><button class="btn btn--ghost" id="tolanding">Start or join another</button></div>`);
   }
@@ -2118,15 +2276,50 @@ function themeBtn(){
 /* ============================================================================
    WIRING
    ========================================================================== */
+/* A dialog you cannot reach with a keyboard is a dialog half the people using
+   it cannot close. Move focus in, keep Tab inside it, put focus back where it
+   came from on the way out. */
+let focusReturn = null;
+function closeSheet(){
+  sheet = null; pending = null; fDraft = null;
+  render();
+  if(focusReturn && document.contains(focusReturn)) focusReturn.focus();
+  focusReturn = null;
+}
+const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+function trapFocus(scrim){
+  const box = scrim.querySelector(".sheet");
+  if(!box) return;
+  // name the dialog after its own heading, so a screen reader announces what opened
+  const h = box.querySelector("h3");
+  if(h && !box.getAttribute("aria-labelledby")){
+    h.id = h.id || "sheet-title";
+    box.setAttribute("aria-labelledby", h.id);
+  }
+  const items = () => [...box.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null);
+  const first = items()[0];
+  // a text field wants the caret; anything else just wants the ring
+  if(first && !box.contains(document.activeElement)) first.focus();
+  box.addEventListener("keydown", e => {
+    if(e.key !== "Tab") return;
+    const list = items();
+    if(!list.length) return;
+    const a = list[0], z = list[list.length-1];
+    if(e.shiftKey && document.activeElement === a){ e.preventDefault(); z.focus(); }
+    else if(!e.shiftKey && document.activeElement === z){ e.preventDefault(); a.focus(); }
+  });
+}
+
 function wireCommon(d){
   const tb = document.getElementById("themebtn");
   if(tb) tb.onclick = () => { theme = isDark() ? "light" : "dark"; applyTheme(); render(); };
 
   const sc = document.querySelector("[data-scrim]");
   if(sc){
-    sc.onclick = e => { if(e.target===sc){ sheet=null; pending=null; fDraft=null; render(); } };
+    sc.onclick = e => { if(e.target===sc){ closeSheet(); } };
     const dis = document.querySelector("[data-dismiss]");
-    if(dis) dis.onclick = () => { sheet=null; fDraft=null; render(); };
+    if(dis) dis.onclick = () => { closeSheet(); };
+    trapFocus(sc);
   }
 
   // --- name entry, step one
@@ -2204,7 +2397,7 @@ function wireGroup(d, filtered){
   const fap = document.getElementById("fapply");
   if(fap) fap.onclick = () => {
     if(fDraft) F = fDraft;
-    fDraft = null; sheet = null; render();
+    fDraft = null; saveF(); closeSheet();
   };
   const fca = document.getElementById("fclearall");
   if(fca) fca.onclick = () => { clearAll(FT()); render(); };
@@ -2215,7 +2408,7 @@ function wireGroup(d, filtered){
     sheet.bench = b.dataset.bench === "1"; render();
   });
   document.querySelectorAll("[data-played]").forEach(b => b.onclick = () => {
-    const t = FT(); t.played = t.played === b.dataset.played ? null : b.dataset.played; render();
+    const t = FT(); t.played = b.dataset.played || null; render();
   });
   document.querySelectorAll("[data-verdict]").forEach(b => b.onclick = () => {
     sheet.verdict = sheet.verdict === b.dataset.verdict ? null : b.dataset.verdict;
@@ -2257,17 +2450,27 @@ function wireGroup(d, filtered){
     b.onclick = () => {
       const v = b.dataset.uv;
       clearFilter(b.dataset.unfilter, v === "" ? undefined : (isNaN(+v) ? v : +v));
-      render();
+      saveF(); render();
     };
   });
   ["clearall","clearall2"].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.onclick = () => { clearAll(); render(); };
+    if(el) el.onclick = () => { clearAll(); saveF(); render(); };
   });
   document.querySelectorAll("[data-arrange]").forEach(b => b.onclick = () => {
     arrange = b.dataset.arrange; store.set("arrange", arrange);
     sheet = null; render();
   });
+
+  // adding is a rare action, so it stays at the bottom, but you should never
+  // have to scroll the whole shelf to find it
+  const aj = document.getElementById("addjump");
+  if(aj) aj.onclick = () => {
+    const sec = document.getElementById("addsec");
+    const box = document.getElementById("addq");
+    if(sec) sec.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    if(box) setTimeout(() => box.focus({ preventScroll: true }), 380);
+  };
 
   // shuffle
   const sh = document.getElementById("shufflebtn");
@@ -2397,8 +2600,18 @@ function wireGroup(d, filtered){
 }
 
 /* ---------- keyboard ---------- */
+// one listener instead of setting focusReturn in twenty separate handlers
+document.addEventListener("mousedown", e => {
+  const b = e.target.closest && e.target.closest("button");
+  if(b) focusReturn = b;
+}, true);
 document.addEventListener("keydown", e => {
-  if(e.key === "Escape" && sheet){ sheet=null; pending=null; fDraft=null; render(); return; }
+  if((e.key === "Enter" || e.key === " ") && document.activeElement && document.activeElement.tagName === "BUTTON")
+    focusReturn = document.activeElement;
+}, true);
+
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape" && sheet){ closeSheet(); return; }
   if(e.key === "/" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)){
     const q = document.getElementById("q");
     if(q){ e.preventDefault(); q.focus(); }
