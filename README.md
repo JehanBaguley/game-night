@@ -224,6 +224,12 @@ One button. It goes straight up for a vote:
 | --- | --- |
 | **Add it** | Onto the shelf, up for a vote, credited to you |
 
+**Two search boxes was the single most confusing thing in the app.** The toolbar one filters the shelf you already have. The one at the bottom searches Steam for something you don't. Both were a magnifying glass and the word "Search", and there was no way to tell them apart until you typed into the wrong one.
+
+They now say what they do. The toolbar reads *"Search the shelf…"*, the bottom one *"Search Steam, or paste a link"* under a heading that says **Add a game** and a line that says *this one searches Steam, not the shelf above*.
+
+Placement stayed at the bottom, because you browse constantly and add rarely, and putting the add form above the shelf would push the actual games below the fold. What changed is that you no longer have to scroll to reach it: **Add a game** sits in the shelf header and jumps you there with focus in the field. Measured before the fix, the add box was 6,322px down a 7,309px page.
+
 ### After you've played it
 
 A game never leaves the shelf. What changes is that it gains history.
@@ -264,6 +270,7 @@ An earlier pass stacked a scrolling tab row, a scrolling toolbar and a header th
 | Tabs | None. One shelf, sectioned | Same |
 | Toolbar | Search on its own row, then Filters, Arrange, layout | One row, same four things |
 | Filters | Full screen, staged, Apply commits | Centred dialog, staged, Apply commits |
+| Shelf header | Two labelled actions, heading hidden | Heading plus the same two actions |
 | Theme | One toggle, light or dark | Same |
 | On scroll | The toolbar sticks under the header as one unit | Same |
 
@@ -275,25 +282,36 @@ Nothing scrolls sideways and nothing animates out of the way, because a control 
 
 ### Filters
 
-Nine filters, all combinable.
+Eight filters, all combinable, in one staged dialog at every screen size.
 
-Each group used to carry an explanatory sentence under its heading. Six of them in one dialog turned out to be more reading than the entire shelf, and "Chill / Normal / Heavy" under a heading that says **Energy** does not need help. The sentences are gone and the dialog now fits on one screen without scrolling.
+**Crew size is not one of eight equal things.** It is the only filter that maps to the decision you are actually making, so it sits at the top on its own surface, with a line underneath saying in words what it is doing to the shelf. Everything else is a row of chips.
+
+Two earlier mistakes are worth recording, because both looked fine until someone used it:
+
+- **Six identically weighted grey headings.** *How many of us* and *Vibe* were typographically the same thing, so nothing looked more important than anything else. Nothing was findable because everything was equally findable.
+- **A group called Shortcuts.** It held *Only my picks*, *Never played*, *Played before*, *85%+ on Steam* and *Benched*. That is not a category, it is a leftovers drawer, and two of those five were mutually exclusive while looking like independent toggles. *Never played* and *Played before* are now one three-way control (**Either / Never / We have**), and the rest sit under **Only show**, which says what they do.
+
+**Options with nothing behind them are hidden, not greyed out.** A chip reading *One sitting 0* is a dead control taking up a row. The exception is one you have already selected, which stays visible or you could not turn it off.
+
+**Filters are remembered per group.** Coming back to the same crew should not mean setting up "six of us, nothing heavy" from scratch every visit. The search box and the bench view are deliberately not saved: a search term you can't see the source of, or a shelf that opens showing only benched games, both read as the app being broken.
 
 When a stack of filters matches nothing, the footer button doesn't go dead. It becomes **Nothing matches. Start again** and clears them in one tap, because a disabled button over seven selected chips is a dead end you have to dig yourself out of.
 
 | Filter | What it answers |
 | --- | --- |
-| Crew size | Can this seat everyone who's in tonight |
+| How many of us tonight | Can this seat everyone who's in |
 | Energy | How much brain does it need |
-| Session shape | A quick one, or something you commit to |
+| How long | A quick one, or something you commit to |
 | Vibe | Cozy, chaotic, tense, competitive |
-| Setup | Who has to do work before anyone plays |
-| My picks | What have I already chosen |
-| Never played / Played before | Fresh, or a return visit |
-| Nobody's picked it | What's being quietly ignored |
-| 85%+ on Steam | Is it actually any good |
+| Faff to get going | Who has to do work before anyone plays |
+| Have we played it | Either, never, or a return visit |
+| Only show → my picks | What have I already chosen |
+| Only show → 85%+ on Steam | Is it actually any good |
+| Only show → the bench | What did we park, and should it come back |
 
-On a phone the filters take over the whole screen, with the page behind them locked, and changes are **staged**: the sheet covers the results, so committing every tap would mean applying changes you can't see. Instead the Apply button carries the live count, closing without applying changes nothing, and Clear shows how many are on. Desktop keeps the inline panel and applies live, because with a mouse you can see the shelf react.
+Changes are **staged everywhere**, phone and desktop alike. The dialog covers the results at both sizes, so committing every tap would mean applying changes you can't see. The Apply button carries the live count, closing without applying changes nothing, and Clear shows how many are on.
+
+It does not fit on one phone screen any more, and that is a deliberate trade. Chips are 40px tall so a thumb hits them, and the crew block earns its space. The Apply button is pinned to the bottom and never moves, so scrolling the middle costs you nothing.
 
 ### Once the shelf is long
 
@@ -399,9 +417,36 @@ Steam is called once per game ever, then cached globally, then refreshed monthly
 
 ---
 
+## Accessibility
+
+Checked with an automated pass that drives the real UI at 375, 768 and 1440px in both themes, rather than by reading the CSS and hoping.
+
+| | What was wrong | Where it is now |
+| --- | --- | --- |
+| Contrast | 49 failures in light, 18 in dark | 0 |
+| Page structure | No `h1`, no dialog had an accessible name | Group name is the `h1`, every dialog is named by its own heading |
+| Keyboard | Focus never entered a dialog, Tab walked out the back | Focus moves in, is trapped, and returns to whatever opened it |
+| Tap targets | Chips and buttons at 34px | 40px and up on phones |
+
+**One token caused most of the contrast failures.** `--muted` sat at `#7A7E87`, which is 3.6:1 on the surface grey. Every pill, count, eyebrow and section heading in the app uses it, at 10 to 13px, so one value under the line failed the whole interface. It is neutral 600 in light and neutral 300 in dark now.
+
+Two more worth naming. The generated avatar circles were white text on `hsl(h 38% 48%)`, which is 2.5:1 , and they carry a person's initial, so that is real text failing badly. And **"Out in front"** on the leader banner was the violet accent over a photograph, which is unreadable over anything bright; it is white on a deeper scrim now.
+
+Motion is opt-out: everything added for feel sits behind `prefers-reduced-motion`.
+
+## When things break
+
+**If the CDN doesn't load, you get a real message.** The app pulls `supabase-js` from jsdelivr. If that is blocked, or you are offline, or the integrity hash doesn't match, the library never arrives and `createClient` throws before anything renders . The old failure mode was a blank white page with nothing in it and nothing in the console for a non-developer to read. It is now checked for, and says what happened with a retry button.
+
+The script tag carries a **Subresource Integrity hash**, so a compromised CDN cannot quietly serve different JavaScript to a page holding your group's data.
+
+**The shelf does not flash any more.** The page used to rebuild its entire HTML on every 10-second poll, which destroyed every `<img>` and re-ran its fade from transparent. That was the flicker. Two fixes: the render is skipped entirely when a poll comes back identical to what is already on screen, and any image the browser already has is marked as loaded without animating. As a side effect your scroll position and your place in a text field now survive polling too.
+
 ## Known limits, stated honestly
 
 - **Group codes are obscurity, not security.** Seven characters from a 30-character alphabet is fine for keeping a game night private. It is not a login, and it should not hold anything you would mind a stranger reading.
 - **The anon key is public.** It has to be. Row level security and the RPC-only interface are what actually protect the data, not the key.
 - **Player caps can be wrong.** Steam does not publish them. The seeded ones are best-effort and some are deliberately left blank rather than guessed. Correct them in the app.
 - **No deletes.** Nothing in the app can remove a game or a person, on purpose. If something needs to go, do it in the Supabase table editor.
+- **One CDN dependency.** `supabase-js` comes from jsdelivr rather than being vendored into the repo. Pinned and integrity-hashed, and it fails with a message rather than a blank page, but it is still a third party in the load path.
+- **Sorting by session length is not wired up.** The list view header offers it, the comparator exists, and nothing sets it. It is in `ARRANGE` as a gap, not a bug.
