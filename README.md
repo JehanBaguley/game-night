@@ -137,9 +137,9 @@ One card component serves all three. Same cover art, same facets, same layout, w
 
 **There are no tabs either.** The whole shelf is on screen, always, split into sections with a count on each. The default split is the one that matters on the night:
 
-- **▶ On right now** — if a round is locked in
-- **In the running** — anything with at least one vote
-- **Nobody's picked it yet** — the rest
+- **▶ On right now**: if a round is locked in
+- **In the running**: anything with at least one vote
+- **Nobody's picked it yet**: the rest
 
 That's a free consequence of the default sort, so the headings just make the boundary explicit. At the start of a round nothing has votes, so the split collapses to one unlabelled shelf rather than putting an empty header on screen.
 
@@ -170,14 +170,14 @@ What replaced it costs nothing: the card says **Added by Soli**. It's set once, 
 
 Steam's genre field says Action / Adventure / Indie / RPG on nearly everything on your shelf. It does not help anyone choose. The edge function reads Steam **user tags** instead and classifies each game on two axes:
 
-- **Vibe** — cozy, chaotic, tense, competitive
-- **Shape** — drop in, one sitting, campaign, long haul
+- **Vibe**: cozy, chaotic, tense, competitive
+- **Shape**: drop in, one sitting, campaign, long haul
 
 Three more come from a curated list rather than Steam, because Steam does not publish them:
 
-- **Energy** — chill, normal, heavy
-- **Player cap** — Steam knows a game is co-op, it does not know the cap
-- **Setup** — just launch, someone hosts, dedicated server. The silent killer of game nights
+- **Energy**: chill, normal, heavy
+- **Player cap**: Steam knows a game is co-op, it does not know the cap
+- **Setup**: just launch, someone hosts, dedicated server. The silent killer of game nights
 
 ### Editing history
 
