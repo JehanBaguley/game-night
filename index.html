@@ -335,7 +335,33 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   background:var(--surface);border-radius:var(--r-lg);overflow:hidden;
   display:flex;flex-direction:column;transition:transform .12s,box-shadow .12s;
 }
+.card{position:relative}
 .card:hover{box-shadow:0 0 0 1px var(--line-strong)}
+
+/* A conic gradient rotated behind a ring-shaped mask. The mask is what keeps
+   it a 2px border rather than a wash over the whole card, and the @property
+   declaration is what lets the angle animate at all: custom properties are
+   plain strings until you give them a type. Browsers without @property get a
+   still gradient ring, which is a perfectly good place to land. */
+@property --beam{ syntax:"<angle>"; initial-value:0deg; inherits:false }
+.card--lead::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;
+  background:conic-gradient(from var(--beam),
+    transparent 0 62%, var(--accent) 80%, #fff 88%, var(--accent) 94%, transparent 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask-composite:exclude;
+  pointer-events:none;z-index:4;
+  animation:beam 4.5s linear infinite;
+}
+@keyframes beam{ to{ --beam:360deg } }
+/* The leader is usually also one of your picks, and two violet rings on one
+   card is just noise. The beam takes over; "picked" is already carried by the
+   button, which says Picked and is filled. */
+.card.on.card--lead{box-shadow:none}
+/* the reel that runs while Roll for it is deciding */
+.reel{display:inline-block;min-width:1ch}
+.reel.spinning{opacity:.55;filter:blur(.3px)}
 .card.on{box-shadow:0 0 0 2px var(--accent)}
 .card.pulse{animation:pulse .5s ease-out}
 @keyframes pulse{0%{box-shadow:0 0 0 2px var(--accent),0 0 0 0 var(--accent-soft)}100%{box-shadow:0 0 0 2px var(--accent),0 0 0 12px transparent}}
@@ -576,8 +602,8 @@ td.r{text-align:right;white-space:nowrap}
    worth more as two labelled actions than as a heading restating the obvious,
    so the heading goes to screen readers only and the buttons keep their words. */
 @media (max-width:560px){
-  .sechead--shelf h2{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  .sechead--shelf{margin-top:20px;justify-content:flex-start}
+  .sechead--shelf > div:first-child{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .sechead--shelf{margin-top:20px;justify-content:flex-start;gap:0}
   .sechead--shelf .acts{flex:1}
   .sechead--shelf .acts .btn{flex:1}
 }
@@ -1999,7 +2025,10 @@ function card(s, d){
   const plays = d.playsBy[s.appid] || [];
   const lastPlay = plays[0];
   const isNow = d.nowPlaying && d.nowPlaying.appid === s.appid;
-  return `<article class="card card--${state}${on?" on":""}${pulse===s.appid?" pulse":""}">
+  // one card is winning; the beam says which without spending a badge on it
+  const isLead = !S.group.locked_appid && state === "open"
+              && d.ranked.length && d.ranked[0].appid === s.appid && n > 0;
+  return `<article class="card card--${state}${on?" on":""}${pulse===s.appid?" pulse":""}${isLead?" card--lead":""}">
     <div class="art" style="--tile:hsl(${hueOf(game.name)} 40% 47%);--ang:${20+(s.appid%120)}deg">
       <div class="gen" aria-hidden="true"><span>${esc(monogram(game.name))}</span></div>
       ${game.header ? `<img src="${esc(game.header)}" alt="" loading="lazy" onload="this.classList.add('in')">` : ""}
@@ -2144,7 +2173,7 @@ function renderSheet(d){
     const game = d.gamesById[sheet.appid] || {};
     const s = (S.shelf||[]).find(x => x.appid === sheet.appid) || {};
     return shell(`
-      <h3>🎲 ${esc(game.name || "That one")}</h3>
+      <h3>🎲 <span class="reel" id="reel">${esc(game.name || "That one")}</span></h3>
       <p>One of the ${sheet.pool} that survived your filters.
          ${s.setup ? esc(SETUP[s.setup])+"." : ""} ${s.crew_max ? "Up to "+s.crew_max+" players." : ""}</p>
       <div class="row">
@@ -2489,6 +2518,7 @@ function wireGroup(d, filtered){
   };
   const sp = document.getElementById("shufflepick");
   if(sp) sp.onclick = () => { const a = sheet.appid; sheet = null; togglePick(a); };
+  spinReel(d, filtered);
 
   // shelf
   document.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => togglePick(+b.dataset.pick));
@@ -2597,6 +2627,31 @@ function wireGroup(d, filtered){
   document.querySelectorAll("[data-open]").forEach(b => {
     b.onclick = () => { sheet=null; S=null; myMemberId=null; location.hash = "#/g/"+b.dataset.open; };
   });
+}
+
+/* A result that simply appears reads as "the computer picked". A reel that
+   runs down and lands reads as a roll, which is the whole point of the button.
+   It only ever changes text in a span, so nothing else on the page re-renders,
+   and it is skipped outright for anyone who has asked for less motion. */
+function spinReel(d, pool){
+  const el = document.getElementById("reel");
+  if(!el || !sheet || sheet.kind !== "shuffle" || sheet.spun) return;
+  sheet.spun = true;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const names = (pool||[]).map(s => (d.gamesById[s.appid]||{}).name).filter(Boolean);
+  if(names.length < 3) return;
+  const landed = el.textContent;
+  el.classList.add("spinning");
+  let wait = 55, elapsed = 0;
+  const step = () => {
+    if(!document.getElementById("reel")) return;      // sheet closed mid-roll
+    el.textContent = names[Math.floor(Math.random()*names.length)];
+    elapsed += wait;
+    wait *= 1.28;                                      // ease out into the answer
+    if(elapsed < 900) setTimeout(step, wait);
+    else { el.textContent = landed; el.classList.remove("spinning"); }
+  };
+  setTimeout(step, wait);
 }
 
 /* ---------- keyboard ---------- */
