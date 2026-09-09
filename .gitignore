@@ -1,0 +1,6 @@
+# Nothing here is built, so this is mostly about keeping local cruft out.
+.DS_Store
+node_modules/
+.env
+.env.local
+supabase/.temp/
