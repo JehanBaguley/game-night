@@ -33,12 +33,16 @@
      red     100 #FFDDD9 · 300 #FF9E96 · 700 #A5292B · 800 #892122
    ========================================================================== */
 :root{
-  --ground:#F7F7F8; --surface:#FFFFFF; --surface-2:#F1F1F2; --surface-3:#E4E5E8;
-  --ink:#1C1D1F; --ink-2:#484A4F; --muted:#61646B;
-  --line:#E8E9EB; --line-strong:#D0D2D5;
+  --ground:#FAFAFA; --surface:#FFFFFF; --surface-2:#F4F4F5; --surface-3:#E8E8EB;
+  --ink:#09090B; --ink-2:#3F3F46; --muted:#5F6068;
+  /* borders are translucent rather than a solid grey, so they sit on whatever
+     is behind them instead of only working on one background */
+  --line:rgba(9,9,11,.08); --line-strong:rgba(9,9,11,.16);
+  --edge:rgba(255,255,255,0);        /* top bevel: dark theme only */
 
   /* violet is the only action colour: picked, voted, live, primary buttons */
-  --accent:#5B2AB8; --accent-ink:#FFFFFF; --accent-soft:#EDE4FF;
+  --accent:#6D28D9; --accent-ink:#FFFFFF; --accent-soft:#EDE9FE;
+  --glow:0 10px 30px -12px color-mix(in oklab, var(--accent) 70%, transparent);
 
   /* energy ramp: blue / yellow / red from the same family, pastel background
      with the deep step on top so the small pill text stays readable */
@@ -54,35 +58,37 @@
   --f-display:var(--f-body);
   --f-mono:var(--f-body);
 
-  --r-sm:4px; --r-md:6px; --r-lg:10px;
-  --shadow:0 1px 2px rgba(28,29,31,.06), 0 2px 8px rgba(28,29,31,.04);
+  --r-sm:6px; --r-md:9px; --r-lg:14px;
+  --shadow:0 1px 2px rgba(9,9,11,.05), 0 4px 16px -6px rgba(9,9,11,.08);
   --shadow-up:0 -1px 14px rgba(28,29,31,.10);
   --safe-b:env(safe-area-inset-bottom, 0px);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --ground:#1C1D1F; --surface:#26272A; --surface-2:#313337; --surface-3:#3E4045;
-    --ink:#F1F1F2; --ink-2:#C7C9CD; --muted:#B3B6BB;
-    --line:#313337; --line-strong:#484A4F;
-    --accent:#B79BF0; --accent-ink:#1B0B33; --accent-soft:#2A1A47;
+    --ground:#09090B; --surface:#141417; --surface-2:#1D1D21; --surface-3:#27272C;
+    --ink:#FAFAFA; --ink-2:#C9C9CE; --muted:#A5A5AD;
+    --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.14);
+    --edge:rgba(255,255,255,.055);   /* the 1px bevel along a surface top */
+    --accent:#A78BFA; --accent-ink:#1E1B4B; --accent-soft:#2E1065;
     --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
     --e2:#F2B772; --e2-bg:#33260F; --e2-ink:#2B1F0C;
     --e3:#FF9E96; --e3-bg:#331C1A; --e3-ink:#2B1512;
     --live:#B79BF0;
-    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --shadow:0 1px 2px rgba(0,0,0,.5);
     --shadow-up:0 -1px 16px rgba(0,0,0,.5);
   }
 }
 :root[data-theme="dark"]{
-  --ground:#1C1D1F; --surface:#26272A; --surface-2:#313337; --surface-3:#3E4045;
-  --ink:#F1F1F2; --ink-2:#C7C9CD; --muted:#B3B6BB;
-  --line:#313337; --line-strong:#484A4F;
-  --accent:#B79BF0; --accent-ink:#1B0B33; --accent-soft:#2A1A47;
+  --ground:#09090B; --surface:#141417; --surface-2:#1D1D21; --surface-3:#27272C;
+  --ink:#FAFAFA; --ink-2:#C9C9CE; --muted:#A5A5AD;
+  --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.14);
+  --edge:rgba(255,255,255,.055);   /* the 1px bevel along a surface top */
+  --accent:#A78BFA; --accent-ink:#1E1B4B; --accent-soft:#2E1065;
   --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
   --e2:#F2B772; --e2-bg:#33260F; --e2-ink:#2B1F0C;
   --e3:#FF9E96; --e3-bg:#331C1A; --e3-ink:#2B1512;
   --live:#B79BF0;
-  --shadow:0 1px 2px rgba(0,0,0,.4);
+  --shadow:0 1px 2px rgba(0,0,0,.5);
   --shadow-up:0 -1px 16px rgba(0,0,0,.5);
 }
 
@@ -124,7 +130,9 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   background:var(--accent);color:var(--accent-ink);border:0;
   transition:filter .12s;
 }
-.btn:hover{filter:brightness(1.1)}
+.btn{box-shadow:var(--glow)}
+.btn--ghost{box-shadow:none}
+.btn:hover{filter:brightness(1.08)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn--ghost{background:var(--surface-2);color:var(--ink-2);font-weight:600}
 .btn--ghost:hover{background:var(--surface-3);color:var(--ink);filter:none}
@@ -164,6 +172,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .round{
   margin-top:12px;background:var(--surface);border-radius:var(--r-lg);
   padding:13px 14px;display:flex;flex-direction:column;gap:9px;
+  box-shadow:0 0 0 1px var(--line), inset 0 1px 0 var(--edge);
 }
 .round.locked{box-shadow:inset 0 0 0 1px var(--accent)}
 .round--paused{box-shadow:inset 0 0 0 1px var(--line-strong)}
@@ -256,7 +265,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   transition:background .12s,color .12s;
 }
 .tbtn:hover{background:var(--surface-3);color:var(--ink)}
-.tbtn[aria-expanded="true"],.tbtn.on{background:var(--accent);color:var(--accent-ink)}
+.tbtn[aria-expanded="true"],.tbtn.on{background:var(--accent);color:var(--accent-ink);box-shadow:var(--glow)}
 .tbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
 .tbtn .badge{
   font-size:10px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;
@@ -265,7 +274,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .tbtn[aria-expanded="true"] .badge{background:var(--accent-ink);color:var(--accent)}
 .seg{display:flex;border-radius:var(--r-md);overflow:hidden;flex:none;background:var(--surface-2)}
 .seg button{min-width:42px;min-height:42px;display:grid;place-items:center;color:var(--muted)}
-.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);box-shadow:var(--glow)}
 .seg svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
 
 /* two columns once there is room, so the panel does not push the shelf
@@ -287,7 +296,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   transition:background .12s,color .12s;
 }
 .chip:hover{background:var(--surface-3)}
-.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);box-shadow:var(--glow)}
 .chip .n{font-size:10.5px;opacity:.65;font-weight:500}
 .chip:disabled{opacity:.35;cursor:not-allowed}
 /* thumbs, not cursors: the controls you actually tap get the 44px floor on a
@@ -334,9 +343,13 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .card{
   background:var(--surface);border-radius:var(--r-lg);overflow:hidden;
   display:flex;flex-direction:column;transition:transform .12s,box-shadow .12s;
+  /* a hairline plus a 1px top bevel. In light the bevel is transparent and the
+     hairline does all the work; in dark the bevel is what stops a stack of
+     near-black panels reading as one flat sheet. */
+  box-shadow:0 0 0 1px var(--line), inset 0 1px 0 var(--edge);
 }
 .card{position:relative}
-.card:hover{box-shadow:0 0 0 1px var(--line-strong)}
+.card:hover{box-shadow:0 0 0 1px var(--line-strong), inset 0 1px 0 var(--edge)}
 
 /* A conic gradient rotated behind a ring-shaped mask. The mask is what keeps
    it a 2px border rather than a wash over the whole card, and the @property
@@ -418,7 +431,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   transition:background .12s,color .12s;
 }
 .pick:hover{background:var(--surface-3);color:var(--ink)}
-.pick[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.pick[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);box-shadow:var(--glow)}
 .pick .n{font-size:11px;opacity:.7;font-weight:600}
 .mini{min-width:38px;min-height:38px;flex:none;border-radius:var(--r-md);background:var(--surface-2);display:grid;place-items:center;color:var(--muted);transition:background .12s,color .12s}
 .mini:hover{background:var(--surface-3);color:var(--ink)}
@@ -460,7 +473,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* ==========================================================================
    LIST VIEW
    ========================================================================== */
-.tablewrap{margin-top:10px;overflow-x:auto;border-radius:var(--r-lg);background:var(--surface)}
+.tablewrap{margin-top:10px;overflow-x:auto;border-radius:var(--r-lg);background:var(--surface);box-shadow:0 0 0 1px var(--line), inset 0 1px 0 var(--edge)}
 table{width:100%;border-collapse:collapse;min-width:600px;font-size:13.5px}
 /* A phone cannot hold seven columns. Dropping two was not enough: the rest
    still overflowed and the Pick button sat off the right edge behind a scroll
@@ -494,7 +507,7 @@ td.r{text-align:right;white-space:nowrap}
 /* ==========================================================================
    ADD
    ========================================================================== */
-.add{margin-top:10px;background:var(--surface);border-radius:var(--r-lg);padding:14px}
+.add{margin-top:10px;background:var(--surface);border-radius:var(--r-lg);padding:14px;box-shadow:0 0 0 1px var(--line), inset 0 1px 0 var(--edge)}
 .add .row{display:flex;gap:8px;flex-wrap:wrap}
 .addfield{position:relative;display:flex}
 .addfield .input{padding-right:52px}
@@ -533,7 +546,7 @@ td.r{text-align:right;white-space:nowrap}
   .rail{position:sticky;top:66px;margin-top:0}
 }
 .rail{display:flex;flex-direction:column;gap:10px;margin-top:24px}
-.panel{background:var(--surface);border-radius:var(--r-lg);padding:14px}
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:14px;box-shadow:0 0 0 1px var(--line), inset 0 1px 0 var(--edge)}
 .panel h3{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 
 .bar{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:7px 0;border-bottom:1px solid var(--line)}
@@ -585,6 +598,37 @@ td.r{text-align:right;white-space:nowrap}
   animation:sheen 1.15s cubic-bezier(.32,.72,.3,1) 1;
 }
 @keyframes sheen{to{transform:translateX(100%)}}
+
+/* Calling a round is the one moment the whole app exists for, and until now it
+   just swapped a strip of text. Plain divs rather than a canvas: 26 of them for
+   one second is nothing, and it needs no library. */
+.confetti{position:fixed;inset:0;z-index:70;pointer-events:none;overflow:hidden}
+.confetti i{
+  position:absolute;top:38%;left:50%;width:8px;height:14px;border-radius:2px;
+  animation:fall var(--dur) cubic-bezier(.2,.6,.35,1) forwards;
+}
+@keyframes fall{
+  0%  {transform:translate(0,0) rotate(0);opacity:1}
+  100%{transform:translate(var(--dx),var(--dy)) rotate(var(--spin));opacity:0}
+}
+
+/* The round is ready to call. A slow sweep says so without a badge or a colour
+   change fighting the rest of the strip. */
+.btn--ready{position:relative;overflow:hidden}
+.btn--ready::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(105deg,transparent 38%,color-mix(in oklab,var(--accent) 45%,transparent) 50%,transparent 62%);
+  transform:translateX(-100%);animation:sheen 2.6s ease-in-out infinite;
+}
+
+/* the die tumbles while the reel is deciding, so the button and the answer
+   read as one action rather than two */
+.die{display:inline-block}
+.die.rolling{animation:tumble .5s cubic-bezier(.3,.1,.3,1) infinite}
+@keyframes tumble{
+  0%{transform:rotate(0) scale(1)} 50%{transform:rotate(190deg) scale(1.18)}
+  100%{transform:rotate(360deg) scale(1)}
+}
 @keyframes tick{from{transform:translateY(-.4em);opacity:0}to{transform:none;opacity:1}}
 .n.bump{display:inline-block;animation:tick .3s cubic-bezier(.2,.8,.3,1)}
 
@@ -966,7 +1010,7 @@ let F = {             // every filter, all combinable
   crew: null,         // headcount for tonight; null = not filtering
   energy: new Set(),
   shape: new Set(),
-  vibe: new Set(),
+  doing: new Set(),
   setup: new Set(),
   mine: false,
   played: null,      // null = don't care, "fresh" = never played, "again" = played before
@@ -984,14 +1028,14 @@ let F = {             // every filter, all combinable
 function saveF(){
   if(!code) return;
   store.set("f."+code, { crew:F.crew, mine:F.mine, played:F.played, wellrated:F.wellrated,
-    energy:[...F.energy], shape:[...F.shape], vibe:[...F.vibe], setup:[...F.setup] });
+    energy:[...F.energy], shape:[...F.shape], doing:[...F.doing], setup:[...F.setup] });
 }
 function loadF(){
   const v = code && store.get("f."+code, null);
   if(!v) return;
   F.crew = v.crew ?? null; F.mine = !!v.mine; F.played = v.played ?? null; F.wellrated = !!v.wellrated;
   F.energy = new Set(v.energy||[]); F.shape = new Set(v.shape||[]);
-  F.vibe   = new Set(v.vibe||[]);   F.setup = new Set(v.setup||[]);
+  F.doing  = new Set(v.doing||[]);  F.setup = new Set(v.setup||[]);
 }
 
 let fDraft = null;   // staged copy of the filters while the phone sheet is open
@@ -1000,7 +1044,7 @@ const FT = () => fDraft || F;
 const cloneF = f => ({
   q:f.q, crew:f.crew, mine:f.mine, played:f.played,
   benched:f.benched, wellrated:f.wellrated,
-  energy:new Set(f.energy), shape:new Set(f.shape), vibe:new Set(f.vibe), setup:new Set(f.setup),
+  energy:new Set(f.energy), shape:new Set(f.shape), doing:new Set(f.doing), setup:new Set(f.setup),
 });
 
 
@@ -1014,7 +1058,12 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const ENERGY = {1:"Chill", 2:"Normal", 3:"Heavy"};
 const SETUP  = {launch:"Just launch", host:"Someone hosts", server:"Dedicated server"};
 const SHAPE  = {dropin:"Drop in", sitting:"One sitting", campaign:"Campaign", longhaul:"Long haul"};
-const VIBE   = {cozy:"Cozy", chaotic:"Chaotic", tense:"Tense", competitive:"Competitive"};
+/* What we'll be doing, not how it feels. The old "vibe" axis (cozy / chaotic /
+   tense / competitive) was blank on 44% of a real shelf, and every one of its
+   cozy keywords was also an energy keyword, so when it did fire it just said
+   "chill" again in different words. Mode of play asks a different question. */
+const DOING  = {mucking:"Mucking about", building:"Building something",
+                story:"A story", scary:"Scary", rounds:"Runs and rounds"};
 const VERDICT = {banger:"Banger", fine:"Fine", never_again:"Never again"};
 /* One control instead of two. Sorting and sectioning were always answering the
    same question - "how do I want this arranged" - and keeping them apart meant
@@ -1062,14 +1111,15 @@ const STATE = {
                can set it. Steam has no idea how much of a night a game costs.
      crew_max  us, same deal. Steam says "co-op", never how many.
      setup     us. Steam does not model who has to host.
-     vibe      Steam's user tags, scored into cozy / chaotic / tense /
-               competitive by the edge function. A guess, so the group can
-               override it, and it stays blank when the tags say nothing.
+     doing     Steam's user tags scored into mucking about / building / a
+               story / scary / runs and rounds, with the publisher-declared
+               categories as a tiebreak and genres as a fallback, so it is
+               never blank. Still a guess, so the group can override it.
      shape     same tag scoring, into drop in / one sitting / campaign /
                long haul.
      everything else  straight from Steam.
 ---------------------------------------------------------------------------- */
-const vibeOf = (s, d) => s.vibe || (d.gamesById[s.appid]||{}).vibe || null;
+const doingOf = (s, d) => s.doing || (d.gamesById[s.appid]||{}).doing || null;
 /** Ours first, Steam's guess second, so nothing sits blank and disappears from
  *  the fits-tonight filter just because it is not in the curated list. */
 const energyOf = (s, d) => s.energy ?? (d.gamesById[s.appid]||{}).energy_guess ?? null;
@@ -1168,7 +1218,7 @@ function activeFilters(f = F){
   if(f.wellrated) out.push({k:"wellrated", label:"85%+ on Steam"});
   f.energy.forEach(v => out.push({k:"energy", v, label:ENERGY[v]}));
   f.shape .forEach(v => out.push({k:"shape",  v, label:SHAPE[v]}));
-  f.vibe  .forEach(v => out.push({k:"vibe",   v, label:VIBE[v]}));
+  f.doing .forEach(v => out.push({k:"doing",  v, label:DOING[v]}));
   f.setup .forEach(v => out.push({k:"setup",  v, label:SETUP[v]}));
   return out;
 }
@@ -1184,7 +1234,7 @@ function clearFilter(k, v, f = F){
 function clearAll(f = F){
   f.q=""; f.crew=null; f.mine=false; f.played=null;
   f.benched=false; f.wellrated=false;
-  f.energy.clear(); f.shape.clear(); f.vibe.clear(); f.setup.clear();
+  f.energy.clear(); f.shape.clear(); f.doing.clear(); f.setup.clear();
 }
 
 /** A game passes if it clears every active filter. Crew is the one that maps
@@ -1222,7 +1272,7 @@ function passes(s, d, f = F){
   if(f.energy.size && !f.energy.has(energyOf(s, d))) return false;
   if(f.setup.size && !f.setup.has(s.setup)) return false;
   if(f.shape.size && !f.shape.has(game.shape)) return false;
-  if(f.vibe.size  && !f.vibe.has(vibeOf(s, d))) return false;
+  if(f.doing.size && !f.doing.has(doingOf(s, d))) return false;
   return true;
 }
 
@@ -1396,10 +1446,10 @@ async function forgetPlay(appid, round){
   finally{ refresh(); }
 }
 
-async function saveFacets(appid, energy, crew, setup, crewMod, vibe){
+async function saveFacets(appid, energy, crew, setup, crewMod, doing){
   try{ await rpc("set_facets", {p_code:code, p_device:deviceId, p_appid:appid,
                                 p_energy:energy, p_crew_max:crew, p_setup:setup,
-                                p_crew_mod: crewMod ?? null, p_vibe: vibe ?? null}); }
+                                p_crew_mod: crewMod ?? null, p_doing: doing ?? null}); }
   finally{ refresh(); }
 }
 
@@ -1503,7 +1553,52 @@ async function addGame(appid){
 }
 
 /* ---------- rounds ---------- */
-async function closeRound(appid){ await rpc("close_round", {p_code:code, p_device:deviceId, p_appid:appid}); sheet=null; refresh(); }
+async function closeRound(appid){
+  await rpc("close_round", {p_code:code, p_device:deviceId, p_appid:appid});
+  sheet=null; burst(); refresh();
+}
+
+/* One second of confetti when a round is called. Removed from the DOM after,
+   so nothing lingers, and skipped entirely under reduced motion. */
+function burst(){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const wrap = document.createElement("div");
+  wrap.className = "confetti";
+  const hue = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  for(let i = 0; i < 26; i++){
+    const bit = document.createElement("i");
+    const a = (Math.random() * Math.PI) - Math.PI/2;      // upward-ish fan
+    const dist = 140 + Math.random() * 260;
+    bit.style.setProperty("--dx", Math.round(Math.sin(a) * dist) + "px");
+    bit.style.setProperty("--dy", Math.round(Math.abs(Math.cos(a)) * -dist * .6 + 420) + "px");
+    bit.style.setProperty("--spin", Math.round(Math.random() * 900 - 450) + "deg");
+    bit.style.setProperty("--dur", (900 + Math.random() * 500) + "ms");
+    bit.style.background = i % 3 === 0 ? hue : (i % 3 === 1 ? "#F2B772" : "#78D3B1");
+    bit.style.left = (44 + Math.random() * 12) + "%";
+    wrap.appendChild(bit);
+  }
+  document.body.appendChild(wrap);
+  setTimeout(() => wrap.remove(), 1600);
+}
+
+/* The leader banner is the only place in the app where the answer changes, so
+   it is the only place worth spending a transition on. Characters resolve left
+   to right, which reads as the name landing rather than as a glitch. */
+function scrambleTo(el, text){
+  if(!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const CH = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let frame = 0;
+  const total = 22;
+  const tick = () => {
+    if(!document.contains(el)) return;
+    const settled = Math.floor((frame / total) * text.length);
+    el.textContent = text.slice(0, settled) + text.slice(settled).replace(/\S/g,
+      () => CH[Math.floor(Math.random() * CH.length)]);
+    if(frame++ < total) requestAnimationFrame(tick);
+    else el.textContent = text;
+  };
+  tick();
+}
 async function startRound(verdict, bench, onBreak){
   await rpc("new_round", {p_code:code, p_device:deviceId,
                           p_verdict: verdict || null, p_bench: !!bench, p_break: !!onBreak});
@@ -1636,7 +1731,7 @@ function renderLanding(){
         <div class="sechead"><div><h2>Your crews</h2></div></div>
         <div class="mygroups">${myGroups.map(g => `
           <button class="mygroup" data-open="${esc(g.code)}">
-            <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 44% 32%)">${esc(monogram(g.name))}</span>
+            <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 58% 30%)">${esc(monogram(g.name))}</span>
             <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span>
           </button>`).join("")}</div>` : ""}
 
@@ -1699,7 +1794,7 @@ function renderGroup(){
     <header class="top"><div class="wrap inner">
       <div class="brand"><h1 class="gn">${esc(g.name)}</h1><span class="code">${esc(g.code)}</span></div>
       ${d.meMember ? `<button class="mepill" id="mebtn" title="That's you">
-        <span class="dot" style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(d.meMember.name)} 44% 32%)">${esc(d.meMember.name[0].toUpperCase())}</span>
+        <span class="dot" style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(d.meMember.name)} 58% 30%)">${esc(d.meMember.name[0].toUpperCase())}</span>
         <span class="nm">${esc(d.meMember.name)}</span></button>` : ""}
       <button class="iconbtn" id="switchbtn" aria-label="Switch group"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
       ${themeBtn()}
@@ -1740,7 +1835,7 @@ function renderGroup(){
           <span><b class="num">${d.votedCount}</b> of ${d.lookedCount} in${
             call.ready ? " · enough to call it" : call.short === d.lookedCount ? "" : " · "+call.short+" more to call it"}</span>
           <button class="btn btn--ghost btn--sm" id="breakbtn">Taking a break</button>
-          ${d.ranked.length ? `<button class="btn btn--ghost btn--sm" id="closebtn" style="margin-left:auto">Call it</button>` : ""}
+          ${d.ranked.length ? `<button class="btn btn--ghost btn--sm${call.ready ? " btn--ready" : ""}" id="closebtn" style="margin-left:auto">Call it</button>` : ""}
         </div>
       </section>`}
 
@@ -1814,7 +1909,7 @@ function renderGroup(){
             ${addResults.length ? `<div class="results">${addResults.map(r => `
               <div class="res">
                 ${r.header ? `<img src="${esc(r.header)}" alt="" loading="lazy">`
-                  : `<span style="width:62px;height:29px;border-radius:4px;flex:none;background:hsl(${hueOf(r.name)} 44% 32%)"></span>`}
+                  : `<span style="width:62px;height:29px;border-radius:4px;flex:none;background:hsl(${hueOf(r.name)} 58% 30%)"></span>`}
                 <span class="nm">${esc(r.name)}</span>
                 <span class="resbtns">
                   <button class="btn btn--sm" data-add="${r.appid}">Add it</button>
@@ -1845,7 +1940,7 @@ function renderGroup(){
               const voted = (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
               return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
                 ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
-                <span class="dot" style="background:hsl(${hueOf(mm.name)} 44% 32%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
+                <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
                 ${mm.device_count>1 ? `<span class="devs" title="${mm.device_count} devices linked">${mm.device_count}</span>` : ""}
               </span>`;
             }).join("") : `<span class="empty">Just you so far.</span>`}</div>
@@ -1876,6 +1971,10 @@ function renderGroup(){
 
   wireGroup(d, filtered);
   settleImages();
+  if(tookover){
+    const t = document.querySelector(".leader.tookover .cap .t");
+    if(t) scrambleTo(t, t.textContent);
+  }
   lastCounts = {...d.counts};
   if(tookover){ const t = tookover; setTimeout(() => { if(tookover === t) tookover = null; }, 1400); }
 }
@@ -1955,7 +2054,7 @@ function filterPanel(d, pool, counts){
     ${lead}
     ${grp("Energy", "energy", ENERGY, (s,dd) => energyOf(s, dd))}
     ${grp("How long", "shape", SHAPE, (s,dd) => (dd.gamesById[s.appid]||{}).shape)}
-    ${grp("Vibe", "vibe", VIBE, (s,dd) => vibeOf(s, dd))}
+    ${grp("What we'll be doing", "doing", DOING, (s,dd) => doingOf(s, dd))}
     ${grp("Faff to get going", "setup", SETUP, s => s.setup)}
     ${played}
     ${only}
@@ -1979,7 +2078,7 @@ function listView(list, d){
           <span>${esc(g.name||s.appid)}</span></div>
           <div class="sub"><span class="narrow">${
             energyOf(s,d) ? esc(ENERGY[energyOf(s,d)])+" · " : ""}${s.crew_max ? "≤ "+s.crew_max+" · " : ""}</span>${
-            esc(SHAPE[g.shape]||"")}${vibeOf(s,d)?" · "+esc(VIBE[vibeOf(s,d)]):""}</div></td>
+            esc(SHAPE[g.shape]||"")}${doingOf(s,d)?" · "+esc(DOING[doingOf(s,d)]):""}</div></td>
         <td class="opt2">${energyOf(s,d)?`<span class="pill pill--e${energyOf(s,d)}">${esc(ENERGY[energyOf(s,d)])}</span>`:`<span class="pill">—</span>`}</td>
         <td class="opt2"><button class="pill pill--set" data-facets="${s.appid}" title="${esc(s.crew_note||"")}">${
           s.crew_max ? "≤ "+s.crew_max : "Set"}${s.crew_mod ? " <span class=\"modhint\">+mod</span>" : ""}</button></td>
@@ -2101,7 +2200,7 @@ function renderSheet(d){
           bits.push("last here " + ago(c.last_seen));
           if(c.device_count>1) bits.push(c.device_count+" devices");
           return `<button class="cand" data-claim="${esc(c.member_id)}">
-            <span class="dot" style="background:hsl(${hueOf(c.name)} 44% 32%)">${esc(monogram(c.name))}</span>
+            <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
             <span class="txt"><b>${esc(c.name)}</b><span>${esc(bits.join(" · "))}</span></span>
             <span style="color:var(--muted)">→</span></button>`;
         }).join("")}
@@ -2149,8 +2248,8 @@ function renderSheet(d){
       <div class="eopts">${[1,2,3].map(v => `<button class="eopt" data-fe="${v}" aria-pressed="${(sheet.e ?? energyOf(s,d))===v}"><b>${esc(ENERGY[v])}</b></button>`).join("")}</div>
       <span class="eyebrow">Faff to get started</span>
       <div class="eopts">${Object.keys(SETUP).map(k => `<button class="eopt" data-fs="${k}" aria-pressed="${(sheet.s ?? s.setup)===k}"><b style="font-size:11.5px">${esc(SETUP[k])}</b></button>`).join("")}</div>
-      <span class="eyebrow">Vibe ${vibeOf(s,d) && !s.vibe ? "· guessed from Steam tags" : ""}</span>
-      <div class="fset">${Object.keys(VIBE).map(k => `<button class="chip" data-fv="${k}" aria-pressed="${(sheet.v ?? vibeOf(s,d))===k}">${esc(VIBE[k])}</button>`).join("")}</div>
+      <span class="eyebrow">What we'll be doing ${doingOf(s,d) && !s.doing ? "· guessed from Steam" : ""}</span>
+      <div class="fset">${Object.keys(DOING).map(k => `<button class="chip" data-fv="${k}" aria-pressed="${(sheet.v ?? doingOf(s,d))===k}">${esc(DOING[k])}</button>`).join("")}</div>
       <span class="eyebrow">Have we played it</span>
       ${(d.playsBy[sheet.appid]||[]).length ? `
         <div class="playlog">${(d.playsBy[sheet.appid]||[]).map(pl => `
@@ -2173,7 +2272,7 @@ function renderSheet(d){
     const game = d.gamesById[sheet.appid] || {};
     const s = (S.shelf||[]).find(x => x.appid === sheet.appid) || {};
     return shell(`
-      <h3>🎲 <span class="reel" id="reel">${esc(game.name || "That one")}</span></h3>
+      <h3><span class="die" id="die">🎲</span> <span class="reel" id="reel">${esc(game.name || "That one")}</span></h3>
       <p>One of the ${sheet.pool} that survived your filters.
          ${s.setup ? esc(SETUP[s.setup])+"." : ""} ${s.crew_max ? "Up to "+s.crew_max+" players." : ""}</p>
       <div class="row">
@@ -2289,7 +2388,7 @@ function renderSheet(d){
   if(sheet.kind === "switch"){
     return shell(`<h3>Your crews</h3>
       <div class="mygroups">${myGroups.map(g => `<button class="mygroup" data-open="${esc(g.code)}">
-        <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 44% 32%)">${esc(monogram(g.name))}</span>
+        <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 58% 30%)">${esc(monogram(g.name))}</span>
         <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span></button>`).join("")}</div>
       <div class="row"><button class="btn btn--ghost" id="tolanding">Start or join another</button></div>`);
   }
@@ -2641,7 +2740,9 @@ function spinReel(d, pool){
   const names = (pool||[]).map(s => (d.gamesById[s.appid]||{}).name).filter(Boolean);
   if(names.length < 3) return;
   const landed = el.textContent;
+  const die = document.getElementById("die");
   el.classList.add("spinning");
+  if(die) die.classList.add("rolling");
   let wait = 55, elapsed = 0;
   const step = () => {
     if(!document.getElementById("reel")) return;      // sheet closed mid-roll
@@ -2649,7 +2750,11 @@ function spinReel(d, pool){
     elapsed += wait;
     wait *= 1.28;                                      // ease out into the answer
     if(elapsed < 900) setTimeout(step, wait);
-    else { el.textContent = landed; el.classList.remove("spinning"); }
+    else {
+      el.textContent = landed;
+      el.classList.remove("spinning");
+      if(die) die.classList.remove("rolling");
+    }
   };
   setTimeout(step, wait);
 }
