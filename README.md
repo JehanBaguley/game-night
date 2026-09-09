@@ -170,7 +170,7 @@ What replaced it costs nothing: the card says **Added by Soli**. It's set once, 
 
 Steam's genre field says Action / Adventure / Indie / RPG on nearly everything on your shelf. It does not help anyone choose. The edge function reads Steam **user tags** instead and classifies each game on two axes:
 
-- **Vibe**: cozy, chaotic, tense, competitive
+- **What we'll be doing**: mucking about, building something, a story, scary, runs and rounds
 - **Shape**: drop in, one sitting, campaign, long haul
 
 Three more come from a curated list rather than Steam, because Steam does not publish them:
@@ -255,11 +255,17 @@ Worth knowing which numbers are ours and which are Steam's, because it changes h
 | Energy | Us. Curated for 76 games, blank otherwise | Yes, any member |
 | Player cap | Us. Steam says "co-op", never how many | Yes, any member |
 | Setup | Us. Steam does not model who has to host | Yes, any member |
-| Vibe | Steam user tags, scored into four buckets | Yes, the group overrides the guess |
+| What we'll be doing | Steam tags scored into five buckets, categories as tiebreak, genres as fallback | Yes, the group overrides the guess |
 | Session length | Same tag scoring | Not yet |
 | Everything else | Steam, directly | No, it's their data |
 
-Vibe is a guess and is treated like one. It stays blank when the tags say nothing useful, rather than defaulting to a confident wrong answer, and any member can correct it from the game's detail sheet.
+It is a guess and is treated like one, but unlike the axis it replaced it is never blank, and any member can correct it from the game's detail sheet.
+
+**This one replaced a "vibe" axis, and the reason is worth keeping.** Vibe sorted games into cozy / chaotic / tense / competitive off Steam user tags. Measured against a real 16-game shelf it was **blank on 7 of them**, including every big survival game, because their tags never hit a vibe keyword. And when it did fire it was redundant: every one of its `cozy` keywords was also an `energy` keyword, so cozy meant chill, computed twice. Length and energy agreed 81% of the time as well. Four axes were behaving like about one and a half.
+
+**Mode of play asks a different question from effort**, so the two stop colliding, and it can fall back through tags, then Steam's publisher-declared `categories`, then genres. Blank rate on the same shelf went from 7 of 16 to **0 of 16**.
+
+The rules are weighted rather than counted, because one strong signal should beat three weak ones. Barotrauma is tagged both *Survival* and *Survival Horror* and has to come out scary. PICO PARK 2 carries a junk *Psychological Horror* tag from SteamSpy, so horror sits at low weight and loses to *Casual*.
 
 ### Chrome, deliberately thin on a phone
 
@@ -302,7 +308,7 @@ When a stack of filters matches nothing, the footer button doesn't go dead. It b
 | How many of us tonight | Can this seat everyone who's in |
 | Energy | How much brain does it need |
 | How long | A quick one, or something you commit to |
-| Vibe | Cozy, chaotic, tense, competitive |
+| What we'll be doing | Mucking about, building, a story, scary, or runs and rounds |
 | Faff to get going | Who has to do work before anyone plays |
 | Have we played it | Either, never, or a return visit |
 | Only show → my picks | What have I already chosen |
@@ -432,7 +438,9 @@ Checked with an automated pass that drives the real UI at 375, 768 and 1440px in
 
 Two more worth naming. The generated avatar circles were white text on `hsl(h 38% 48%)`, which is 2.5:1 , and they carry a person's initial, so that is real text failing badly. And **"Out in front"** on the leader banner was the violet accent over a photograph, which is unreadable over anything bright; it is white on a deeper scrim now.
 
-Motion is opt-out: everything added for feel sits behind `prefers-reduced-motion`.
+Motion is opt-out: everything added for feel sits behind `prefers-reduced-motion`, including the confetti, which is skipped entirely rather than shortened.
+
+**Colour.** Borders are translucent rather than a solid grey, so a hairline works on whatever is behind it instead of only on one background. Dark is near-black with lifted surfaces and a 1px top bevel, which is what stops a stack of dark panels reading as one flat sheet. The action colour is used as a glow as well as a fill.
 
 **Alignment.** Every section on the page now starts and ends on the same 14px gutter, measured rather than eyeballed. The one that had drifted was the shelf header: hiding its heading on phones left the empty wrapper as a flex item, and the row's 14px gap pushed both buttons off the grid by exactly that much.
 
@@ -446,6 +454,10 @@ Four pieces, each tied to something that actually happened rather than added for
 | **Sheen** | Once, when a different game takes the lead | The one moment in a round where the answer changes |
 | **Count tick** | When a tally goes up | A number that snaps looks like a re-render, a number that rolls looks like a vote |
 | **Reel** | While **Roll for it** decides | A result that just appears reads as the computer picking. A reel that runs down and lands reads as a roll |
+| **Tumbling die** | Alongside the reel | So the button and the answer read as one action rather than two |
+| **Confetti** | Once, when a round is called | The moment the whole app exists for, and it used to just swap a strip of text |
+| **Name scramble** | On the banner, when a different game takes over | Characters resolve left to right, so it reads as the name landing rather than as a glitch |
+| **Call it shimmer** | Once enough people have voted | Says the round is ready without a badge or a colour change shouting about it |
 
 The beam is a conic gradient rotated behind a ring-shaped mask. The mask is what keeps it a 2px border rather than a wash over the card, and the `@property --beam` declaration is what lets the angle animate at all, since custom properties are plain strings until you give them a type. Browsers without `@property` get a still gradient ring, which is a fine place to land.
 
