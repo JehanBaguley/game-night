@@ -1,0 +1,2449 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Game Night</title>
+<meta name="description" content="Pick what we play next.">
+<meta name="color-scheme" content="light dark">
+
+<link rel="preconnect" href="https://shared.cloudflare.steamstatic.com">
+
+<style>
+/* ==========================================================================
+   TOKENS
+   Built on the Core Tier 1 ramps (neutral / red / yellow / green / blue),
+   used the Notion and Discord way: the 100s and 200s carry backgrounds, the
+   700s and 800s carry the text on them, and nothing sits at full saturation.
+   Light is Notion (warm-neutral ground, white surfaces, hairline separation);
+   dark is Discord (neutral 900 ground, lifted surfaces, one vivid accent).
+
+   Complete palette on bare :root, redefined by the two blocks after it, so no
+   colour is ever declared only inside a media query.
+
+   Core Tier 1 reference, sampled from Foundations:
+     neutral 100 #F1F1F2 · 200 #D0D2D5 · 300 #B3B6BB · 400 #9699A0 · 500 #7A7E87
+             600 #61646B · 700 #484A4F · 800 #313337 · 900 #1C1D1F
+     green   100 #CFF1E3 · 300 #78D3B1 · 400 #2EB88F · 700 #00764D · 800 #00623F
+   Accent is deliberately NOT from that ramp. Violet 700 #5B2AB8 in light,
+   violet 300 #B79BF0 in dark, so the action colour never collides with the
+   blue / amber / red the energy pills use.
+     blue    100 #CBEFF9 · 300 #69CEE6 · 600 #0082A8 · 800 #005C79
+     yellow  100 #FCE3C8 · 300 #F2B772 · 700 #9D5400 · 800 #7E4100
+     red     100 #FFDDD9 · 300 #FF9E96 · 700 #A5292B · 800 #892122
+   ========================================================================== */
+:root{
+  --ground:#F7F7F8; --surface:#FFFFFF; --surface-2:#F1F1F2; --surface-3:#E4E5E8;
+  --ink:#1C1D1F; --ink-2:#484A4F; --muted:#7A7E87;
+  --line:#E8E9EB; --line-strong:#D0D2D5;
+
+  /* violet is the only action colour: picked, voted, live, primary buttons */
+  --accent:#5B2AB8; --accent-ink:#FFFFFF; --accent-soft:#EDE4FF;
+
+  /* energy ramp: blue / yellow / red from the same family, pastel background
+     with the deep step on top so the small pill text stays readable */
+  --e1:#005C79; --e1-bg:#CBEFF9; --e1-ink:#FFFFFF;
+  --e2:#7E4100; --e2-bg:#FCE3C8; --e2-ink:#FFFFFF;
+  --e3:#892122; --e3-bg:#FFDDD9; --e3-ink:#FFFFFF;
+  --live:#5B2AB8;
+
+  /* -apple-system first so Safari picks San Francisco, system-ui after it for
+     everyone else. One family throughout, weight and size do the work. */
+  --f-body:-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
+           "Helvetica Neue", Arial, sans-serif;
+  --f-display:var(--f-body);
+  --f-mono:var(--f-body);
+
+  --r-sm:4px; --r-md:6px; --r-lg:10px;
+  --shadow:0 1px 2px rgba(28,29,31,.06), 0 2px 8px rgba(28,29,31,.04);
+  --shadow-up:0 -1px 14px rgba(28,29,31,.10);
+  --safe-b:env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#1C1D1F; --surface:#26272A; --surface-2:#313337; --surface-3:#3E4045;
+    --ink:#F1F1F2; --ink-2:#B3B6BB; --muted:#9699A0;
+    --line:#313337; --line-strong:#484A4F;
+    --accent:#B79BF0; --accent-ink:#1B0B33; --accent-soft:#2A1A47;
+    --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
+    --e2:#F2B772; --e2-bg:#33260F; --e2-ink:#2B1F0C;
+    --e3:#FF9E96; --e3-bg:#331C1A; --e3-ink:#2B1512;
+    --live:#B79BF0;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    --shadow-up:0 -1px 16px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#1C1D1F; --surface:#26272A; --surface-2:#313337; --surface-3:#3E4045;
+  --ink:#F1F1F2; --ink-2:#B3B6BB; --muted:#9699A0;
+  --line:#313337; --line-strong:#484A4F;
+  --accent:#B79BF0; --accent-ink:#1B0B33; --accent-soft:#2A1A47;
+  --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
+  --e2:#F2B772; --e2-bg:#33260F; --e2-ink:#2B1F0C;
+  --e3:#FF9E96; --e3-bg:#331C1A; --e3-ink:#2B1512;
+  --live:#B79BF0;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+  --shadow-up:0 -1px 16px rgba(0,0,0,.5);
+}
+
+/* ========================================================================== */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body.locked{overflow:hidden}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--f-body);font-size:15px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  font-synthesis-weight:none;
+  padding-bottom:calc(74px + var(--safe-b));
+}
+@media (min-width:900px){ body{padding-bottom:40px} }
+
+h1,h2,h3{font-family:var(--f-display);margin:0;letter-spacing:-.01em;text-wrap:balance;font-weight:650}
+p{margin:0}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+img{max-width:100%;display:block}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r-sm)}
+[hidden]{display:none!important}
+.num{font-variant-numeric:tabular-nums}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* the uppercase tracked micro-label does the job a mono face used to */
+.eyebrow{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+.wrap{max-width:1220px;margin:0 auto;padding:0 14px}
+@media (min-width:900px){ .wrap{padding:0 24px} }
+
+/* ---------- controls ---------- */
+.btn{
+  min-height:40px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 15px;border-radius:var(--r-md);font-size:13.5px;font-weight:600;
+  background:var(--accent);color:var(--accent-ink);border:0;
+  transition:filter .12s;
+}
+.btn:hover{filter:brightness(1.1)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn--ghost{background:var(--surface-2);color:var(--ink-2);font-weight:600}
+.btn--ghost:hover{background:var(--surface-3);color:var(--ink);filter:none}
+.btn--sm{min-height:34px;padding:0 11px;font-size:12.5px}
+.input{
+  min-height:42px;width:100%;padding:0 12px;background:var(--surface-2);color:var(--ink);
+  border:0;border-radius:var(--r-md);font-size:14.5px;
+}
+.input::placeholder{color:var(--muted)}
+.input:focus{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* ---------- header ---------- */
+.top{
+  position:sticky;top:0;z-index:40;background:var(--ground);
+  border-bottom:1px solid var(--line);
+}
+.top .inner{display:flex;align-items:center;gap:8px;min-height:54px}
+.brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:1}
+.brand .gn{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand .code{font-size:10px;color:var(--muted);letter-spacing:.09em;flex:none;font-weight:600}
+.iconbtn{
+  min-width:38px;min-height:38px;display:grid;place-items:center;flex:none;
+  border-radius:var(--r-md);color:var(--ink-2);background:var(--surface-2);
+  transition:background .12s,color .12s;
+}
+.iconbtn:hover{background:var(--surface-3);color:var(--ink)}
+.iconbtn svg{width:16px;height:16px;stroke-width:2;fill:none;stroke:currentColor}
+.mepill{
+  display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px 0 4px;
+  border-radius:999px;background:var(--surface-2);font-size:12.5px;font-weight:600;flex:none;max-width:150px;
+}
+.mepill:hover{background:var(--surface-3)}
+.mepill span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (max-width:520px){ .mepill span.nm{display:none} .mepill{padding:0 4px} }
+
+/* ---------- round strip ---------- */
+.round{
+  margin-top:12px;background:var(--surface);border-radius:var(--r-lg);
+  padding:13px 14px;display:flex;flex-direction:column;gap:9px;
+}
+.round.locked{box-shadow:inset 0 0 0 1px var(--accent)}
+.round--paused{box-shadow:inset 0 0 0 1px var(--line-strong)}
+.round--paused h2{color:var(--muted)}
+.round .line1{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.round h2{font-size:15.5px;font-weight:650}
+.round .when{font-size:12.5px;color:var(--muted);margin-left:auto}
+.progress{height:4px;background:var(--surface-3);border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.round .line2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.flash{
+  background:var(--accent-soft);color:var(--accent);border-radius:var(--r-md);
+  padding:9px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;
+}
+
+/* ---------- leader ---------- */
+.leader{margin-top:12px;border-radius:var(--r-lg);overflow:hidden;background:var(--surface)}
+/* explicit height, not aspect-ratio: at full desktop width the ratio would make
+   this a 500px hero, and capping with max-height narrows the box instead */
+.leader .art{position:relative;width:100%;height:clamp(140px,36vw,220px);overflow:hidden}
+.leader .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s}
+.leader .art img.in{opacity:1}
+/* the banner carries white text over the placeholder as well as over real
+   cover art, so darken the generated tile here specifically */
+.leader .art .gen{filter:brightness(.72) saturate(.85)}
+.leader .scrim{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,.5) 40%,rgba(0,0,0,.92) 100%)}
+.leader .cap{
+  position:absolute;left:14px;right:14px;bottom:11px;z-index:2;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
+}
+.leader .cap .k{font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;color:var(--accent)}
+.leader .cap .t{font-size:22px;font-weight:650;line-height:1.12;letter-spacing:-.015em}
+.leader .cap .m{font-size:12px;opacity:.85}
+
+/* ---------- section heads ---------- */
+.sechead{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:28px 0 10px}
+.sechead h2{font-size:13px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.sechead p{font-size:12.5px;color:var(--muted);margin-top:3px;letter-spacing:0;text-transform:none}
+
+/* ==========================================================================
+   TOOLBAR + FILTERS
+   ========================================================================== */
+/* the toolbar sticks under the header, so filters stay reachable however far
+   down a long shelf you have scrolled */
+.toolbar{
+  display:flex;gap:7px;align-items:center;flex-wrap:wrap;
+  background:var(--ground);padding:0 0 8px;
+}
+/* phone: search owns row one, the controls wrap onto row two. The tabs used to
+   occupy that row, so this is height-neutral and nothing has to scroll sideways */
+.toolbar .searchwrap{flex:1 0 100%;min-width:0}
+.toolbar .tbtn,.toolbar .seg{flex:none}
+/* Group and the Fits shortcut stay off the phone toolbar: with sections on by
+   default they are rare, and they are both a tap away in the sheet.
+   These sit next to .tbtn and .fgroup, which also set display, so they are
+   scoped one level deeper to actually win rather than reaching for !important */
+@media (min-width:900px){
+  .toolbar .searchwrap{flex:1 1 auto}
+}
+
+
+/* thumbs need more room than a cursor does, without wrecking desktop density */
+@media (pointer: coarse){
+  .more{padding:6px 2px}
+  .pill--set{padding:8px 9px}
+  .take{padding:2px 0}
+}
+
+/* one shelf, no tabs. Everything is always on it and the sections carry the
+   state, so there is no hidden slice and no "which tab was that in" moment. */
+.shelfbar{
+  position:sticky;top:54px;z-index:30;background:var(--ground);
+  margin:0 -14px;padding:2px 14px 0;
+  transition:box-shadow .18s ease;
+}
+.shelfbar.is-stuck{box-shadow:0 8px 18px -14px rgba(0,0,0,.55)}
+@media (min-width:900px){ .shelfbar{margin:0 -24px;padding:2px 24px 0} }
+
+.searchwrap{position:relative;flex:1 1 180px;min-width:0}
+.searchwrap .input{padding-left:34px}
+.searchwrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:2;pointer-events:none}
+.searchwrap .clear{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:32px;height:32px;display:grid;place-items:center;color:var(--muted);border-radius:var(--r-sm)}
+.tbtn{
+  min-height:42px;display:inline-flex;align-items:center;gap:7px;padding:0 12px;flex:none;
+  border-radius:var(--r-md);background:var(--surface-2);font-size:13px;font-weight:600;color:var(--ink-2);
+  transition:background .12s,color .12s;
+}
+.tbtn:hover{background:var(--surface-3);color:var(--ink)}
+.tbtn[aria-expanded="true"],.tbtn.on{background:var(--accent);color:var(--accent-ink)}
+.tbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.tbtn .badge{
+  font-size:10px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;
+  background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;
+}
+.tbtn[aria-expanded="true"] .badge{background:var(--accent-ink);color:var(--accent)}
+.seg{display:flex;border-radius:var(--r-md);overflow:hidden;flex:none;background:var(--surface-2)}
+.seg button{min-width:42px;min-height:42px;display:grid;place-items:center;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* two columns once there is room, so the panel does not push the shelf
+   off the screen when several filter groups are open */
+.fpanel{
+  margin-top:8px;background:var(--surface);border-radius:var(--r-lg);
+  padding:15px;display:grid;gap:15px 26px;grid-template-columns:1fr;
+}
+@media (min-width:820px){
+  .fpanel{grid-template-columns:1fr 1fr}
+}
+.fgroup{display:flex;flex-direction:column;gap:8px}
+.fgroup > .lab{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.fset{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  min-height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;
+  border-radius:var(--r-md);font-size:12.5px;font-weight:600;color:var(--ink-2);
+  white-space:nowrap;background:var(--surface-2);
+  transition:background .12s,color .12s;
+}
+.chip:hover{background:var(--surface-3)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.chip .n{font-size:10.5px;opacity:.65;font-weight:500}
+.chip:disabled{opacity:.35;cursor:not-allowed}
+
+.stepper{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.stepper .sbtn{width:42px;height:42px;border-radius:var(--r-md);display:grid;place-items:center;font-size:18px;color:var(--ink-2);background:var(--surface-2)}
+.stepper .sbtn:hover{background:var(--surface-3);color:var(--ink)}
+.stepper .val{font-size:20px;font-weight:700;min-width:52px;text-align:center}
+.stepper .val:not(.num){font-size:14px;color:var(--muted);font-weight:600}
+.stepper .off{font-size:12.5px;color:var(--muted)}
+
+.activebar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:9px}
+.abchip{
+  display:inline-flex;align-items:center;gap:5px;min-height:28px;padding:0 5px 0 10px;
+  border-radius:var(--r-md);background:var(--accent-soft);color:var(--accent);
+  font-size:12px;font-weight:600;
+}
+.abchip button{width:20px;height:20px;display:grid;place-items:center;border-radius:var(--r-sm);color:inherit;opacity:.65;font-size:11px}
+.abchip button:hover{opacity:1;background:rgba(127,127,127,.18)}
+.clearall{font-size:12px;color:var(--muted);min-height:28px;font-weight:600}
+.clearall:hover{color:var(--ink);text-decoration:underline}
+.resultline{font-size:12px;color:var(--muted);margin-top:10px;letter-spacing:.02em}
+
+/* ==========================================================================
+   CARDS  - cover led, no border, denser than before
+   ========================================================================== */
+.grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+@media (min-width:460px){ .grid{grid-template-columns:repeat(2,1fr)} }
+@media (min-width:620px){ .grid{grid-template-columns:repeat(3,1fr)} }
+@media (min-width:1000px){ .grid{grid-template-columns:repeat(4,1fr);gap:12px} }
+
+.card{
+  background:var(--surface);border-radius:var(--r-lg);overflow:hidden;
+  display:flex;flex-direction:column;transition:transform .12s,box-shadow .12s;
+}
+.card:hover{box-shadow:0 0 0 1px var(--line-strong)}
+.card.on{box-shadow:0 0 0 2px var(--accent)}
+.card.pulse{animation:pulse .5s ease-out}
+@keyframes pulse{0%{box-shadow:0 0 0 2px var(--accent),0 0 0 0 var(--accent-soft)}100%{box-shadow:0 0 0 2px var(--accent),0 0 0 12px transparent}}
+
+/* the generated tile is the placeholder under the cover, so there is never a
+   grey box and never a layout shift when the image lands */
+.art{position:relative;aspect-ratio:460/215;overflow:hidden;background:var(--tile)}
+.art .gen{
+  position:absolute;inset:0;display:grid;place-items:center;
+  background:
+    repeating-linear-gradient(var(--ang), rgba(255,255,255,.10) 0 2px, transparent 2px 13px),
+    linear-gradient(150deg, color-mix(in oklab, var(--tile) 82%, white), var(--tile) 55%, color-mix(in oklab, var(--tile) 68%, black));
+}
+.art .gen span{font-size:26px;font-weight:700;letter-spacing:-.02em;color:rgba(255,255,255,.9)}
+.art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .35s}
+.art img.in{opacity:1}
+.art .badges{position:absolute;z-index:2;top:6px;left:6px;right:6px;display:flex;gap:5px;align-items:flex-start}
+.art .badges .sp{flex:1}
+.bdg{font-size:9.5px;letter-spacing:.06em;font-weight:700;text-transform:uppercase;padding:3px 6px;border-radius:var(--r-sm);background:rgba(10,12,15,.7);color:#fff;backdrop-filter:blur(4px)}
+
+.body{padding:10px 11px 11px;display:flex;flex-direction:column;gap:8px;flex:1}
+.body h3{font-size:15.5px;font-weight:650;line-height:1.25;letter-spacing:-.01em}
+.desc{font-size:13px;color:var(--ink-2);line-height:1.42}
+.desc.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.more{font-size:11.5px;color:var(--accent);font-weight:700;align-self:flex-start}
+.more:hover{text-decoration:underline}
+
+.facets{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.pill{font-size:10px;font-weight:600;letter-spacing:.03em;padding:3px 6px;border-radius:var(--r-sm);background:var(--surface-2);color:var(--muted)}
+/* three dots make it self-evidently a 1-to-3 scale, so the word does not
+   have to carry the whole meaning on its own */
+.lvl{font-style:normal;letter-spacing:1px;margin-right:5px;font-size:8px;vertical-align:1px;opacity:.75}
+.pill--e1{background:var(--e1-bg);color:var(--e1)}
+.pill--e2{background:var(--e2-bg);color:var(--e2)}
+.pill--e3{background:var(--e3-bg);color:var(--e3)}
+.pill--rev{color:var(--accent);background:var(--accent-soft)}
+.pill--guess{opacity:.75;font-style:italic}
+.pill--link{color:var(--ink-2)}
+.pill--link:hover{background:var(--surface-3);text-decoration:none}
+.pill--set{cursor:pointer;box-shadow:inset 0 0 0 1px var(--line-strong);background:transparent}
+.modhint{opacity:.6;font-weight:500}
+.bdg--mods{background:var(--e2);color:var(--e2-ink)}
+.pill--set:hover{background:var(--surface-2)}
+
+.takes{display:flex;flex-direction:column;gap:4px;padding-left:8px;box-shadow:inset 2px 0 0 var(--surface-3)}
+.take{font-size:12.5px;color:var(--ink-2);line-height:1.4}
+.take b{color:var(--muted);font-weight:700;margin-right:5px}
+
+.foot{margin-top:auto;display:flex;gap:6px;padding-top:2px}
+.pick{
+  flex:1;min-height:38px;border-radius:var(--r-md);background:var(--surface-2);
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  font-size:13px;font-weight:700;color:var(--ink-2);
+  transition:background .12s,color .12s;
+}
+.pick:hover{background:var(--surface-3);color:var(--ink)}
+.pick[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.pick .n{font-size:11px;opacity:.7;font-weight:600}
+.mini{min-width:38px;min-height:38px;flex:none;border-radius:var(--r-md);background:var(--surface-2);display:grid;place-items:center;color:var(--muted);transition:background .12s,color .12s}
+.mini:hover{background:var(--surface-3);color:var(--ink)}
+.mini svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
+
+/* section heads for a shelf broken into groups */
+.grouphead{
+  display:flex;align-items:baseline;gap:9px;margin:22px 0 8px;
+  font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+}
+.grouphead span{
+  font-size:10px;font-weight:700;letter-spacing:0;color:var(--muted);
+  background:var(--surface-2);border-radius:999px;padding:2px 7px;
+}
+.grouphead::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.bdg--now{background:var(--accent);color:var(--accent-ink)}
+.bdg--played{background:rgba(10,12,15,.55);color:#fff;font-weight:600}
+.addedby{font-size:11.5px;color:var(--muted)}
+.playline{font-size:11.5px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.pill--v-none{background:var(--surface-2);color:var(--muted)}
+.pill--v-banger{background:var(--accent-soft);color:var(--accent)}
+.pill--v-fine{background:var(--surface-2);color:var(--muted)}
+.pill--v-never_again{background:var(--e3-bg);color:var(--e3)}
+.eopt[data-verdict] b{font-size:15px}
+
+/* one card, three states. Backlog reads as provisional through a dashed edge
+   and a muted cover rather than through a whole separate component. */
+.card--benched{box-shadow:inset 0 0 0 1px var(--line)}
+.card--benched .art{opacity:.6}
+.card--benched:hover .art{opacity:1}
+.card--playing{box-shadow:0 0 0 2px var(--accent)}
+.bdg--backlog{background:rgba(10,12,15,.55);color:#fff;font-weight:600}
+.pick--static{
+  flex:1;min-height:38px;border-radius:var(--r-md);background:var(--accent-soft);color:var(--accent);
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+}
+
+/* ==========================================================================
+   LIST VIEW
+   ========================================================================== */
+.tablewrap{margin-top:10px;overflow-x:auto;border-radius:var(--r-lg);background:var(--surface)}
+table{width:100%;border-collapse:collapse;min-width:600px;font-size:13.5px}
+/* A phone cannot hold seven columns. Dropping two was not enough: the rest
+   still overflowed and the Pick button sat off the right edge behind a scroll
+   nobody notices. Below 560px it is three columns, with energy and crew moved
+   into the line under the game name so no information is actually lost. */
+.narrow{display:none}
+@media (max-width:700px){ table{min-width:0} .opt{display:none} }
+@media (max-width:560px){
+  .opt2{display:none}
+  .narrow{display:inline}
+  td.g{min-width:0}
+  th,td{padding:9px 8px}
+}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;background:var(--surface-2);position:sticky;top:0;z-index:1}
+th button{display:inline-flex;align-items:center;gap:5px;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+th button:hover{color:var(--ink)}
+th .dir{color:var(--accent)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr.on{background:var(--accent-soft)}
+td.g{min-width:170px}
+td.g .nm{font-weight:700;display:flex;align-items:center;gap:8px}
+td.g .swatch{width:20px;height:20px;border-radius:var(--r-sm);flex:none;background:var(--tile)}
+td.g .sub{font-size:11px;color:var(--muted);margin-top:1px}
+td.r{text-align:right;white-space:nowrap}
+.rowpick{min-height:32px;padding:0 11px;border-radius:var(--r-md);background:var(--surface-2);font-size:12.5px;font-weight:700;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
+.rowpick:hover{background:var(--surface-3);color:var(--ink)}
+.rowpick[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+
+/* ==========================================================================
+   ADD
+   ========================================================================== */
+.add{margin-top:10px;background:var(--surface);border-radius:var(--r-lg);padding:14px}
+.add .row{display:flex;gap:8px;flex-wrap:wrap}
+.addfield{position:relative;display:flex}
+.addfield .input{padding-right:52px}
+.addgo{
+  position:absolute;right:5px;top:50%;transform:translateY(-50%);
+  width:36px;height:32px;display:grid;place-items:center;border-radius:var(--r-sm);
+  background:var(--accent);color:var(--accent-ink);
+}
+.addgo:disabled{opacity:.5}
+.addgo svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:2.2}
+.spin{
+  width:14px;height:14px;border-radius:999px;
+  border:2px solid currentColor;border-top-color:transparent;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.add .row .input{flex:1 1 220px;background:var(--surface-2)}
+.results{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.res{display:flex;align-items:center;gap:11px;padding:8px;min-height:52px;border-radius:var(--r-md);width:100%;background:var(--surface-2);flex-wrap:wrap}
+.res .nm{flex:1 1 130px}
+.resbtns{display:flex;gap:6px;flex:none;margin-left:auto}
+.res img{width:62px;height:29px;object-fit:cover;border-radius:var(--r-sm);flex:none;background:var(--surface-3)}
+.res .nm{font-size:13.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.owns{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
+.owns input{width:17px;height:17px;accent-color:var(--accent)}
+.msg{margin-top:9px;font-size:12.5px;padding:9px 11px;border-radius:var(--r-md);font-weight:600}
+.msg--bad{background:var(--e3-bg);color:var(--e3)}
+.msg--ok{background:var(--accent-soft);color:var(--accent)}
+
+/* ==========================================================================
+   RAIL
+   ========================================================================== */
+.cols{display:block}
+@media (min-width:900px){
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start}
+  .rail{position:sticky;top:66px;margin-top:0}
+}
+.rail{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+.panel{background:var(--surface);border-radius:var(--r-lg);padding:14px}
+.panel h3{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+.bar{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:7px 0;border-bottom:1px solid var(--line)}
+.bar:last-child{border-bottom:none}
+.bar .t{font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .c{font-size:12px;color:var(--muted);font-weight:700}
+.bar .track{grid-column:1/-1;height:4px;border-radius:999px;background:var(--surface-3);overflow:hidden}
+.bar .fill{height:100%;background:var(--accent);border-radius:999px;transition:width .5s cubic-bezier(.2,.7,.3,1)}
+.bar .ago{grid-column:1/-1;font-size:10px;color:var(--muted);letter-spacing:.02em}
+
+.crew{display:flex;flex-wrap:wrap;gap:5px}
+.who{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px 3px 3px;font-size:12px;font-weight:600;background:var(--surface-2)}
+.who.novote{opacity:.45}
+.who .dot{width:19px;height:19px;border-radius:999px;display:grid;place-items:center;font-size:9.5px;font-weight:700;color:#fff;flex:none}
+.who .livedot{width:6px;height:6px;border-radius:999px;background:var(--live);flex:none;margin-left:4px}
+.who .devs{
+  font-size:9px;font-weight:700;min-width:14px;height:14px;padding:0 3px;
+  display:grid;place-items:center;border-radius:999px;
+  background:var(--surface-3);color:var(--muted);
+}
+
+.eopts{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.eopt{min-height:48px;border-radius:var(--r-md);padding:6px;line-height:1.2;text-align:center;background:var(--surface-2);transition:background .12s}
+.eopt:hover{background:var(--surface-3)}
+.eopt b{display:block;font-size:13px;font-weight:700}
+.eopt span{font-size:11px;color:var(--muted)}
+.eopt[data-e="1"][aria-pressed="true"]{background:var(--e1);color:var(--e1-ink)}
+.eopt[data-e="2"][aria-pressed="true"]{background:var(--e2);color:var(--e2-ink)}
+.eopt[data-e="3"][aria-pressed="true"]{background:var(--e3);color:var(--e3-ink)}
+/* two options side by side, each with room for a line saying what it does */
+.eopts--2{grid-template-columns:1fr}
+.eopts--2 .eopt{min-height:0;padding:11px 12px;text-align:left}
+.eopts--2 .eopt span{display:block;margin-top:2px}
+@media (min-width:480px){ .eopts--2{grid-template-columns:repeat(2,1fr)} }
+.eopt:not([data-e])[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.eopt[aria-pressed="true"] span{color:inherit;opacity:.8}
+
+.share pre{
+  margin:0 0 9px;white-space:pre-wrap;word-break:break-word;
+  font-size:11.5px;line-height:1.6;background:var(--surface-2);border-radius:var(--r-md);
+  padding:10px;color:var(--ink-2);max-height:160px;overflow-y:auto;
+}
+.share .row{display:flex;gap:6px;flex-wrap:wrap}
+
+/* ---------- sticky vote bar ---------- */
+.votebar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--surface);
+  border-top:1px solid var(--line);box-shadow:var(--shadow-up);
+  padding:9px 14px calc(9px + var(--safe-b));display:flex;align-items:center;gap:10px;
+}
+@media (min-width:900px){ .votebar{display:none} }
+.votebar .st{flex:1;min-width:0}
+.votebar .st .a{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.votebar .st .b{font-size:11px;color:var(--muted)}
+.pips{display:flex;gap:3px;margin:3px 0}
+.pips i{width:15px;height:3px;border-radius:999px;background:var(--surface-3);display:block}
+.pips i.f{background:var(--accent)}
+
+/* ---------- sheets ---------- */
+.sheetwrap{position:fixed;inset:0;z-index:60;background:rgba(10,12,15,.62);display:grid;place-items:end center;overscroll-behavior:contain}
+@media (min-width:640px){ .sheetwrap{place-items:center;padding:20px} }
+.sheet{
+  background:var(--surface);width:100%;max-width:450px;
+  border-radius:var(--r-lg) var(--r-lg) 0 0;padding:20px 18px calc(20px + var(--safe-b));
+  display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow-y:auto;
+}
+@media (min-width:640px){
+  .sheet{border-radius:var(--r-lg);padding-bottom:20px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45)}
+}
+
+/* The filter sheet is the one that needs real height, a scrolling middle and a
+   footer that stays put, because the Apply button is the whole point of it. */
+/* Full screen on a phone. A bottom sheet over a scrollable page means two
+   scroll areas fighting each other and the shelf sliding about behind you. */
+.sheet--tall{
+  height:100dvh;max-height:100dvh;width:100%;max-width:none;
+  padding:0;gap:0;border-radius:0;
+}
+/* From tablet up it is a centred dialog rather than a sheet stuck to the
+   bottom edge, because there is no thumb reach to design around on a desktop
+   and a panel hanging off the bottom of a 1400px window looks like a mistake. */
+@media (min-width:640px){
+  .sheet--tall{
+    height:auto;max-height:min(660px, 84vh);max-width:560px;
+    border-radius:var(--r-lg);box-shadow:0 24px 60px -20px rgba(0,0,0,.45);
+  }
+}
+@media (min-width:900px){ .sheet--tall{max-width:640px} }
+.sheethead{
+  display:flex;align-items:center;gap:10px;
+  padding:16px 16px 12px;border-bottom:1px solid var(--line);flex:none;
+}
+.sheethead h3{flex:1;font-size:17px}
+.sheetbody{flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch}
+.sheetbody .fpanel{background:transparent;padding:0;margin:0}
+.sheetfoot{
+  flex:none;padding:12px 16px calc(12px + var(--safe-b));
+  border-top:1px solid var(--line);background:var(--surface);
+}
+.sheetfoot .btn{width:100%;min-height:46px;font-size:15px}
+.sheet h3{font-size:18px;font-weight:650}
+.sheet p{font-size:13px;color:var(--ink-2)}
+.sheet .row{display:flex;gap:8px}
+.sheet .row .btn{flex:1}
+.sheet .input{background:var(--surface-2)}
+.playlog{display:flex;flex-direction:column;gap:1px;background:var(--line);border-radius:var(--r-md);overflow:hidden}
+.playrow{
+  display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;
+  background:var(--surface-2);padding:8px 11px;font-size:12px;color:var(--ink-2);
+}
+.playrow span:first-child{font-weight:700;color:var(--ink)}
+.playrow span:nth-child(3){font-weight:600}
+.rowx{width:22px;height:22px;display:grid;place-items:center;border-radius:var(--r-sm);color:var(--muted);font-size:11px}
+.rowx:hover{background:var(--surface-3);color:var(--ink)}
+.notebox{background:var(--surface-2);border-radius:var(--r-md);padding:9px 11px;font-size:12.5px;color:var(--ink-2)}
+.sheet .danger{font-size:12.5px;color:var(--e3);font-weight:600;align-self:flex-start}
+.sheet .danger:hover{text-decoration:underline}
+
+.cand{
+  display:flex;align-items:center;gap:11px;min-height:58px;padding:9px 11px;width:100%;
+  border-radius:var(--r-md);text-align:left;background:var(--surface-2);transition:background .12s;
+}
+.cand:hover{background:var(--surface-3)}
+.cand .dot{width:32px;height:32px;border-radius:999px;display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;flex:none}
+.cand .txt{min-width:0;flex:1}
+.cand .txt b{display:block;font-size:15px;font-weight:650}
+.cand .txt span{font-size:12px;color:var(--muted)}
+
+/* ---------- landing ---------- */
+.hero{padding:38px 0 6px;max-width:50ch}
+.hero h1{font-size:clamp(28px,6.5vw,42px);font-weight:650;line-height:1.05;letter-spacing:-.02em}
+.hero p{margin-top:11px;font-size:15px;color:var(--ink-2)}
+.mygroups{display:flex;flex-direction:column;gap:6px}
+.mygroup{display:flex;align-items:center;gap:11px;min-height:54px;padding:0 13px;border-radius:var(--r-md);background:var(--surface);text-align:left;width:100%;transition:background .12s}
+.mygroup:hover{background:var(--surface-2)}
+.mygroup .nm{flex:1;font-weight:650;font-size:15px}
+.mygroup .cd{font-size:10.5px;color:var(--muted);letter-spacing:.09em;font-weight:600}
+
+.empty{font-size:13px;color:var(--muted);padding:26px 4px;text-align:center;line-height:1.6}
+.empty b{display:block;color:var(--ink);font-size:15.5px;font-weight:650;margin-bottom:4px}
+.footer{margin-top:40px;padding:16px 0 0;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+
+@media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+</style>
+
+</head>
+<body>
+
+<div id="app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+/* ============================================================================
+   CONFIG - paste your two values here, commit, done.
+   Both are safe in a public repo: the anon key can only call the RPCs granted
+   at the bottom of schema.sql, and every one of them needs a group code.
+   ========================================================================== */
+const CONFIG = {
+  SUPABASE_URL: "PASTE_YOUR_PROJECT_URL_HERE",
+  SUPABASE_ANON_KEY: "PASTE_YOUR_ANON_KEY_HERE",
+};
+
+const CONFIGURED = CONFIG.SUPABASE_URL.startsWith("http") && CONFIG.SUPABASE_ANON_KEY.length > 30;
+const sb = CONFIGURED ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
+const FN_URL = CONFIG.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/enrich";
+
+/* ============================================================================
+   IDENTITY
+   deviceId is generated once and shared across every group. The server maps
+   devices to a member_id, so one person can vote from a phone and a laptop and
+   stay one person. myName is remembered globally so a second group prefills.
+   ========================================================================== */
+const LS = "gamenight.v2";
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem(LS+"."+k); return v ? JSON.parse(v) : d; }catch{ return d; } },
+  set(k, v){ try{ localStorage.setItem(LS+"."+k, JSON.stringify(v)); }catch{} },
+};
+
+let deviceId = store.get("device", null);
+if (!deviceId) {
+  deviceId = (crypto.randomUUID && crypto.randomUUID()) ||
+    "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+      const r = Math.random()*16|0; return (c==="x"?r:(r&0x3|0x8)).toString(16);
+    });
+  store.set("device", deviceId);
+}
+let myName   = store.get("name", "");
+let myGroups = store.get("groups", []);
+let myMemberId = null;   // resolved per group by whoami()
+
+/* ---------- name matching: Soli vs soli vs Soli L ---------- */
+function normName(s){
+  return String(s||"").toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g,"")   // strip accents
+    .replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+}
+/** Levenshtein, capped: we only care about distances of 1 or 2. */
+function lev(a, b){
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  const m = a.length, n = b.length;
+  let prev = Array.from({length:n+1}, (_,i)=>i);
+  for (let i=1;i<=m;i++){
+    const cur = [i];
+    for (let j=1;j<=n;j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a[i-1]===b[j-1]?0:1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+/** Everyone in the group who might already be this person. */
+function nameMatches(input, members){
+  const n = normName(input);
+  if (!n) return [];
+  const first = n.split(" ")[0];
+  return members.map(m => {
+    const mn = normName(m.name);
+    const mfirst = mn.split(" ")[0];
+    let score = 0;
+    if (mn === n) score = 100;                                     // Soli / soli / SOLI
+    else if (mn.startsWith(n + " ") || n.startsWith(mn + " ")) score = 88;  // Soli / Soli L
+    else if (mfirst === first && first.length >= 3) score = 74;     // Soli L / Soli B
+    else if (Math.max(mn.length, n.length) >= 4 && lev(mn, n) <= 2) score = 68; // Soli / Solli
+    return { m, score };
+  }).filter(x => x.score >= 60)
+    .sort((a,b) => b.score - a.score)
+    .slice(0,4)
+    .map(x => x.m);
+}
+
+/* ============================================================================
+   CURATED FACETS
+   Steam will tell you a game is co-op. It will not tell you how many people
+   can actually play, how much of a night it costs, or who has to host. So
+   those three come from here, verified against store pages, wikis and dev
+   posts rather than guessed.
+
+   [energy, crew_max, setup, crew_mod, note]
+     energy   1 chill / 2 normal / 3 heavy
+     crew_max the OFFICIAL supported count. null means genuinely unconfirmed,
+              and the app says "cap unknown" instead of inventing a number
+     setup    0 just launch / 1 someone hosts / 2 dedicated server
+     crew_mod the bigger number you can reach with mods or a server config.
+              Kept separate on purpose: a filter that assumes everyone has
+              installed MoreCompany is a filter that lies
+   ========================================================================== */
+const SETUP_KEYS = ["launch","host","server"];
+const CURATED = {
+  251570:[3,8,2,null,"8 on a hosted game, more on a dedicated server"],
+  427410:[2,6,1,null,0],
+  1621690:[1,8,1,null,0],
+  1203620:[2,16,2,null,0],
+  1169040:[1,null,2,null,"No fixed cap. The devs say a dedicated server takes hundreds"],
+  1623730:[2,4,1,32,"4 in a hosted co-op game, up to 32 on a dedicated server"],
+  413150:[1,4,1,8,"4 cabins in vanilla, 8 with the config unlocked"],
+  892970:[2,10,2,null,0],
+  2686630:[1,10,2,null,"Steam says up to 10 on a server"],
+  1604030:[3,null,2,null,"Clan sizes vary by server settings"],
+  602960:[3,16,2,null,0],
+  553850:[2,4,0,null,0],
+  4001890:[1,null,0,null,0],
+  2644470:[1,8,1,null,0],
+  1599600:[2,4,1,null,0],
+  962130:[2,4,1,null,0],
+  648800:[1,8,1,null,0],
+  242760:[3,8,1,128,"8 is the supported number, server config goes higher but the devs advise against it"],
+  1326470:[3,8,1,null,"8 is a hard engine cap, cannot be raised"],
+  2399830:[3,8,2,70,"8 in a private session, up to 70 on a dedicated server"],
+  440900:[3,4,2,40,"4 in the in-game co-op mode, 40 on a dedicated server"],
+  361420:[1,4,1,8,"4 hosted from the game, 8 on a headless dedicated server"],
+  815370:[3,4,1,8,"4 officially, 8 with the Suffer2Gether mod"],
+  1149460:[2,8,1,null,0],
+  105600:[1,8,2,255,"Host and play defaults to 8, a server accepts up to 255"],
+  322330:[2,6,2,64,"6 in a hosted room, servers accept 64 but 8 to 10 is the sane number"],
+  108600:[3,16,2,100,"No official cap, 16 to 32 is typical, around 100 is the reported ceiling"],
+  526870:[2,4,1,null,"4 is what Coffee Stain supports, more works but is not supported"],
+  427520:[2,16,2,500,"No real limit, 16 is a big session and the technical ceiling is absurd"],
+  244850:[2,16,2,64,"16 in the lobby slider, up to 64 on a dedicated server, 12 is where it stays smooth"],
+  275850:[1,32,0,null,"32 share a lobby, but mission parties are 2 to 4"],
+  1172620:[2,4,0,null,"4 on a galleon, which is one crew"],
+  1129580:[1,4,1,null,0],
+  1660080:[1,8,1,null,0],
+  2646460:[3,null,2,null,"Server configs ship with 20 to 50, no developer number published"],
+  1928980:[2,6,1,null,0],
+  1307550:[2,8,2,127,"Around 8 hosted, the server config accepts up to 127"],
+  768200:[2,10,1,null,0],
+  548430:[2,4,1,null,0],
+  550:[2,4,0,8,"4 in campaign, community servers and mods run more"],
+  1272080:[2,4,0,null,0],
+  493520:[3,4,1,null,"Built for exactly four, bots fill empty slots"],
+  1282100:[3,3,1,null,"Three total, and progress lives in the host's world"],
+  632360:[2,4,1,16,"4 supported, mods go higher and get silly"],
+  552500:[2,4,1,null,0],
+  1361210:[2,4,0,null,0],
+  232090:[2,6,2,null,0],
+  1144200:[3,5,1,16,"5 supported, mods advertise 16 but it is not official"],
+  1966720:[1,4,1,16,"4 officially, MoreCompany is how everyone plays it with a bigger group"],
+  739630:[2,4,1,null,"4 only, mods that went higher were patched out"],
+  728880:[2,4,1,null,0],
+  996770:[1,4,0,null,"Couch only, there is no online mode in the first game"],
+  477160:[1,8,1,null,0],
+  285900:[1,8,1,null,"8 online, 4 on a couch"],
+  386940:[1,4,1,8,0],
+  431240:[1,12,1,null,0],
+  945360:[1,15,1,null,0],
+  1097150:[1,4,0,60,"4 in a matchmaking party, Custom Shows hold far more"],
+  674940:[1,4,1,null,0],
+  1016920:[1,4,1,null,0],
+  2881650:[1,4,1,8,"4 officially, community mods go higher"],
+  3241660:[1,6,1,null,0],
+  1426210:[2,2,1,null,"Two only, and the second seat is free with Friend's Pass"],
+  1222700:[2,2,1,null,"Two only, there is no solo mode"],
+  2001120:[2,2,1,null,"Two only, Friend's Pass again"],
+  620:[2,2,1,null,"The co-op campaign is strictly two"],
+  865360:[2,2,1,null,"Two, one on each walkie-talkie"],
+  1435790:[1,10,1,null,"Lobbies hold 10, but the built-in rooms are designed for about 3"],
+  435150:[3,4,1,null,0],
+  1086940:[3,4,1,null,"4 in a party, and the campaign lives on the host's save"],
+  2344520:[2,4,0,null,0],
+  899770:[2,4,0,null,0],
+  397540:[2,4,1,null,0],
+  2622380:[3,3,0,null,"Built around three, with a solo and a duo mode"],
+  4704690:[1,10,1,null,"2 to 10 recommended, the real cap depends on the host's connection"],
+  1478500:[1,12,1,null,"2 to 12. The devs reckon 2 is a focused co-op and 12 is an absolute mess"],
+  4704690:[1,10,1,null,"2 to 10 recommended, the real cap depends on the host's connection"]
+};
+
+/** Facets for a game we already know about, or nulls if we do not. */
+function curatedFor(appid){
+  const c = CURATED[appid];
+  if(!c) return { energy:null, crew_max:null, setup:null, crew_mod:null, crew_note:null };
+  return { energy:c[0], crew_max:c[1], setup:SETUP_KEYS[c[2]], crew_mod:c[3], crew_note:c[4] || null };
+}
+
+/* Our own one-liners for the shelf we started with. Steam's blurb is fine but
+   it is marketing; these are how we actually describe them to each other, and
+   they scan far better once the shelf gets long. Steam's copy is still there
+   behind "More". */
+const BLURBS = {
+  251570:"Zombie horde survival", 427410:"90s sci-fi research facility",
+  1621690:"Subterranean mining sandbox", 1203620:"Voxel fantasy action RPG",
+  1169040:"Top-down colony-builder survival", 1623730:"Creature-collecting base builder",
+  413150:"Cozy farming life simulator", 892970:"Viking exploration and sailing",
+  2686630:"Oceanic island-village builder", 1604030:"Vampire castle-building RPG",
+  602960:"Submarine crisis simulator", 553850:"Chaotic alien-blasting shooter",
+  4001890:"Casual arcade fishing party", 2644470:"Cooperative puzzle teamwork frustration",
+  1599600:"Rogue-lite restaurant cooking panic",
+};
+
+// the 15 the shelf starts with
+const SEED = [251570,427410,1621690,1203620,1169040,1623730,413150,892970,
+              2686630,1604030,602960,553850,4001890,2644470,1599600];
+
+/* ============================================================================
+   API
+   ========================================================================== */
+async function rpc(fn, args){
+  const { data, error } = await sb.rpc(fn, args);
+  if (error) throw new Error(error.message);
+  return data;
+}
+async function callEnrich(payload){
+  const res = await fetch(FN_URL, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json",
+              "Authorization":"Bearer "+CONFIG.SUPABASE_ANON_KEY,
+              "apikey":CONFIG.SUPABASE_ANON_KEY },
+    body: JSON.stringify(payload),
+  });
+  const body = await res.json().catch(()=>({}));
+  if (!res.ok) throw new Error(body.error || "Steam lookup failed");
+  return body;
+}
+
+/* ============================================================================
+   VIEW STATE
+   ========================================================================== */
+let S = null, code = "", loading = false, busy = false;
+let flash = "", lastLeader = null, pulse = null;
+let pending = null, sheet = null;
+let addResults = [], addMsg = null, addBusy = false;
+let expanded = new Set();
+
+let F = {             // every filter, all combinable
+  q: "",
+  crew: null,         // headcount for tonight; null = not filtering
+  energy: new Set(),
+  shape: new Set(),
+  vibe: new Set(),
+  setup: new Set(),
+  mine: false,
+  played: null,      // null = don't care, "fresh" = never played, "again" = played before
+  benched: false,    // benched games stay out of sight until you ask for them
+  wellrated: false,  // 85% or better on Steam
+};
+// sections by state is the default: everything is on one shelf, but the stuff
+// you can actually vote for is still what you hit first
+
+let fDraft = null;   // staged copy of the filters while the phone sheet is open
+/** Whichever filter set edits should land on: the draft on a phone, live on desktop. */
+const FT = () => fDraft || F;
+const cloneF = f => ({
+  q:f.q, crew:f.crew, mine:f.mine, played:f.played,
+  benched:f.benched, wellrated:f.wellrated,
+  energy:new Set(f.energy), shape:new Set(f.shape), vibe:new Set(f.vibe), setup:new Set(f.setup),
+});
+
+
+let view = store.get("view", "cards");
+
+const app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+const ENERGY = {1:"Chill", 2:"Normal", 3:"Heavy"};
+const SETUP  = {launch:"Just launch", host:"Someone hosts", server:"Dedicated server"};
+const SHAPE  = {dropin:"Drop in", sitting:"One sitting", campaign:"Campaign", longhaul:"Long haul"};
+const VIBE   = {cozy:"Cozy", chaotic:"Chaotic", tense:"Tense", competitive:"Competitive"};
+const VERDICT = {banger:"Banger", fine:"Fine", never_again:"Never again"};
+/* One control instead of two. Sorting and sectioning were always answering the
+   same question - "how do I want this arranged" - and keeping them apart meant
+   two things to learn for a shelf of fifteen games. Each option says how the
+   list is ordered and whether it gets headings. */
+const ARRANGE = {
+  votes:  { label:"Most votes",     sort:"votes",  dir:"desc", group:"none"   },
+  az:     { label:"A to Z",         sort:"az",     dir:"asc",  group:"none"   },
+  review: { label:"Best reviewed",  sort:"review", dir:"desc", group:"none"   },
+  added:  { label:"Newest",         sort:"added",  dir:"desc", group:"none"   },
+  inplay: { label:"What's in play", sort:"votes",  dir:"desc", group:"votes"  },
+  energy: { label:"Energy",         sort:"votes",  dir:"desc", group:"energy" },
+  shape:  { label:"Length",         sort:"votes",  dir:"desc", group:"shape"  },
+  setup:  { label:"Faff",           sort:"votes",  dir:"desc", group:"setup"  },
+  played: { label:"Played or not",  sort:"votes",  dir:"desc", group:"played" },
+};
+let arrange = store.get("arrange", "inplay");
+const A  = () => ARRANGE[arrange] || ARRANGE.inplay;
+const sortLabel = () => A().label;
+
+/* ----------------------------------------------------------------------------
+   GAME STATE
+   Every game on the shelf is in exactly one of these. The state is derived,
+   never stored twice, so there is one definition and nothing to keep in sync.
+
+     open     on the shelf and up for a vote. Which is nearly everything:
+              there is no backlog and no gate. Ten mates do not need a
+              nomination process, they need to see the games.
+     playing  won the round and is on right now. Locked until someone
+              hits Finished it.
+     benched  out of view. Someone parked it, or it got a never-again.
+              Not deleted, and one tap brings it back.
+
+   "played" is history, not a state. Same for "nobody owns it": that is a fact
+   about the game shown on the card, never a reason to hide it.
+---------------------------------------------------------------------------- */
+const STATE = {
+  open:    { label:"Up for a vote", cta:"Pick this" },
+  playing: { label:"On right now",  cta:"On now"    },
+  benched: { label:"Benched",       cta:"Unbench"   },
+};
+/* ----------------------------------------------------------------------------
+   WHERE EACH FACET COMES FROM
+     energy    us. Curated for the 74 known games, blank otherwise, any member
+               can set it. Steam has no idea how much of a night a game costs.
+     crew_max  us, same deal. Steam says "co-op", never how many.
+     setup     us. Steam does not model who has to host.
+     vibe      Steam's user tags, scored into cozy / chaotic / tense /
+               competitive by the edge function. A guess, so the group can
+               override it, and it stays blank when the tags say nothing.
+     shape     same tag scoring, into drop in / one sitting / campaign /
+               long haul.
+     everything else  straight from Steam.
+---------------------------------------------------------------------------- */
+const vibeOf = (s, d) => s.vibe || (d.gamesById[s.appid]||{}).vibe || null;
+/** Ours first, Steam's guess second, so nothing sits blank and disappears from
+ *  the fits-tonight filter just because it is not in the curated list. */
+const energyOf = (s, d) => s.energy ?? (d.gamesById[s.appid]||{}).energy_guess ?? null;
+const energyIsGuess = (s, d) => s.energy == null && (d.gamesById[s.appid]||{}).energy_guess != null;
+
+function stateOf(s, d){
+  if(d.nowPlaying && d.nowPlaying.appid === s.appid) return "playing";
+  return s.benched ? "benched" : "open";
+}
+const VERDICT_ICON = {banger:"\u2605", fine:"\u25CF", never_again:"\u2716"};
+const SHAPE_ORDER = {dropin:0, sitting:1, campaign:2, longhaul:3};
+
+function hueOf(str){ let h=0; for(let i=0;i<String(str).length;i++) h=(h*31+String(str).charCodeAt(i))%360; return h; }
+function monogram(name){
+  const w = String(name||"?").replace(/[^A-Za-z0-9 ]/g,"").split(" ").filter(Boolean);
+  return (w.length>1 ? w[0][0]+w[1][0] : (w[0]||"??").slice(0,2)).toUpperCase();
+}
+function ago(iso){
+  if(!iso) return "";
+  const s=(Date.now()-new Date(iso).getTime())/1000;
+  if(s<90) return "just now";
+  if(s<3600) return Math.round(s/60)+"m ago";
+  if(s<86400) return Math.round(s/3600)+"h ago";
+  return Math.round(s/86400)+"d ago";
+}
+/** How far off calling it we are. There is no deadline: the cadence was always
+ *  "whenever we finish a game", so a countdown was inventing one. */
+function callable(d, g){
+  const short = Math.max(0, g.quorum - d.votedCount);
+  return { ready: short === 0, short };
+}
+const isLive = iso => iso && (Date.now()-new Date(iso).getTime()) < 180000;
+const shortDate = iso => new Date(iso).toLocaleDateString("en-AU", {day:"numeric", month:"short"});
+
+/* ---------- derived ---------- */
+function derive(){
+  if(!S) return null;
+  const gamesById = {};
+  (S.games||[]).forEach(g => { gamesById[g.appid] = g; });
+
+  const counts = {}, voters = new Set(), lastVoteAt = {};
+  (S.ballots||[]).forEach(b => {
+    (b.picks||[]).forEach(a => {
+      counts[a] = (counts[a]||0)+1;
+      if(!lastVoteAt[a] || b.updated_at > lastVoteAt[a]) lastVoteAt[a] = b.updated_at;
+    });
+    if((b.picks||[]).length) voters.add(b.member_id);
+  });
+
+  const takesBy = {};
+  (S.takes||[]).forEach(t => {
+    const who = (S.members||[]).find(m => m.member_id === t.member_id);
+    (takesBy[t.appid] = takesBy[t.appid]||[]).push({
+      by: who ? who.name : "Someone", body: t.body, mine: t.member_id === myMemberId
+    });
+  });
+
+  // play history: one row per game per round, so a game we come back to later
+  // stacks up rather than overwriting the first time we played it
+  const playsBy = {};
+  (S.plays||[]).forEach(pl => { (playsBy[pl.appid] = playsBy[pl.appid]||[]).push(pl); });
+  Object.values(playsBy).forEach(list => list.sort((a,b) => a.started_at < b.started_at ? 1 : -1));
+  const nowPlaying = (S.plays||[]).find(pl => !pl.finished_at) || null;
+
+  const myBallot = (S.ballots||[]).find(b => b.member_id === myMemberId);
+  const myPicks  = myBallot ? (myBallot.picks||[]) : [];
+  const meMember = (S.members||[]).find(m => m.member_id === myMemberId) || null;
+
+  // duplicate display names still get a suffix, for the cases the match sheet
+  // did not catch (someone genuinely is a second Sam)
+  const seen = {};
+  const members = (S.members||[]).map(m => {
+    seen[m.name] = (seen[m.name]||0)+1;
+    return {...m, label: seen[m.name] > 1 ? m.name+" ("+seen[m.name]+")" : m.name};
+  });
+
+  const ranked = Object.keys(counts).map(a => ({appid:+a, n:counts[a]}))
+    .sort((x,y) => y.n-x.n || x.appid-y.appid);
+
+  return { gamesById, counts, takesBy, myPicks, meMember, playsBy, nowPlaying,
+           members, ranked, lastVoteAt,
+           votedCount: voters.size, lookedCount: members.length,
+           liveCount: members.filter(m => isLive(m.last_seen)).length };
+}
+
+/* ============================================================================
+   FILTERING + SORTING
+   ========================================================================== */
+function activeFilters(f = F){
+  const out = [];
+  if(f.q) out.push({k:"q", label:'"'+f.q+'"'});
+  if(f.crew) out.push({k:"crew", label:"for "+f.crew+" players"});
+  if(f.mine) out.push({k:"mine", label:"my picks"});
+  if(f.played) out.push({k:"played", label: f.played === "fresh" ? "never played" : "played before"});
+  if(f.benched) out.push({k:"benched", label:"the bench"});
+  if(f.wellrated) out.push({k:"wellrated", label:"85%+ on Steam"});
+  f.energy.forEach(v => out.push({k:"energy", v, label:ENERGY[v]}));
+  f.shape .forEach(v => out.push({k:"shape",  v, label:SHAPE[v]}));
+  f.vibe  .forEach(v => out.push({k:"vibe",   v, label:VIBE[v]}));
+  f.setup .forEach(v => out.push({k:"setup",  v, label:SETUP[v]}));
+  return out;
+}
+function clearFilter(k, v, f = F){
+  if(k==="q"){ f.q=""; }
+  else if(k==="crew"){ f.crew=null; }
+  else if(k==="mine"){ f.mine=false; }
+  else if(k==="played"){ f.played=null; }
+  else if(k==="benched"){ f.benched=false; }
+  else if(k==="wellrated"){ f.wellrated=false; }
+  else f[k].delete(v);
+}
+function clearAll(f = F){
+  f.q=""; f.crew=null; f.mine=false; f.played=null;
+  f.benched=false; f.wellrated=false;
+  f.energy.clear(); f.shape.clear(); f.vibe.clear(); f.setup.clear();
+}
+
+/** A game passes if it clears every active filter. Crew is the one that maps
+ *  to the real decision: five people means a four-player game is out. */
+/** How a game sits against tonight's headcount.
+ *  "fits" clears it outright, "mods" only clears it if someone installs
+ *  something, "no" cannot seat everyone, "unknown" has no published cap. */
+function crewFit(s, want){
+  if(!want) return "fits";
+  if(s.crew_max == null) return "unknown";
+  if(s.crew_max >= want) return "fits";
+  if(s.crew_mod != null && s.crew_mod >= want) return "mods";
+  return "no";
+}
+
+function matchesSearch(game, q){
+  if(!q) return true;
+  const hay = ((game.name||"")+" "+(game.short_desc||"")+" "+(game.tags||[]).join(" ")).toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+
+function passes(s, d, f = F){
+  const game = d.gamesById[s.appid] || {};
+  if(!matchesSearch(game, f.q)) return false;
+  // a moddable game is kept and labelled rather than hidden, because "you can
+  // play this if someone installs a mod" is useful and "it vanished" is not
+  if(crewFit(s, f.crew) === "no") return false;
+  if(f.mine && !d.myPicks.includes(s.appid)) return false;
+  if(f.wellrated && !((game.review_pct ?? 0) >= 85)) return false;
+  if(f.played){
+    const played = (d.playsBy[s.appid]||[]).length > 0;
+    if(f.played === "fresh" && played) return false;
+    if(f.played === "again" && !played) return false;
+  }
+  if(f.energy.size && !f.energy.has(energyOf(s, d))) return false;
+  if(f.setup.size && !f.setup.has(s.setup)) return false;
+  if(f.shape.size && !f.shape.has(game.shape)) return false;
+  if(f.vibe.size  && !f.vibe.has(vibeOf(s, d))) return false;
+  return true;
+}
+
+function sortShelf(list, d){
+  const sortBy = A().sort, asc = A().dir === "asc";
+  const val = s => {
+    const g = d.gamesById[s.appid] || {};
+    switch(sortBy){
+      case "votes":  return d.counts[s.appid] || 0;
+      case "review": return g.review_pct ?? -1;
+      case "added":  return new Date(s.added_at).getTime();
+      case "length": return -(SHAPE_ORDER[g.shape] ?? 9);   // shortest first when desc
+      case "crew":   return s.crew_max ?? 0;
+      case "az":     return g.name || "";
+      default:       return 0;
+    }
+  };
+  return list.slice().sort((a,b) => {
+    const va = val(a), vb = val(b);
+    // strings and numbers need opposite-looking comparators for the same
+    // direction, so they are handled separately rather than with one sign flip
+    if(typeof va === "string"){
+      return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    }
+    if(va !== vb) return asc ? va - vb : vb - va;
+    // stable tiebreak on name, so equal values never jitter between renders
+    const ga = d.gamesById[a.appid]||{}, gb = d.gamesById[b.appid]||{};
+    return (ga.name||"").localeCompare(gb.name||"");
+  });
+}
+
+/** Sections for a shelf that has outgrown one long scroll. */
+function groupShelf(list, d){
+  const groupBy = A().group;
+  if(groupBy === "none") return [{ label:null, items:list }];
+  const buckets = new Map();
+  const keyOf = s => {
+    const g = d.gamesById[s.appid] || {};
+    if(groupBy === "votes"){
+      if(stateOf(s, d) === "playing") return "\u25B6 On right now";
+      if(stateOf(s, d) === "benched") return "Benched";
+      return (d.counts[s.appid]||0) > 0 ? "In the running" : "Nobody's picked it yet";
+    }
+    if(groupBy === "energy"){ const e = energyOf(s, d); return e ? ENERGY[e] : "Not rated yet"; }
+    if(groupBy === "shape")  return g.shape  ? SHAPE[g.shape]   : "Unsorted";
+    if(groupBy === "setup")  return s.setup  ? SETUP[s.setup]   : "Unsorted";
+    if(groupBy === "played") return (d.playsBy[s.appid]||[]).length ? "Played before" : "Never played";
+    return "";
+  };
+  list.forEach(s => {
+    const k = keyOf(s);
+    if(!buckets.has(k)) buckets.set(k, []);
+    buckets.get(k).push(s);
+  });
+  // keep a sensible reading order rather than whatever the data happened to be in
+  const order = {
+    votes:  ["\u25B6 On right now","In the running","Nobody's picked it yet","Benched"],
+    energy: ["Chill","Normal","Heavy","Not rated yet"],
+    shape:  ["Drop in","One sitting","Campaign","Long haul","Unsorted"],
+    setup:  ["Just launch","Someone hosts","Dedicated server","Unsorted"],
+    played: ["Never played","Played before"],
+  }[A().group] || [];
+  return [...buckets.entries()]
+    .sort((a,b) => {
+      const ia = order.indexOf(a[0]), ib = order.indexOf(b[0]);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    })
+    .map(([label, items]) => ({ label, items }));
+}
+/** Drop the heading when the grouping produced exactly one bucket: a lone
+ *  "Up for a vote" header over the entire shelf says nothing. */
+function sections(list, d){
+  const out = groupShelf(list, d);
+  return out.length === 1 ? [{ label:null, items:out[0].items }] : out;
+}
+
+/* ============================================================================
+   ACTIONS
+   ========================================================================== */
+
+/** Never gate the shelf behind a name. Park the action, ask, then run it. */
+function needName(action){
+  if(myMemberId) return false;
+  pending = action;
+  sheet = { kind:"name", step:"enter", typed: myName };
+  render();
+  return true;
+}
+
+async function refresh(){
+  if(!code) return;
+  try{
+    // whoami first: a returning visitor is recognised without being asked again
+    if(myMemberId === null){
+      myMemberId = await rpc("whoami", { p_code: code, p_device: deviceId });
+    }
+    const next = await rpc("get_state", { p_code: code });
+    const before = S ? derive() : null;
+    S = next;
+    const after = derive();
+
+    if(before && after && after.ranked.length){
+      const nl = after.ranked[0].appid;
+      const ol = before.ranked.length ? before.ranked[0].appid : null;
+      if(ol && nl !== ol){
+        const g = after.gamesById[nl];
+        flash = (g ? g.name : "Something") + " just took the lead";
+        setTimeout(() => { flash = ""; render(); }, 9000);
+      }
+    }
+    render();
+  }catch(err){
+    if(/no group/i.test(err.message)){
+      myGroups = myGroups.filter(g => g.code !== code);
+      store.set("groups", myGroups);
+      location.hash = "";
+    }
+  }
+}
+
+async function togglePick(appid){
+  if(needName(() => togglePick(appid))) return;
+  const d = derive();
+  let picks = d.myPicks.slice();
+  const at = picks.indexOf(appid);
+  if(at > -1) picks.splice(at,1);
+  else { if(picks.length >= 3) picks.shift(); picks.push(appid); pulse = appid; }
+  // optimistic: the tap registers instantly, the write reconciles behind it
+  const mine = (S.ballots||[]).find(b => b.member_id === myMemberId);
+  if(mine) mine.picks = picks;
+  else (S.ballots = S.ballots||[]).push({member_id:myMemberId, picks, updated_at:new Date().toISOString()});
+  render();
+  setTimeout(()=>{ pulse = null; }, 600);
+  try{ await rpc("set_picks", {p_code:code, p_device:deviceId, p_picks:picks}); }
+  finally{ refresh(); }
+}
+
+async function unbench(appid){
+  if(needName(() => unbench(appid))) return;
+  try{ await rpc("unbench_game", {p_code:code, p_device:deviceId, p_appid:appid}); }
+  finally{ refresh(); }
+}
+async function saveTake(appid, body){
+  try{ await rpc("set_take", {p_code:code, p_device:deviceId, p_appid:appid, p_body:body}); }
+  finally{ refresh(); }
+}
+/** Log, or re-verdict, a game the group played before any of this existed. */
+async function logPastPlay(appid, verdict){
+  if(needName(() => logPastPlay(appid, verdict))) return;
+  try{ await rpc("log_past_play", {p_code:code, p_device:deviceId, p_appid:appid, p_verdict:verdict || null}); }
+  finally{ refresh(); }
+}
+async function forgetPlay(appid, round){
+  try{ await rpc("forget_play", {p_code:code, p_device:deviceId, p_appid:appid, p_round:round}); }
+  finally{ refresh(); }
+}
+
+async function saveFacets(appid, energy, crew, setup, crewMod, vibe){
+  try{ await rpc("set_facets", {p_code:code, p_device:deviceId, p_appid:appid,
+                                p_energy:energy, p_crew_max:crew, p_setup:setup,
+                                p_crew_mod: crewMod ?? null, p_vibe: vibe ?? null}); }
+  finally{ refresh(); }
+}
+
+/* ---------- identity ---------- */
+async function finishAsNew(name){
+  myName = name; store.set("name", name);
+  myMemberId = await rpc("join_as_new", {p_code:code, p_device:deviceId, p_person:name});
+  await refresh();
+  sheet = null;
+  const run = pending; pending = null;
+  if(run) run(); else render();
+}
+async function finishAsClaim(member){
+  myName = member.name; store.set("name", member.name);
+  myMemberId = await rpc("claim_member", {p_code:code, p_device:deviceId, p_member:member.member_id});
+  await refresh();
+  sheet = null;
+  const run = pending; pending = null;
+  if(run) run(); else render();
+}
+
+/* ---------- add ---------- */
+/** An app id out of anything someone might paste: a bare number, or any
+ *  store, community or help URL. */
+function parseAppid(input){
+  const t = String(input || "").trim();
+  if(/^\d{2,8}$/.test(t)) return Number(t);
+  // /app/1478500/Big_Walk/?curator_clanid=... - everything after the id is
+  // optional, so match the id and read the slug separately if it is there
+  const m = t.match(/\/app\/(\d+)/);
+  return m ? Number(m[1]) : null;
+}
+/** "Big_Walk" out of a store URL, for the preview's benefit only. */
+function parseSlug(input){
+  const m = String(input || "").match(/\/app\/\d+\/([^/?#]+)/);
+  return m ? decodeURIComponent(m[1]).replace(/_/g, " ") : null;
+}
+
+let searchTimer = null;
+function onAddInput(value){
+  clearTimeout(searchTimer);
+  addMsg = null;
+  const q = value.trim();
+
+  // A pasted link is unambiguous, so go straight for it rather than typing it
+  // into a search box that cannot read URLs.
+  if(parseAppid(q)){ addLookup(q); return; }
+
+  if(q.length < 2){ addResults = []; render(); return; }
+  searchTimer = setTimeout(() => runSearch(q), 400);
+}
+
+async function runSearch(q){
+  addBusy = true; render();
+  try{
+    const { results } = await callEnrich({action:"search", q});
+    addResults = results || [];
+    if(!addResults.length) addMsg = {kind:"bad", text:"Steam found nothing called that. Try fewer words, or paste the store link."};
+  }catch(err){ addResults = []; addMsg = {kind:"bad", text:err.message}; }
+  finally{ addBusy = false; render(); }
+}
+
+/** Fetch one exact game from a link or id and show it ready to add. */
+async function addLookup(raw){
+  const appid = parseAppid(raw);
+  if(!appid) return;
+  clearTimeout(searchTimer);
+  addBusy = true; addMsg = null; addResults = []; render();
+  try{
+    const { game } = await callEnrich({action:"get", appid, slug: parseSlug(raw)});
+    addResults = [{appid, name: game.name, header: game.header}];
+  }catch(err){ addMsg = {kind:"bad", text:err.message}; }
+  finally{ addBusy = false; render(); }
+}
+
+/** Whatever is in the box: a link goes straight to lookup, words to search. */
+function submitAdd(){
+  const el = document.getElementById("addq");
+  if(!el) return;
+  const v = el.value.trim();
+  if(!v) return;
+  if(parseAppid(v)) addLookup(v); else runSearch(v);
+}
+async function addGame(appid){
+  if(needName(() => addGame(appid))) return;
+  busy = true; addMsg = null; render();
+  try{
+    const { game } = await callEnrich({action:"get", appid});
+    // anything in the curated list arrives already knowing its cap and setup
+    const f = curatedFor(appid);
+    await rpc("add_game", {p_code:code, p_device:deviceId, p_appid:appid,
+                           p_energy:f.energy, p_crew_max:f.crew_max,
+                           p_setup:f.setup, p_crew_mod:f.crew_mod, p_crew_note:f.crew_note});
+    addMsg = {kind:"ok", text: game.name + " is up for a vote"};
+    addResults = [];
+    const box = document.getElementById("addq"); if(box) box.value = "";
+    await refresh();
+    sheet = { kind:"take", appid, fromAdd:true, gameName: game.name };
+  }catch(err){ addMsg = {kind:"bad", text:err.message}; }
+  finally{ busy = false; render(); }
+}
+
+/* ---------- rounds ---------- */
+async function closeRound(appid){ await rpc("close_round", {p_code:code, p_device:deviceId, p_appid:appid}); sheet=null; refresh(); }
+async function startRound(verdict, bench, onBreak){
+  await rpc("new_round", {p_code:code, p_device:deviceId,
+                          p_verdict: verdict || null, p_bench: !!bench, p_break: !!onBreak});
+  sheet=null; refresh();
+}
+async function setBreak(on){
+  if(needName(() => setBreak(on))) return;
+  try{ await rpc("set_break", {p_code:code, p_device:deviceId, p_on:!!on}); }
+  finally{ sheet=null; refresh(); }
+}
+async function reopenRound(){ await rpc("reopen_round", {p_code:code, p_device:deviceId}); sheet=null; refresh(); }
+
+/* ---------- groups ---------- */
+async function createGroup(name, person){
+  const newCode = await rpc("create_group", {p_name:name, p_device:deviceId, p_person:person||myName||"Host"});
+  if(person){ myName = person; store.set("name", person); }
+  myGroups = [...myGroups.filter(g=>g.code!==newCode), {code:newCode, name}];
+  store.set("groups", myGroups);
+  for(const appid of SEED){
+    // Two independent steps on purpose. Enrichment only supplies the name,
+    // blurb and cover; the facets are local. If Steam is slow or down, the
+    // shelf still gets built and the missing details fill in on a later view,
+    // instead of a new group opening completely empty.
+    try{ await callEnrich({action:"get", appid}); }catch{}
+    try{
+      const f = curatedFor(appid);
+      await rpc("add_game", {p_code:newCode, p_device:deviceId, p_appid:appid,
+                             p_energy:f.energy, p_crew_max:f.crew_max, p_setup:f.setup,
+                             p_crew_mod:f.crew_mod, p_crew_note:f.crew_note});
+    }catch(err){ console.warn("seed failed for", appid, err && err.message); }
+  }
+  myMemberId = null;
+  location.hash = "#/g/" + newCode;
+}
+async function joinByCode(c){
+  const clean = String(c||"").trim().toUpperCase();
+  if(!clean) return;
+  const st = await rpc("get_state", {p_code: clean});       // throws if the code is wrong
+  myGroups = [...myGroups.filter(g=>g.code!==clean), {code:clean, name:st.group.name}];
+  store.set("groups", myGroups);
+  myMemberId = null; S = null;
+  location.hash = "#/g/" + clean;
+}
+
+/* ============================================================================
+   SHARE TEXT
+   ========================================================================== */
+function summaryText(d){
+  const g = S.group;
+  const lines = ["🎮 " + g.name + " — what are we playing"];
+  lines.push("");
+  if(!d.ranked.length) lines.push("nothing yet, someone go first");
+  else d.ranked.slice(0,5).forEach((r,i) => {
+    const g2 = d.gamesById[r.appid];
+    lines.push((i+1)+". "+(g2?g2.name:r.appid)+" — "+r.n+(r.n===1?" vote":" votes"));
+  });
+  lines.push("");
+  lines.push(S.group.paused_at ? "on a break, votes still welcome"
+                               : d.votedCount+" of "+d.lookedCount+" in");
+  lines.push(location.origin+location.pathname+"#/g/"+g.code);
+  return lines.join("\n");
+}
+function nudgeText(d){
+  const voted = new Set((S.ballots||[]).filter(b=>(b.picks||[]).length).map(b=>b.member_id));
+  const missing = d.members.filter(m => !voted.has(m.member_id)).map(m=>m.label);
+  const link = location.origin+location.pathname+"#/g/"+S.group.code;
+  if(!missing.length) return "that's everyone in 🎉 " + link;
+  return missing.join(", ") + " — still waiting on your picks 👀\n" + link;
+}
+async function copy(text, btn){
+  try{
+    await navigator.clipboard.writeText(text);
+    const was = btn.textContent; btn.textContent = "Copied";
+    setTimeout(()=>{ btn.textContent = was; }, 1600);
+  }catch{ btn.textContent = "Select the text above"; }
+}
+
+/* ============================================================================
+   RENDER
+   ========================================================================== */
+function render(){
+  // Nothing behind a sheet should scroll. Without this the shelf drifts around
+  // under your thumb while you are trying to use the sheet on top of it.
+  document.body.classList.toggle("locked", !!sheet);
+  if(!CONFIGURED) return renderSetup();
+  const m = location.hash.match(/^#\/g\/([A-Za-z0-9]+)/);
+  if(!m){ code=""; return renderLanding(); }
+  code = m[1].toUpperCase();
+  if(!S || S.group.code !== code) return renderLoading();
+  renderGroup();
+}
+
+function renderSetup(){
+  app.innerHTML = `<div class="wrap"><div class="hero"><h1>Almost there</h1>
+    <p>Open <code>index.html</code>, find the <code>CONFIG</code> block near the top of the script,
+    and paste in your Supabase project URL and anon key. The README walks through it.</p></div></div>`;
+}
+function renderLoading(){
+  app.innerHTML = `<div class="wrap"><div class="hero"><h1>Loading…</h1>
+    <p>If this hangs about, the code in the link is probably wrong.</p></div></div>`;
+  if(loading) return;
+  loading = true;
+  refresh().finally(()=>{ loading = false; });
+}
+
+function renderLanding(){
+  app.innerHTML = `
+    <header class="top"><div class="wrap inner">
+      <div class="brand"><span class="gn">Game Night</span></div>
+      ${themeBtn()}
+    </div></header>
+    <div class="wrap">
+      <div class="hero">
+        <h1>Pick what we play next</h1>
+        <p>Chuck your games in, everyone picks three, the shelf sorts itself out.
+           No accounts, no app, just a link.</p>
+      </div>
+      ${myGroups.length ? `
+        <div class="sechead"><div><h2>Your crews</h2></div></div>
+        <div class="mygroups">${myGroups.map(g => `
+          <button class="mygroup" data-open="${esc(g.code)}">
+            <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 38% 48%)">${esc(monogram(g.name))}</span>
+            <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span>
+          </button>`).join("")}</div>` : ""}
+
+      <div class="sechead"><div><h2>Start a crew</h2><p>You get a link to send round.</p></div></div>
+      <div class="add"><div class="row">
+        <input class="input" id="newname" placeholder="Group name, e.g. Brisbane crew" maxlength="40">
+        <button class="btn" id="createbtn">Create</button>
+      </div></div>
+
+      <div class="sechead"><div><h2>Got a code?</h2><p>Paste whatever a mate sent you.</p></div></div>
+      <div class="add"><div class="row">
+        <input class="input" id="joincode" placeholder="7 characters" maxlength="7" autocapitalize="characters">
+        <button class="btn btn--ghost" id="joinbtn">Join</button>
+      </div></div>
+      <p class="footer">Data lives in your own Supabase project. Cover art and stats come from Steam.</p>
+    </div>
+    ${sheet ? renderSheet(null) : ""}`;
+
+  wireCommon(null);
+  const create = document.getElementById("createbtn");
+  create.onclick = async () => {
+    const name = document.getElementById("newname").value.trim();
+    if(!name) return;
+    if(!myName){ sheet = {kind:"name", step:"enter", typed:"", then:"create", groupName:name}; return render(); }
+    create.disabled = true; create.textContent = "Setting up…";
+    try{ await createGroup(name, myName); }
+    catch(err){ create.disabled=false; create.textContent="Create"; alert(err.message); }
+  };
+  document.getElementById("joinbtn").onclick = async () => {
+    const c = document.getElementById("joincode").value.trim();
+    if(!c) return;
+    try{ await joinByCode(c); }catch(err){ alert(err.message); }
+  };
+  app.querySelectorAll("[data-open]").forEach(b => {
+    b.onclick = () => { S=null; myMemberId=null; location.hash = "#/g/"+b.dataset.open; };
+  });
+}
+
+function renderGroup(){
+  const d = derive();
+  const g = S.group;
+  const shelf = S.shelf || [];
+  const counts = {
+    inplay:  shelf.filter(s => stateOf(s,d) !== "benched" && (d.counts[s.appid]||0) > 0).length,
+    benched: shelf.filter(s => stateOf(s,d) === "benched").length,
+  };
+  // The whole shelf, every time. Backlog and played used to be tabs, which
+  // meant a game could be "missing" while sitting two taps away. Now the state
+  // is a section heading and a card CTA, and the filters are what narrow it.
+  // Benched games are the one thing not on the shelf by default. Everything
+  // else is, always: no tabs, no gate, no second list.
+  const pool = shelf.filter(s => (stateOf(s, d) === "benched") === F.benched);
+  const pct = Math.min(100, Math.round((d.votedCount / Math.max(1, g.quorum)) * 100));
+  const call = callable(d, g);
+
+  const filtered = sortShelf(pool.filter(s => passes(s, d)), d);
+  const active = activeFilters();
+
+  app.innerHTML = `
+    <header class="top"><div class="wrap inner">
+      <div class="brand"><span class="gn">${esc(g.name)}</span><span class="code">${esc(g.code)}</span></div>
+      ${d.meMember ? `<button class="mepill" id="mebtn" title="That's you">
+        <span class="dot" style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(d.meMember.name)} 38% 48%)">${esc(d.meMember.name[0].toUpperCase())}</span>
+        <span class="nm">${esc(d.meMember.name)}</span></button>` : ""}
+      <button class="iconbtn" id="switchbtn" aria-label="Switch group"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+      ${themeBtn()}
+    </div></header>
+
+    <div class="wrap">
+      ${flash ? `<div class="round"><div class="flash">⚡ ${esc(flash)}</div></div>` : ""}
+
+      ${g.paused_at && !g.locked_appid ? `
+      <section class="round round--paused">
+        <div class="line1">
+          <h2>\u23F8 Taking a break</h2>
+          <span class="when">since ${esc(shortDate(g.paused_at))}</span>
+        </div>
+        <div class="line2">
+          <span>Chuck picks in whenever. Nobody is counting.</span>
+          <button class="btn btn--sm" id="resumebtn" style="margin-left:auto">Pick it back up</button>
+        </div>
+      </section>` : g.locked_appid ? `
+      <section class="round locked">
+        <div class="line1">
+          <h2>\u25B6 Now playing</h2>
+          <span class="when">${esc(ago((d.nowPlaying||{}).started_at))}</span>
+        </div>
+        <div class="line2">
+          <span><b>${esc((d.gamesById[g.locked_appid]||{}).name || "")}</b> got the nod in round ${g.round_no}</span>
+          <button class="btn btn--ghost btn--sm" id="reopenbtn">Changed our minds</button>
+          <button class="btn btn--sm" id="closebtn" style="margin-left:auto">Finished it</button>
+        </div>
+      </section>` : `
+      <section class="round">
+        <div class="line1">
+          <h2>Round ${g.round_no}</h2>
+          ${d.liveCount ? `<span class="when" style="color:var(--live)">${d.liveCount} looking now</span>` : ""}
+        </div>
+        <div class="progress"><i style="width:${pct}%"></i></div>
+        <div class="line2">
+          <span><b class="num">${d.votedCount}</b> of ${d.lookedCount} in${
+            call.ready ? " · enough to call it" : call.short === d.lookedCount ? "" : " · "+call.short+" more to call it"}</span>
+          <button class="btn btn--ghost btn--sm" id="breakbtn">Taking a break</button>
+          ${d.ranked.length ? `<button class="btn btn--ghost btn--sm" id="closebtn" style="margin-left:auto">Call it</button>` : ""}
+        </div>
+      </section>`}
+
+      ${renderLeader(d, g)}
+
+      <div class="cols">
+        <main>
+          <div class="sechead"><div><h2>The shelf</h2></div>
+            <button class="btn btn--ghost btn--sm" id="shufflebtn">🎲 Just pick one</button>
+          </div>
+
+          <div class="shelfbar">
+          <div class="toolbar">
+            <label class="searchwrap">
+              <span class="sr">Search the shelf</span>
+              <svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input class="input" id="q" placeholder="Search the shelf…" value="${esc(F.q)}">
+              ${F.q ? `<button class="clear" id="qclear" aria-label="Clear search">✕</button>` : ""}
+            </label>
+            <button class="tbtn" id="fbtn" aria-haspopup="dialog">
+              <svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M3 5h18M6 12h12M10 19h4"/></svg>
+              Filters ${active.length ? `<span class="badge num">${active.length}</span>` : ""}
+            </button>
+            <button class="tbtn" id="sortbtn">
+              <svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M7 4v16M7 20l-3-3M17 20V4M17 4l3 3"/></svg>
+              ${esc(sortLabel())}
+            </button>
+            <div class="seg" role="group" aria-label="View">
+              <button data-view="cards" aria-pressed="${view==="cards"}" aria-label="Card view"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+              <button data-view="list" aria-pressed="${view==="list"}" aria-label="List view"><svg viewBox="0 0 24 24" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+            </div>
+          </div>
+          </div>
+
+          ${active.length ? `<div class="activebar">
+            ${active.map(a => `<span class="abchip">${esc(a.label)}
+              <button data-unfilter="${a.k}" data-uv="${esc(a.v ?? "")}" aria-label="Remove ${esc(a.label)}">✕</button></span>`).join("")}
+            <button class="clearall" id="clearall">Clear all</button>
+          </div>` : ""}
+
+          ${filtered.length === pool.length
+            ? (counts.inplay ? "" : `<p class="resultline">${pool.length} on the shelf, nobody has picked yet</p>`)
+            : `<p class="resultline">${filtered.length} of ${pool.length} shown</p>`}
+
+          ${filtered.length
+            ? sections(filtered, d).map(sec => `
+                ${sec.label ? `<h3 class="grouphead">${esc(sec.label)}<span>${sec.items.length}</span></h3>` : ""}
+                ${view === "cards"
+                  ? `<div class="grid">${sec.items.map(s => card(s,d)).join("")}</div>`
+                  : listView(sec.items, d)}`).join("")
+            : `<div class="empty"><b>Nothing survived that</b>
+                 ${F.crew ? "Nothing here seats "+F.crew+" of you." : "That is a lot of filters."}
+                 <br><button class="clearall" id="clearall2">Clear the lot</button>
+               </div>`}
+
+          <div class="sechead"><div><h2>Add something</h2><p>Search Steam, or paste a link.</p></div></div>
+          <div class="add">
+            <div class="addfield">
+              <input class="input" id="addq" placeholder="Game name, or a Steam link"
+                     enterkeyhint="search" ${busy?"disabled":""}>
+              <button class="addgo" id="addgo" aria-label="Look it up" ${busy||addBusy?"disabled":""}>
+                ${addBusy
+                  ? `<span class="spin"></span>`
+                  : `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>`}
+              </button>
+            </div>
+            ${addResults.length ? `<div class="results">${addResults.map(r => `
+              <div class="res">
+                ${r.header ? `<img src="${esc(r.header)}" alt="" loading="lazy">`
+                  : `<span style="width:62px;height:29px;border-radius:4px;flex:none;background:hsl(${hueOf(r.name)} 38% 48%)"></span>`}
+                <span class="nm">${esc(r.name)}</span>
+                <span class="resbtns">
+                  <button class="btn btn--sm" data-add="${r.appid}">Add it</button>
+                </span>
+              </div>`).join("")}</div>` : ""}
+            ${addMsg ? `<p class="msg msg--${addMsg.kind==="ok"?"ok":"bad"}">${esc(addMsg.text)}</p>` : ""}
+          </div>
+
+          <p class="footer">Steam never says how many can play, so the caps are ours. Tap one if it looks off.</p>
+        </main>
+
+        <aside class="rail">
+          <section class="panel">
+            <h3>The vote</h3>
+            ${d.ranked.length ? d.ranked.map(r => {
+              const gm = d.gamesById[r.appid], max = d.ranked[0].n;
+              return `<div class="bar">
+                <span class="t">${esc(gm?gm.name:r.appid)}</span><span class="c num">${r.n}</span>
+                <span class="track"><span class="fill" style="width:${(r.n/max)*100}%"></span></span>
+                <span class="ago">last vote ${esc(ago(d.lastVoteAt[r.appid]))}</span>
+              </div>`;
+            }).join("") : `<p class="empty" style="padding:8px 0;text-align:left">Nothing yet. First pick sets the tone.</p>`}
+          </section>
+
+          <section class="panel">
+            <h3>Who's in</h3>
+            <div class="crew">${d.members.length ? d.members.map(mm => {
+              const voted = (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
+              return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
+                ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
+                <span class="dot" style="background:hsl(${hueOf(mm.name)} 38% 48%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
+                ${mm.device_count>1 ? `<span class="devs" title="${mm.device_count} devices linked">${mm.device_count}</span>` : ""}
+              </span>`;
+            }).join("") : `<span class="empty">Just you so far.</span>`}</div>
+          </section>
+
+          <section class="panel share">
+            <h3>Send to the chat</h3>
+            <pre>${esc(summaryText(d))}</pre>
+            <div class="row">
+              <button class="btn btn--ghost btn--sm" id="copysum">Copy where it's at</button>
+              <button class="btn btn--ghost btn--sm" id="copynudge">Copy a nudge</button>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <div class="votebar">
+      <div class="st">
+        <div class="a">${d.ranked.length ? esc((d.gamesById[d.ranked[0].appid]||{}).name||"")+" leading" : "No votes yet"}</div>
+        <div class="pips">${[0,1,2].map(i => `<i class="${i < d.myPicks.length ? "f":""}"></i>`).join("")}</div>
+        <div class="b num">${d.myPicks.length}/3 picks${g.paused_at ? " \u00B7 on a break" : " \u00B7 "+d.votedCount+" of "+d.lookedCount+" in"}</div>
+      </div>
+      <button class="btn btn--ghost btn--sm" id="sharemob">Share</button>
+    </div>
+
+    ${sheet ? renderSheet(d) : ""}`;
+
+  wireGroup(d, filtered);
+}
+
+function filterPanel(d, pool, counts){
+  const n = (fn) => pool.filter(fn).length;
+  counts = counts || {};
+  const grp = (key, map, getter) => `
+    <div class="fgroup"><div class="lab"><span class="eyebrow">${key.label}</span></div>
+      <div class="fset">${Object.keys(map).map(k => {
+        const count = n(s => getter(s, d) === (isNaN(+k) ? k : +k));
+        const val = isNaN(+k) ? k : +k;
+        return `<button class="chip ${key.cls?key.cls+val:""}" data-f="${key.f}" data-v="${k}"
+                  aria-pressed="${FT()[key.f].has(val)}" ${count?"":"disabled"}>
+                  ${esc(map[k])}<span class="n num">${count}</span></button>`;
+      }).join("")}</div></div>`;
+
+  return `<div class="fpanel">
+    <div class="fgroup">
+      <div class="lab"><span class="eyebrow">How many of us</span></div>
+      <div class="stepper">
+        <button class="sbtn" data-crew="-" aria-label="Fewer players">\u2212</button>
+        <span class="val${F.crew ? " num" : ""}">${FT().crew ?? "Any"}</span>
+        <button class="sbtn" data-crew="+" aria-label="More players">+</button>
+        ${FT().crew ? `<button class="clearall" data-crew="off">Any</button>`
+                 : `<span class="off">${d.lookedCount} in the group</span>`}
+      </div>
+    </div>
+
+    ${grp({label:"Energy", f:"energy"}, ENERGY, (s,dd) => energyOf(s, dd))}
+    ${grp({label:"How long", f:"shape"}, SHAPE, (s,dd) => (dd.gamesById[s.appid]||{}).shape)}
+    ${grp({label:"Vibe", f:"vibe"}, VIBE, (s,dd) => vibeOf(s, dd))}
+    ${grp({label:"Faff", f:"setup"}, SETUP, s => s.setup)}
+
+    <div class="fgroup"><div class="lab"><span class="eyebrow">Shortcuts</span></div>
+      <div class="fset">
+        <button class="chip" data-toggle="mine" aria-pressed="${FT().mine}" ${d.myPicks.length?"":"disabled"}>Only my picks</button>
+        <button class="chip" data-played="fresh" aria-pressed="${FT().played==="fresh"}">Never played</button>
+        <button class="chip" data-played="again" aria-pressed="${FT().played==="again"}">Played before</button>
+        <button class="chip" data-toggle="wellrated" aria-pressed="${FT().wellrated}">85%+ on Steam</button>
+        ${counts.benched ? `<button class="chip" data-toggle="benched" aria-pressed="${FT().benched}">Benched<span class="n num">${counts.benched}</span></button>` : ""}
+      </div>
+    </div>
+  </div>`;
+}
+
+function listView(list, d){
+  // headers set the arrangement, so the table and the toolbar never disagree
+  const th = (key, label, align, extra) => `<th class="${align?"r ":""}${extra||""}"><button data-arrange="${key}">${label}${
+    arrange===key ? `<span class="dir">\u25BE</span>` : ""}</button></th>`;
+  return `<div class="tablewrap"><table>
+    <thead><tr>
+      ${th("az","Game")}<th class="opt2">Energy</th><th class="opt2">Crew</th>
+      <th class="opt">Added by</th>${th("review","Reviews",1,"opt")}${th("votes","Votes",1)}<th class="r"></th>
+    </tr></thead>
+    <tbody>${list.map(s => {
+      const g = d.gamesById[s.appid]||{}, n = d.counts[s.appid]||0, on = d.myPicks.includes(s.appid);
+      return `<tr class="${on?"on":""}">
+        <td class="g"><div class="nm">
+          <span class="swatch" style="--tile:hsl(${hueOf(g.name||s.appid)} 40% 47%)"></span>
+          <span>${esc(g.name||s.appid)}</span></div>
+          <div class="sub"><span class="narrow">${
+            energyOf(s,d) ? esc(ENERGY[energyOf(s,d)])+" · " : ""}${s.crew_max ? "≤ "+s.crew_max+" · " : ""}</span>${
+            esc(SHAPE[g.shape]||"")}${vibeOf(s,d)?" · "+esc(VIBE[vibeOf(s,d)]):""}</div></td>
+        <td class="opt2">${energyOf(s,d)?`<span class="pill pill--e${energyOf(s,d)}">${esc(ENERGY[energyOf(s,d)])}</span>`:`<span class="pill">—</span>`}</td>
+        <td class="opt2"><button class="pill pill--set" data-facets="${s.appid}" title="${esc(s.crew_note||"")}">${
+          s.crew_max ? "≤ "+s.crew_max : "Set"}${s.crew_mod ? " <span class=\"modhint\">+mod</span>" : ""}</button></td>
+        <td class="opt">${esc(s.added_name || "\u2014")}</td>
+        <td class="r opt num">${g.review_pct!=null?g.review_pct+"%":"—"}</td>
+        <td class="r num">${n}</td>
+        <td class="r"><button class="rowpick" data-pick="${s.appid}" aria-pressed="${on}">${on?"Picked":"Pick"}</button></td>
+      </tr>`;
+    }).join("")}</tbody></table></div>`;
+}
+
+function renderLeader(d, g){
+  const appid = g.locked_appid || (d.ranked.length ? d.ranked[0].appid : null);
+  if(!appid) return "";
+  const game = d.gamesById[appid];
+  if(!game) return "";
+  const n = d.counts[appid] || 0;
+  const tied = d.ranked.filter(r => r.n === n && !g.locked_appid);
+  return `<div class="leader">
+    <div class="art" style="--tile:hsl(${hueOf(game.name)} 40% 47%);--ang:${20+(appid%120)}deg">
+      <div class="gen"><span>${esc(monogram(game.name))}</span></div>
+      ${game.header ? `<img src="${esc(game.header)}" alt="" onload="this.classList.add('in')">` : ""}
+      <div class="scrim"></div>
+      <div class="cap">
+        <div class="k">${g.locked_appid ? "We're playing" : tied.length>1 ? "Dead heat" : "Out in front"}</div>
+        <div class="t">${esc(game.name)}</div>
+        <div class="m num">${n} ${n===1?"vote":"votes"}${game.review_desc?" · "+esc(game.review_desc):""}</div>
+      </div>
+    </div></div>`;
+}
+
+function card(s, d){
+  const state = stateOf(s, d);
+  const game = d.gamesById[s.appid] || {name:"Loading…", appid:s.appid};
+  const n = d.counts[s.appid]||0, on = d.myPicks.includes(s.appid);
+  const eff = energyOf(s, d);
+  const cf = crewFit(s, F.crew);
+  const takes = d.takesBy[s.appid]||[];
+  const open = expanded.has(s.appid);
+  const tagline = BLURBS[s.appid] || game.short_desc || "";
+  const desc = open ? (game.long_desc || game.short_desc || "") : tagline;
+  const hasMore = !!(game.long_desc && game.long_desc !== tagline);
+  const plays = d.playsBy[s.appid] || [];
+  const lastPlay = plays[0];
+  const isNow = d.nowPlaying && d.nowPlaying.appid === s.appid;
+  return `<article class="card card--${state}${on?" on":""}${pulse===s.appid?" pulse":""}">
+    <div class="art" style="--tile:hsl(${hueOf(game.name)} 40% 47%);--ang:${20+(s.appid%120)}deg">
+      <div class="gen"><span>${esc(monogram(game.name))}</span></div>
+      ${game.header ? `<img src="${esc(game.header)}" alt="" loading="lazy" onload="this.classList.add('in')">` : ""}
+      <div class="badges">
+        ${isNow ? `<span class="bdg bdg--now">\u25B6 playing now</span>`
+          : cf === "mods" ? `<span class="bdg bdg--mods">needs a mod</span>`
+          : cf === "unknown" && F.crew ? `<span class="bdg">cap unknown</span>`
+          : ""}
+        <span class="sp"></span>
+        ${state === "benched" ? `<span class="bdg bdg--backlog">benched</span>`
+          : plays.length && !isNow ? `<span class="bdg bdg--played" title="Last played ${esc(ago(lastPlay.started_at))}">${
+              plays.length > 1 ? "played \u00D7"+plays.length : "played"}</span>` : ""}
+      </div>
+    </div>
+    <div class="body">
+      <h3>${esc(game.name)}</h3>
+      ${desc ? `<p class="desc${open?"":" clamp"}">${esc(desc)}</p>` : ""}
+      ${hasMore ? `<button class="more" data-more="${s.appid}">${open?"Less":"More"}</button>` : ""}
+      <div class="facets">
+        ${eff ? `<span class="pill pill--e${eff}${energyIsGuess(s,d)?" pill--guess":""}" title="Energy: ${esc(ENERGY[eff])}${energyIsGuess(s,d)?", guessed from Steam tags. Tap the cap to set it properly":""}"><i class="lvl">${
+          "\u25CF".repeat(eff)}${"\u25CB".repeat(3-eff)}</i>${esc(ENERGY[eff])}</span>` : ""}
+        <button class="pill pill--set" data-facets="${s.appid}" title="${esc(s.crew_note||"")}">
+          ${s.crew_max ? "Up to "+s.crew_max : "Cap unknown"}${s.crew_mod ? ` <span class="modhint">${s.crew_mod} modded</span>` : ""}
+        </button>
+        ${s.setup ? `<span class="pill">${esc(SETUP[s.setup])}</span>` : ""}
+        ${game.shape ? `<span class="pill">${esc(SHAPE[game.shape]||game.shape)}</span>` : ""}
+        ${game.review_pct!=null ? `<span class="pill pill--rev" title="${esc(game.review_desc||"")} · ${game.review_count||0} reviews">${game.review_pct}%</span>` : ""}
+        <a class="pill pill--link" href="https://store.steampowered.com/app/${s.appid}/" target="_blank" rel="noopener">Steam ↗</a>
+      </div>
+      ${plays.length && !isNow ? `<p class="playline">
+        <span>Played ${esc(ago(lastPlay.started_at))}${
+          plays.length > 1 ? " \u00B7 "+plays.length+" times now" : ""} \u00B7</span>
+        <span class="pill pill--v-${lastPlay.verdict||"none"}">${
+          lastPlay.verdict ? VERDICT_ICON[lastPlay.verdict]+" "+esc(VERDICT[lastPlay.verdict]) : "no verdict"}</span>
+      </p>` : ""}
+      ${s.added_name ? `<p class="addedby">Added by ${esc(s.added_name)}</p>` : ""}
+      ${takes.length ? `<div class="takes">${takes.slice(0,3).map(t=>`<p class="take"><b>${esc(t.by)}</b>${esc(t.body)}</p>`).join("")}</div>` : ""}
+      <div class="foot">
+        ${state === "benched"
+          ? `<button class="pick" data-unbench="${s.appid}">Put it back</button>`
+          : state === "playing"
+          ? `<span class="pick pick--static">On right now</span>`
+          : `<button class="pick" data-pick="${s.appid}" aria-pressed="${on}">${on?"Picked":"Pick this"}<span class="n num">${n}</span></button>`}
+        <button class="mini" data-take="${s.appid}" aria-label="Add your take on ${esc(game.name)}">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      </div>
+    </div></article>`;
+}
+
+// backlogCard removed: card() handles every state, so there is one component
+/* ---------- sheets ---------- */
+function renderSheet(d){
+  const shell = inner => `<div class="sheetwrap" data-scrim><div class="sheet" role="dialog" aria-modal="true">${inner}</div></div>`;
+
+  if(sheet.kind === "name"){
+    if(sheet.step === "match"){
+      // the "is that the same as this account" moment
+      const many = sheet.candidates.length > 1;
+      return shell(`
+        <h3>Have we met?</h3>
+        <p>There ${many?"are already people":"is already someone"} in this group with a name like
+           <b>${esc(sheet.typed)}</b>. If one of them is you, tap it and your picks carry over to this device.</p>
+        ${sheet.candidates.map(c => {
+          const voted = (S.ballots||[]).find(b => b.member_id===c.member_id && (b.picks||[]).length);
+          const bits = [];
+          if(voted) bits.push(voted.picks.length + (voted.picks.length===1?" pick":" picks"));
+          else bits.push("no picks yet");
+          bits.push("last here " + ago(c.last_seen));
+          if(c.device_count>1) bits.push(c.device_count+" devices");
+          return `<button class="cand" data-claim="${esc(c.member_id)}">
+            <span class="dot" style="background:hsl(${hueOf(c.name)} 38% 48%)">${esc(monogram(c.name))}</span>
+            <span class="txt"><b>${esc(c.name)}</b><span>${esc(bits.join(" · "))}</span></span>
+            <span style="color:var(--muted)">→</span></button>`;
+        }).join("")}
+        <div class="row">
+          <button class="btn btn--ghost" id="notme">Nah, I'm new</button>
+        </div>`);
+    }
+    const returning = !!myName;
+    return shell(`
+      <h3>${returning ? "Back again" : "Who's this?"}</h3>
+      <p>${returning
+        ? "We know you on this device. Only change it if you are, in fact, someone else."
+        : "Just a name for the list. No signup, nothing to remember."}</p>
+      <input class="input" id="nameinput" placeholder="Your name" maxlength="24" value="${esc(sheet.typed||"")}">
+      <div class="row"><button class="btn" id="namego">${returning ? "Continue as "+esc(myName) : "That's me"}</button></div>`);
+  }
+
+  if(sheet.kind === "take"){
+    const game = d.gamesById[sheet.appid] || {};
+    const mine = (d.takesBy[sheet.appid]||[]).find(t => t.mine);
+    return shell(`
+      <h3>${sheet.fromAdd ? "In it goes. Sell it to us?" : "Your take on "+esc(game.name||"this")}</h3>
+      <p>${sheet.fromAdd
+        ? "One line on why "+esc(sheet.gameName||"it")+" is worth a night. Shows on the card. Skip if you cannot be bothered."
+        : "One line, shows on the card. Be honest."}</p>
+      <input class="input" id="takeinput" maxlength="140" placeholder="e.g. peaks at 4, grindy after that" value="${esc(mine?mine.body:"")}">
+      <div class="row">
+        <button class="btn btn--ghost" id="takeclear">${sheet.fromAdd ? "Skip" : "Clear"}</button>
+        <button class="btn" id="takego">Save</button>
+      </div>`);
+  }
+
+  if(sheet.kind === "facets"){
+    const s = (S.shelf||[]).find(x => x.appid === sheet.appid) || {};
+    const game = d.gamesById[sheet.appid] || {};
+    return shell(`
+      <h3>${esc(game.name||"Game")} details</h3>
+      <p>Steam never says how many can play, so this bit is on us.</p>
+      ${s.crew_note ? `<p class="notebox">${esc(s.crew_note)}</p>` : ""}
+      <span class="eyebrow">How many, out of the box</span>
+      <input class="input" id="fcrew" type="number" min="1" max="500" placeholder="Not sure? Leave it" value="${s.crew_max ?? ""}">
+      <span class="eyebrow">With mods or a server, if it stretches</span>
+      <input class="input" id="fmod" type="number" min="1" max="9999" placeholder="Optional" value="${s.crew_mod ?? ""}">
+      <span class="eyebrow">How much of a night it costs</span>
+      <div class="eopts">${[1,2,3].map(v => `<button class="eopt" data-fe="${v}" aria-pressed="${(sheet.e ?? energyOf(s,d))===v}"><b>${esc(ENERGY[v])}</b></button>`).join("")}</div>
+      <span class="eyebrow">Faff to get started</span>
+      <div class="eopts">${Object.keys(SETUP).map(k => `<button class="eopt" data-fs="${k}" aria-pressed="${(sheet.s ?? s.setup)===k}"><b style="font-size:11.5px">${esc(SETUP[k])}</b></button>`).join("")}</div>
+      <span class="eyebrow">Vibe ${vibeOf(s,d) && !s.vibe ? "· guessed from Steam tags" : ""}</span>
+      <div class="fset">${Object.keys(VIBE).map(k => `<button class="chip" data-fv="${k}" aria-pressed="${(sheet.v ?? vibeOf(s,d))===k}">${esc(VIBE[k])}</button>`).join("")}</div>
+      <span class="eyebrow">Have we played it</span>
+      ${(d.playsBy[sheet.appid]||[]).length ? `
+        <div class="playlog">${(d.playsBy[sheet.appid]||[]).map(pl => `
+          <div class="playrow">
+            <span>${pl.round_no ? "Round "+pl.round_no : "Before this"}</span>
+            <span>${pl.round_no ? esc(ago(pl.started_at)) : "at some point"}</span>
+            <span>${pl.verdict ? VERDICT_ICON[pl.verdict]+" "+esc(VERDICT[pl.verdict]) : pl.finished_at ? "no verdict" : "on now"}</span>
+            ${pl.finished_at ? `<button class="rowx" data-forget="${pl.round_no}" aria-label="Remove this play">\u2715</button>` : "<span></span>"}
+          </div>`).join("")}</div>` : `<p class="notebox">Nothing logged yet. Played it before all this? Say so.</p>`}
+      <div class="fset">
+        ${Object.keys(VERDICT).map(k => `<button class="chip" data-past="${k}">${
+          VERDICT_ICON[k]} ${esc(VERDICT[k])}</button>`).join("")}
+        <button class="chip" data-past="">Played, no verdict</button>
+      </div>
+      <div class="row"><button class="btn" id="facetgo">Save</button></div>
+      ${stateOf(s, d) === "open" ? `<button class="danger" id="retirego">Bench it</button>` : ""}`);
+  }
+
+  if(sheet.kind === "shuffle"){
+    const game = d.gamesById[sheet.appid] || {};
+    const s = (S.shelf||[]).find(x => x.appid === sheet.appid) || {};
+    return shell(`
+      <h3>🎲 ${esc(game.name || "That one")}</h3>
+      <p>One of the ${sheet.pool} that survived your filters.
+         ${s.setup ? esc(SETUP[s.setup])+"." : ""} ${s.crew_max ? "Up to "+s.crew_max+" players." : ""}</p>
+      <div class="row">
+        <button class="btn btn--ghost" id="reroll">Roll again</button>
+        <button class="btn" id="shufflepick">Pick it</button>
+      </div>`);
+  }
+
+  if(sheet.kind === "close"){
+    if(S.group.locked_appid){
+      const g2 = d.gamesById[S.group.locked_appid] || {};
+      return shell(`<h3>How was ${esc(g2.name || "it")}?</h3>
+        <p>For future reference. Skip it if you cannot be bothered.</p>
+        <div class="eopts">
+          ${Object.keys(VERDICT).map(k => `<button class="eopt" data-verdict="${k}" aria-pressed="${sheet.verdict===k}">
+            <b>${VERDICT_ICON[k]}</b><span>${esc(VERDICT[k])}</span></button>`).join("")}
+        </div>
+        <span class="eyebrow">Where does ${esc(g2.name || "it")} go?</span>
+        <div class="eopts eopts--2">
+          <button class="eopt" data-bench="0" aria-pressed="${!sheet.bench}">
+            <b>Leave it up</b><span>Still up for a vote, carrying its verdict</span></button>
+          <button class="eopt" data-bench="1" aria-pressed="${!!sheet.bench}">
+            <b>Bench it</b><span>Off the shelf until someone puts it back</span></button>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted)">Everyone's picks reset either way. Nothing gets deleted.</p>
+        <div class="row">
+          <button class="btn btn--ghost" data-dismiss>Not yet</button>
+          <button class="btn btn--ghost" id="newroundbreak">Take a break</button>
+          <button class="btn" id="newroundgo">Next round</button>
+        </div>`);
+    }
+    const top = d.ranked[0], game = d.gamesById[top.appid] || {};
+    return shell(`<h3>Lock in ${esc(game.name||"the leader")}?</h3>
+      <p>${d.votedCount} of ${d.lookedCount} have voted. Pins it up top so nobody can claim they missed it.</p>
+      <div class="row"><button class="btn btn--ghost" data-dismiss>Not yet</button>
+      <button class="btn" id="closego">Lock it in</button></div>`);
+  }
+
+  if(sheet.kind === "resume"){
+    const n = sheet.crew ?? d.lookedCount;
+    const fits = (S.shelf||[]).filter(x => stateOf(x,d) !== "benched" && crewFit(x, n) !== "no").length;
+    return shell(`<h3>Back on</h3>
+      <p>How many of us this time? It sets your crew filter so nothing that can't seat you all gets in the way.</p>
+      <div class="stepper">
+        <button class="sbtn" data-rcrew="-" aria-label="Fewer">\u2212</button>
+        <span class="val num">${n}</span>
+        <button class="sbtn" data-rcrew="+" aria-label="More">+</button>
+        <span class="off">${fits} of ${(S.shelf||[]).length} fit</span>
+      </div>
+      <div class="row">
+        <button class="btn btn--ghost" id="resumeskip">Skip</button>
+        <button class="btn" id="resumego">Back on</button>
+      </div>`);
+  }
+
+  if(sheet.kind === "share"){
+    const nudging = sheet.mode === "nudge";
+    const body = nudging ? nudgeText(d) : summaryText(d);
+    return shell(`<h3>Send to the chat</h3>
+      <div class="fset">
+        <button class="chip" data-sharemode="state" aria-pressed="${!nudging}">Where it's at</button>
+        <button class="chip" data-sharemode="nudge" aria-pressed="${nudging}">Nudge the slackers</button>
+      </div>
+      <p>${nudging ? "Names whoever has not picked yet." : "The leaderboard, plus the link."}</p>
+      <pre style="margin:0;white-space:pre-wrap;font-family:var(--f-mono);font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px;max-height:200px;overflow:auto">${esc(body)}</pre>
+      <div class="row"><button class="btn" id="copyshare">Copy it</button></div>`);
+  }
+
+  if(sheet.kind === "filters"){
+    const draft = fDraft || F;
+    const shelfAll = S.shelf || [];
+    const counts = {
+      benched: shelfAll.filter(x => stateOf(x,d) === "benched").length,
+    };
+    // counts are over the whole shelf, same as what the sheet will apply to
+    const pool = (S.shelf || []).filter(x => (stateOf(x,d) === "benched") === draft.benched);
+    const n = pool.filter(x => passes(x, d, draft)).length;
+    const on = activeFilters(draft).length;
+    return `<div class="sheetwrap" data-scrim><div class="sheet sheet--tall" role="dialog" aria-modal="true">
+      <div class="sheethead">
+        <h3>Filters</h3>
+        ${on ? `<button class="clearall" id="fclear">Clear ${on}</button>` : ""}
+        <button class="iconbtn" data-dismiss aria-label="Close">\u2715</button>
+      </div>
+      <div class="sheetbody">${filterPanel(d, pool, counts)}</div>
+      <div class="sheetfoot">
+        ${n
+          ? `<button class="btn" id="fapply">Show ${n} game${n===1?"":"s"}</button>`
+          : `<button class="btn" id="fclearall">Nothing matches. Start again</button>`}
+      </div>
+    </div></div>`;
+  }
+
+  if(sheet.kind === "arrange"){
+    const set = (keys) => `<div class="fset">${keys.map(k =>
+      `<button class="chip" data-arrange="${k}" aria-pressed="${arrange===k}">${esc(ARRANGE[k].label)}</button>`).join("")}</div>`;
+    const flat = Object.keys(ARRANGE).filter(k => ARRANGE[k].group === "none");
+    const grouped = Object.keys(ARRANGE).filter(k => ARRANGE[k].group !== "none");
+    return shell(`<h3>Arrange</h3>
+      <div class="fgroup"><div class="lab"><span class="eyebrow">One list</span></div>${set(flat)}</div>
+      <div class="fgroup"><div class="lab"><span class="eyebrow">In sections</span></div>${set(grouped)}</div>`);
+  }
+
+  if(sheet.kind === "me"){
+    const me = d.meMember || {};
+    return shell(`<h3>That's you</h3>
+      <p>You're <b>${esc(me.name||"")}</b>${me.device_count>1?" on "+me.device_count+" devices":""}.
+         Rename yourself here and your votes come with you.</p>
+      <input class="input" id="renameinput" maxlength="24" value="${esc(me.name||"")}">
+      <div class="row"><button class="btn" id="renamego">Save name</button></div>`);
+  }
+
+  if(sheet.kind === "switch"){
+    return shell(`<h3>Your crews</h3>
+      <div class="mygroups">${myGroups.map(g => `<button class="mygroup" data-open="${esc(g.code)}">
+        <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 38% 48%)">${esc(monogram(g.name))}</span>
+        <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span></button>`).join("")}</div>
+      <div class="row"><button class="btn btn--ghost" id="tolanding">Start or join another</button></div>`);
+  }
+  return "";
+}
+
+function themeBtn(){
+  const dark = isDark();
+  return `<button class="iconbtn" id="themebtn" aria-label="Switch to ${dark?"light":"dark"} mode"
+    title="Switch to ${dark?"light":"dark"} mode"><span style="font-size:15px">${dark?"☀":"☾"}</span></button>`;
+}
+
+/* ============================================================================
+   WIRING
+   ========================================================================== */
+function wireCommon(d){
+  const tb = document.getElementById("themebtn");
+  if(tb) tb.onclick = () => { theme = isDark() ? "light" : "dark"; applyTheme(); render(); };
+
+  const sc = document.querySelector("[data-scrim]");
+  if(sc){
+    sc.onclick = e => { if(e.target===sc){ sheet=null; pending=null; fDraft=null; render(); } };
+    const dis = document.querySelector("[data-dismiss]");
+    if(dis) dis.onclick = () => { sheet=null; fDraft=null; render(); };
+  }
+
+  // --- name entry, step one
+  const ni = document.getElementById("nameinput");
+  if(ni){
+    ni.focus();
+    const go = async () => {
+      const v = ni.value.trim(); if(!v) return;
+      const then = sheet.then, groupName = sheet.groupName;
+      const btn = document.getElementById("namego");
+      btn.disabled = true;
+
+      if(then === "create"){
+        myName = v; store.set("name", v);
+        btn.textContent = "Setting up…";
+        try{ await createGroup(groupName, v); }
+        catch(e){ btn.disabled=false; btn.textContent="That's me"; alert(e.message); }
+        return;
+      }
+
+      // step two: does this name look like someone already here?
+      const candidates = nameMatches(v, (S && S.members) || []);
+      if(candidates.length){
+        sheet = { kind:"name", step:"match", typed:v, candidates };
+        render();
+        return;
+      }
+      try{ await finishAsNew(v); }
+      catch(e){ btn.disabled=false; btn.textContent="That's me"; alert(e.message); }
+    };
+    document.getElementById("namego").onclick = go;
+    ni.onkeydown = e => { if(e.key==="Enter") go(); };
+  }
+
+  // --- name entry, step two
+  document.querySelectorAll("[data-claim]").forEach(b => {
+    b.onclick = async () => {
+      const m = (S.members||[]).find(x => String(x.member_id) === b.dataset.claim);
+      if(!m) return;
+      b.disabled = true;
+      try{ await finishAsClaim(m); }catch(e){ b.disabled=false; alert(e.message); }
+    };
+  });
+  const notme = document.getElementById("notme");
+  if(notme) notme.onclick = async () => {
+    notme.disabled = true;
+    try{ await finishAsNew(sheet.typed); }catch(e){ notme.disabled=false; alert(e.message); }
+  };
+}
+
+function wireGroup(d, filtered){
+  wireCommon(d);
+
+  // toolbar
+  const q = document.getElementById("q");
+  if(q){
+    q.oninput = e => {
+      F.q = e.target.value;
+      const pos = e.target.selectionStart;
+      render();
+      const nq = document.getElementById("q");
+      if(nq){ nq.focus(); nq.setSelectionRange(pos, pos); }
+    };
+  }
+  const qc = document.getElementById("qclear");
+  if(qc) qc.onclick = () => { F.q=""; render(); };
+  document.getElementById("fbtn").onclick = () => {
+    // stage a copy so nothing commits until Apply, and closing changes nothing
+    fDraft = cloneF(F);
+    sheet = { kind:"filters" };
+    render();
+  };
+  const sb2 = document.getElementById("sortbtn");
+  if(sb2) sb2.onclick = () => { sheet = {kind:"arrange"}; render(); };
+  const fap = document.getElementById("fapply");
+  if(fap) fap.onclick = () => {
+    if(fDraft) F = fDraft;
+    fDraft = null; sheet = null; render();
+  };
+  const fca = document.getElementById("fclearall");
+  if(fca) fca.onclick = () => { clearAll(FT()); render(); };
+  const fcl = document.getElementById("fclear");
+  if(fcl) fcl.onclick = () => { clearAll(FT()); render(); };
+
+  document.querySelectorAll("[data-bench]").forEach(b => b.onclick = () => {
+    sheet.bench = b.dataset.bench === "1"; render();
+  });
+  document.querySelectorAll("[data-played]").forEach(b => b.onclick = () => {
+    const t = FT(); t.played = t.played === b.dataset.played ? null : b.dataset.played; render();
+  });
+  document.querySelectorAll("[data-verdict]").forEach(b => b.onclick = () => {
+    sheet.verdict = sheet.verdict === b.dataset.verdict ? null : b.dataset.verdict;
+    // "never again" almost always means bench it, so pre-select that rather
+    // than making people say the same thing twice
+    if(sheet.verdict === "never_again") sheet.bench = true;
+    if(sheet.verdict === "banger") sheet.bench = false;
+    render();
+  });
+  const ro = document.getElementById("reopenbtn");
+  if(ro) ro.onclick = () => { const open = () => reopenRound(); if(!needName(open)) open(); };
+  document.querySelectorAll("[data-view]").forEach(b => {
+    b.onclick = () => { view = b.dataset.view; store.set("view", view); render(); };
+  });
+
+  // filter panel
+  document.querySelectorAll("[data-f]").forEach(b => {
+    b.onclick = () => {
+      const key = b.dataset.f, raw = b.dataset.v;
+      const val = isNaN(+raw) ? raw : +raw;
+      const t = FT();
+      t[key].has(val) ? t[key].delete(val) : t[key].add(val);
+      render();
+    };
+  });
+  document.querySelectorAll("[data-toggle]").forEach(b => {
+    b.onclick = () => { const t = FT(); t[b.dataset.toggle] = !t[b.dataset.toggle]; render(); };
+  });
+  document.querySelectorAll("[data-crew]").forEach(b => {
+    b.onclick = () => {
+      const op = b.dataset.crew, t = FT();
+      if(op === "off") t.crew = null;
+      else if(op === "+") t.crew = Math.min(64, (t.crew || Math.max(2, d.lookedCount)) + (t.crew ? 1 : 0));
+      else t.crew = Math.max(1, (t.crew || Math.max(2, d.lookedCount)) - (t.crew ? 1 : 0));
+      render();
+    };
+  });
+  document.querySelectorAll("[data-unfilter]").forEach(b => {
+    b.onclick = () => {
+      const v = b.dataset.uv;
+      clearFilter(b.dataset.unfilter, v === "" ? undefined : (isNaN(+v) ? v : +v));
+      render();
+    };
+  });
+  ["clearall","clearall2"].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.onclick = () => { clearAll(); render(); };
+  });
+  document.querySelectorAll("[data-arrange]").forEach(b => b.onclick = () => {
+    arrange = b.dataset.arrange; store.set("arrange", arrange);
+    sheet = null; render();
+  });
+
+  // shuffle
+  const sh = document.getElementById("shufflebtn");
+  if(sh) sh.onclick = () => {
+    if(!filtered.length){ return; }
+    const pick = filtered[Math.floor(Math.random()*filtered.length)];
+    sheet = {kind:"shuffle", appid:pick.appid, pool:filtered.length};
+    render();
+  };
+  const reroll = document.getElementById("reroll");
+  if(reroll) reroll.onclick = () => {
+    const pool = filtered.filter(s => s.appid !== sheet.appid);
+    const src = pool.length ? pool : filtered;
+    sheet = {kind:"shuffle", appid: src[Math.floor(Math.random()*src.length)].appid, pool:filtered.length};
+    render();
+  };
+  const sp = document.getElementById("shufflepick");
+  if(sp) sp.onclick = () => { const a = sheet.appid; sheet = null; togglePick(a); };
+
+  // shelf
+  document.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => togglePick(+b.dataset.pick));
+  document.querySelectorAll("[data-unbench]").forEach(b => b.onclick = () => unbench(+b.dataset.unbench));
+  document.querySelectorAll("[data-more]").forEach(b => b.onclick = () => {
+    const id = +b.dataset.more;
+    expanded.has(id) ? expanded.delete(id) : expanded.add(id);
+    render();
+  });
+  document.querySelectorAll("[data-take]").forEach(b => {
+    const open = () => { sheet = {kind:"take", appid:+b.dataset.take}; render(); };
+    b.onclick = () => { if(!needName(open)) open(); };
+  });
+  document.querySelectorAll("[data-facets]").forEach(b => {
+    const open = () => { sheet = {kind:"facets", appid:+b.dataset.facets, e:null, s:null}; render(); };
+    b.onclick = () => { if(!needName(open)) open(); };
+  });
+
+  // add
+  const addq = document.getElementById("addq");
+  if(addq){
+    addq.oninput = e => onAddInput(e.target.value);
+    addq.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); submitAdd(); } };
+  }
+  const addgo = document.getElementById("addgo");
+  if(addgo) addgo.onclick = submitAdd;
+  document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => addGame(+b.dataset.add));
+
+  // rail + bar
+  const cs = document.getElementById("copysum");   if(cs) cs.onclick = () => copy(summaryText(d), cs);
+  const cn = document.getElementById("copynudge"); if(cn) cn.onclick = () => copy(nudgeText(d), cn);
+  const sm = document.getElementById("sharemob");  if(sm) sm.onclick = () => { sheet={kind:"share"}; render(); };
+  const cb = document.getElementById("closebtn");  if(cb) cb.onclick = () => { const open=()=>{sheet={kind:"close"};render();}; if(!needName(open)) open(); };
+  const bkb = document.getElementById("breakbtn");
+  if(bkb) bkb.onclick = () => setBreak(true);
+  const rsb = document.getElementById("resumebtn");
+  if(rsb) rsb.onclick = () => { sheet = {kind:"resume", crew:d.lookedCount}; render(); };
+  document.querySelectorAll("[data-rcrew]").forEach(b => b.onclick = () => {
+    sheet.crew = Math.max(1, Math.min(64, (sheet.crew ?? d.lookedCount) + (b.dataset.rcrew === "+" ? 1 : -1)));
+    render();
+  });
+  const rgo = document.getElementById("resumego");
+  if(rgo) rgo.onclick = () => { F.crew = sheet.crew ?? d.lookedCount; setBreak(false); };
+  const rsk = document.getElementById("resumeskip");
+  if(rsk) rsk.onclick = () => setBreak(false);
+  const sw = document.getElementById("switchbtn"); if(sw) sw.onclick = () => { sheet={kind:"switch"}; render(); };
+  const mb = document.getElementById("mebtn");     if(mb) mb.onclick = () => { sheet={kind:"me"}; render(); };
+
+  // sheet internals
+  const ti = document.getElementById("takeinput");
+  if(ti){
+    ti.focus();
+    document.getElementById("takego").onclick   = () => { const a=sheet.appid,v=ti.value; sheet=null; saveTake(a,v); };
+    document.getElementById("takeclear").onclick = () => { const a=sheet.appid; sheet=null; saveTake(a,""); };
+  }
+  document.querySelectorAll("[data-fe]").forEach(b => b.onclick = () => {
+    sheet.e = +b.dataset.fe;
+    document.querySelectorAll("[data-fe]").forEach(x => x.setAttribute("aria-pressed", String(+x.dataset.fe === sheet.e)));
+  });
+  document.querySelectorAll("[data-fs]").forEach(b => b.onclick = () => {
+    sheet.s = b.dataset.fs;
+    document.querySelectorAll("[data-fs]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.fs === sheet.s)));
+  });
+  document.querySelectorAll("[data-past]").forEach(b => b.onclick = () => {
+    logPastPlay(sheet.appid, b.dataset.past);
+  });
+  document.querySelectorAll("[data-forget]").forEach(b => b.onclick = () => {
+    forgetPlay(sheet.appid, +b.dataset.forget);
+  });
+  document.querySelectorAll("[data-fv]").forEach(b => b.onclick = () => {
+    sheet.v = b.dataset.fv;
+    document.querySelectorAll("[data-fv]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.fv === sheet.v)));
+  });
+  const fg = document.getElementById("facetgo");
+  if(fg) fg.onclick = () => {
+    const raw = document.getElementById("fcrew").value.trim();
+    const rawMod = document.getElementById("fmod").value.trim();
+    const a = sheet.appid, e = sheet.e, s = sheet.s, v = sheet.v;
+    sheet = null;
+    saveFacets(a, e, raw ? Number(raw) : null, s, rawMod ? Number(rawMod) : null, v);
+  };
+  const rg = document.getElementById("retirego");
+  if(rg) rg.onclick = async () => {
+    const a = sheet.appid; sheet = null; render();
+    // not a delete: it drops off the ballot, out of everyone's picks, and needs
+    // benched, not deleted: takes and play history all survive
+    try{ await rpc("bench_game", {p_code:code, p_device:deviceId, p_appid:a}); }finally{ refresh(); }
+  };
+  const cg = document.getElementById("closego");    if(cg) cg.onclick = () => closeRound(d.ranked[0].appid);
+  const nr = document.getElementById("newroundgo"); if(nr) nr.onclick = () => startRound(sheet.verdict, sheet.bench, false);
+  const nb = document.getElementById("newroundbreak"); if(nb) nb.onclick = () => startRound(sheet.verdict, sheet.bench, true);
+  document.querySelectorAll("[data-sharemode]").forEach(b => b.onclick = () => {
+    sheet.mode = b.dataset.sharemode; render();
+  });
+  const cshare = document.getElementById("copyshare");
+  if(cshare) cshare.onclick = () => copy(sheet.mode === "nudge" ? nudgeText(d) : summaryText(d), cshare);
+  const rn = document.getElementById("renamego");
+  if(rn) rn.onclick = async () => {
+    const v = document.getElementById("renameinput").value.trim();
+    if(!v) return;
+    sheet = null; myName = v; store.set("name", v);
+    try{ await rpc("rename_me", {p_code:code, p_device:deviceId, p_person:v}); }finally{ refresh(); }
+  };
+  const tl = document.getElementById("tolanding");
+  if(tl) tl.onclick = () => { sheet=null; S=null; myMemberId=null; location.hash=""; };
+  document.querySelectorAll("[data-open]").forEach(b => {
+    b.onclick = () => { sheet=null; S=null; myMemberId=null; location.hash = "#/g/"+b.dataset.open; };
+  });
+}
+
+/* ---------- keyboard ---------- */
+document.addEventListener("keydown", e => {
+  if(e.key === "Escape" && sheet){ sheet=null; pending=null; fDraft=null; render(); return; }
+  if(e.key === "/" && !/^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)){
+    const q = document.getElementById("q");
+    if(q){ e.preventDefault(); q.focus(); }
+  }
+});
+
+/* ---------- theme ---------- */
+// Light or dark, nothing else. Defaults to whatever the device is set to the
+// first time, then remembers the choice.
+let theme = store.get("theme", null) ||
+  (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+const isDark = () => theme === "dark";
+function applyTheme(){
+  document.documentElement.setAttribute("data-theme", theme);
+  store.set("theme", theme);
+}
+applyTheme();
+
+/* ============================================================================
+   BOOT + POLLING
+   Ten seconds while the tab is visible, immediate on focus. No realtime
+   replication to enable, which is one less setup step to get wrong.
+   ========================================================================== */
+window.addEventListener("hashchange", () => { S=null; myMemberId=null; expanded.clear(); clearAll(); render(); });
+document.addEventListener("visibilitychange", () => { if(!document.hidden) refresh(); });
+window.addEventListener("focus", () => refresh());
+/* The toolbar stays put. It used to slide away on scroll-down, which read as
+   the page jumping around; a shadow when it is pinned is enough. */
+(() => {
+  let ticking = false;
+  const apply = () => {
+    ticking = false;
+    const bar = document.querySelector(".shelfbar");
+    if(bar) bar.classList.toggle("is-stuck", window.scrollY > 90);
+  };
+  window.addEventListener("scroll", () => {
+    if(!ticking){ ticking = true; requestAnimationFrame(apply); }
+  }, {passive:true});
+})();
+
+setInterval(() => { if(!document.hidden && code) refresh(); }, 10000);
+setInterval(() => { if(!document.hidden && code) rpc("touch_group",{p_code:code,p_device:deviceId}).catch(()=>{}); }, 60000);
+
+render();
+</script>
+</body>
+</html>
