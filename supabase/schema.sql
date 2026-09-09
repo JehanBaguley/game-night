@@ -90,7 +90,7 @@ create table shelf (
   crew_mod   int,                             -- higher count reachable with mods or a server config
   crew_note  text,                            -- the caveat, shown when someone taps the cap
   setup      text,                            -- 'launch' | 'host' | 'server'
-  vibe       text,                            -- group override for the tag-derived vibe
+  doing      text,                            -- group override for the derived mode of play
   added_at   timestamptz not null default now(),
   primary key (group_code, appid)
 );
@@ -134,7 +134,7 @@ create table games (
   coop         boolean not null default false,
   online_coop  boolean not null default false,
   released     text,
-  vibe         text,                           -- cozy | chaotic | tense | competitive
+  doing        text,                           -- mucking | building | story | scary | rounds
   shape        text,                           -- dropin | sitting | campaign | longhaul
   energy_guess int,                            -- tag-derived fallback when the group has not set one
   fetched_at   timestamptz not null default now()
@@ -335,7 +335,7 @@ begin
        select json_agg(json_build_object(
          'appid', s.appid, 'benched', s.benched, 'added_name', s.added_name,
          'energy', s.energy, 'crew_max', s.crew_max, 'crew_mod', s.crew_mod,
-         'crew_note', s.crew_note, 'setup', s.setup, 'vibe', s.vibe,
+         'crew_note', s.crew_note, 'setup', s.setup, 'doing', s.doing,
          'added_at', s.added_at) order by s.added_at)
        from shelf s where s.group_code = p_code), '[]'::json),
     'takes', coalesce((
@@ -398,7 +398,7 @@ end; $$;
 create or replace function set_facets(
   p_code text, p_device uuid, p_appid int,
   p_energy int, p_crew_max int, p_setup text,
-  p_crew_mod int default null, p_vibe text default null
+  p_crew_mod int default null, p_doing text default null
 ) returns void language plpgsql security definer set search_path = public as $$
 begin
   perform assert_member(p_code, p_device);
@@ -408,15 +408,15 @@ begin
     raise exception 'player cap looks wrong'; end if;
   if p_setup is not null and p_setup not in ('launch','host','server') then
     raise exception 'setup must be launch, host or server'; end if;
-  if p_vibe is not null and p_vibe not in ('cozy','chaotic','tense','competitive') then
-    raise exception 'vibe must be cozy, chaotic, tense or competitive'; end if;
+  if p_doing is not null and p_doing not in ('mucking','building','story','scary','rounds') then
+    raise exception 'doing must be mucking, building, story, scary or rounds'; end if;
 
   update shelf
      set energy   = coalesce(p_energy, energy),
          crew_max = coalesce(p_crew_max, crew_max),
          crew_mod = coalesce(p_crew_mod, crew_mod),
          setup    = coalesce(p_setup, setup),
-         vibe     = coalesce(p_vibe, vibe)
+         doing    = coalesce(p_doing, doing)
    where group_code = p_code and appid = p_appid;
 end; $$;
 
@@ -555,6 +555,11 @@ end; $$;
 -- ---------------------------------------------------------------------------
 revoke all on all tables    in schema public from anon;
 revoke all on all functions in schema public from anon;
+-- Postgres grants EXECUTE to PUBLIC on new functions, so revoking from anon
+-- alone still leaves these three internal helpers callable by anyone.
+revoke execute on function make_code() from public;
+revoke execute on function member_of(text, uuid) from public;
+revoke execute on function assert_member(text, uuid) from public;
 
 grant execute on function whoami(text, uuid)                                to anon;
 grant execute on function create_group(text, uuid, text)                    to anon;
