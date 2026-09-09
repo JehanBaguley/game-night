@@ -42,12 +42,63 @@ const CACHE_DAYS = 30; // T5: anything older than this re-fetches
 // and read the user tags instead, which describe how a game actually plays.
 // ----------------------------------------------------------------------------
 
-const VIBE_RULES: Array<[string, string[]]> = [
-  ["cozy",        ["relaxing", "cozy", "cute", "farming sim", "wholesome", "casual", "family friendly"]],
-  ["chaotic",     ["funny", "comedy", "party game", "physics", "silly", "chaos", "memes"]],
-  ["tense",       ["horror", "survival horror", "difficult", "souls-like", "atmospheric", "dark", "psychological horror"]],
-  ["competitive", ["pvp", "competitive", "esports", "team-based", "arena shooter", "fighting"]],
+/* WHAT WE'LL BE DOING
+   This replaced a "vibe" axis (cozy / chaotic / tense / competitive) that was
+   blank on 44% of a real shelf and, when it did fire, restated energy: every
+   one of its cozy keywords was also an energy-1 keyword. Mode of play answers
+   a different question from effort, so the two stop colliding.
+
+   Weighted rather than counted, because one strong signal should beat three
+   weak ones. Barotrauma is tagged Survival AND Survival Horror; the horror has
+   to win. PICO PARK 2 carries a junk "Psychological Horror" tag, so horror at
+   low weight has to lose to Casual. Order matters on ties: first listed wins,
+   which is why the broadest bucket is last. */
+const DOING_RULES: Array<[string, Record<string, number>]> = [
+  ["scary", { "survival horror":5, "horror":4, "lovecraftian":2, "psychological horror":1, "zombies":1 }],
+  ["rounds", { "roguelike":4, "roguelite":4, "rogue-lite":4, "rogue-like":4, "run based roguelike":4,
+               "action roguelike":4, "battle royale":3, "extraction shooter":3, "moba":3,
+               "arena shooter":3, "hero shooter":2, "fighting":2, "arcade":2, "pvp":2, "pve":2, "shooter":1 }],
+  ["mucking", { "party game":5, "funny":3, "comedy":3, "physics":2, "silly":2, "memes":2,
+                "casual":2, "family friendly":2, "puzzle":2, "cute":1, "platformer":1, "sports":1 }],
+  ["story", { "story rich":5, "narrative":3, "choose your own adventure":3, "visual novel":3,
+              "adventure":2, "dungeon crawler":2, "metroidvania":2, "point & click":2, "rpg":1 }],
+  ["building", { "base building":5, "base-building":5, "open world survival craft":5, "colony sim":4,
+                 "city builder":4, "automation":4, "farming sim":4, "crafting":3, "management":2,
+                 "resource management":2, "sandbox":2, "survival":2, "life sim":2, "building":2, "simulation":1 }],
 ];
+
+/* Steam's categories are declared by the publisher rather than voted on by the
+   crowd, so they are close to always present and close to always right. Tags
+   are neither. Letting categories contribute is what takes the blank rate to
+   zero on games too new or too small for SteamSpy to know about. */
+const CATEGORY_HINTS: Record<string, [string, number]> = {
+  "co-op campaign": ["story", 3],
+  "shared/split screen": ["mucking", 2],
+  "shared/split screen co-op": ["mucking", 2],
+  "online pvp": ["rounds", 2],
+  "shared/split screen pvp": ["rounds", 1],
+  "pvp": ["rounds", 1],
+};
+
+function classifyDoing(tags: string[], categories: string[]): string | null {
+  const hay = tags.map((t) => t.toLowerCase());
+  const score: Record<string, number> = {};
+  for (const [label, kws] of DOING_RULES) {
+    score[label] = 0;
+    for (const [kw, w] of Object.entries(kws)) {
+      if (hay.some((t) => t.includes(kw))) score[label] += w;
+    }
+  }
+  for (const c of categories) {
+    const hit = CATEGORY_HINTS[c.toLowerCase()];
+    if (hit) score[hit[0]] = (score[hit[0]] ?? 0) + hit[1];
+  }
+  let best: string | null = null, bestScore = 0;
+  for (const [label] of DOING_RULES) {      // first listed wins a tie
+    if (score[label] > bestScore) { best = label; bestScore = score[label]; }
+  }
+  return best;
+}
 
 // Energy is normally ours, curated per game. For anything outside that list a
 // tag-derived guess is far better than a blank, because a game with no energy
@@ -263,7 +314,7 @@ Deno.serve(async (req) => {
     coop,
     online_coop: categories.some((c) => /online co-?op/i.test(c)),
     released: details.release_date?.date ?? null,
-    vibe: classify(VIBE_RULES, forClassify),
+    doing: classifyDoing(forClassify, categories),
     shape: classify(SHAPE_RULES, forClassify),
     // no strong signal either way lands on 2, a normal night
     energy_guess: Number(classify(ENERGY_RULES, forClassify) ?? 2),
