@@ -1,0 +1,61 @@
+# Fixes T1 and T5 from the plan in one job.
+#
+# T1: Supabase pauses free projects after about a week with no activity. Your
+#     game night cadence is deliberately loose, so without this the project
+#     sleeps between rounds and the link is dead when someone finally opens it.
+#     This is the single most likely thing to kill the site.
+# T5: cached Steam data drifts. While we are here, re-fetch anything stale.
+name: keepalive
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"    # 03:17 UTC every Monday, well inside the 7-day window
+  workflow_dispatch: {}      # and a manual button, for after you have been away
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Touch the database
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          # `games` is the one table with a public read policy, so the anon key
+          # is enough to keep the project counted as active.
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            "$URL/rest/v1/games?select=appid&limit=1" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          echo "ping returned $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase did not answer with 200. The project may already be paused, check the dashboard."
+            exit 1
+          fi
+
+      - name: Refresh stale Steam data
+        continue-on-error: true      # never fail the keepalive because Steam is slow
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -uo pipefail
+          cutoff=$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          stale=$(curl -sS \
+            "$URL/rest/v1/games?select=appid&fetched_at=lt.$cutoff&limit=40" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+            | grep -o '"appid":[0-9]*' | cut -d: -f2 || true)
+
+          if [ -z "$stale" ]; then
+            echo "nothing stale"
+            exit 0
+          fi
+
+          for id in $stale; do
+            echo "re-enriching $id"
+            curl -sS -X POST "$URL/functions/v1/enrich" \
+              -H "Content-Type: application/json" \
+              -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+              -d "{\"action\":\"get\",\"appid\":$id,\"force\":true}" > /dev/null
+            sleep 2   # be polite to Steam
+          done
