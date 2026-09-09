@@ -434,6 +434,23 @@ Two more worth naming. The generated avatar circles were white text on `hsl(h 38
 
 Motion is opt-out: everything added for feel sits behind `prefers-reduced-motion`.
 
+**Alignment.** Every section on the page now starts and ends on the same 14px gutter, measured rather than eyeballed. The one that had drifted was the shelf header: hiding its heading on phones left the empty wrapper as a flex item, and the row's 14px gap pushed both buttons off the grid by exactly that much.
+
+## Motion, and what each bit means
+
+Four pieces, each tied to something that actually happened rather than added for decoration.
+
+| | When | Why |
+| --- | --- | --- |
+| **Border beam** | Continuously, on the card with the most votes | Once you have scrolled past the banner, nothing marked the leader. A light travelling the border does it without spending a badge or a colour on it |
+| **Sheen** | Once, when a different game takes the lead | The one moment in a round where the answer changes |
+| **Count tick** | When a tally goes up | A number that snaps looks like a re-render, a number that rolls looks like a vote |
+| **Reel** | While **Roll for it** decides | A result that just appears reads as the computer picking. A reel that runs down and lands reads as a roll |
+
+The beam is a conic gradient rotated behind a ring-shaped mask. The mask is what keeps it a 2px border rather than a wash over the card, and the `@property --beam` declaration is what lets the angle animate at all, since custom properties are plain strings until you give them a type. Browsers without `@property` get a still gradient ring, which is a fine place to land.
+
+The reel only ever changes text inside one `<span>`, so nothing else on the page re-renders while it runs, and it lands on the game the button will actually pick.
+
 ## When things break
 
 **If the CDN doesn't load, you get a real message.** The app pulls `supabase-js` from jsdelivr. If that is blocked, or you are offline, or the integrity hash doesn't match, the library never arrives and `createClient` throws before anything renders . The old failure mode was a blank white page with nothing in it and nothing in the console for a non-developer to read. It is now checked for, and says what happened with a retry button.
