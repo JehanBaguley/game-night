@@ -46,9 +46,9 @@
 
   /* energy ramp: blue / yellow / red from the same family, pastel background
      with the deep step on top so the small pill text stays readable */
-  --e1:#005C79; --e1-bg:#CBEFF9; --e1-ink:#FFFFFF;
-  --e2:#7E4100; --e2-bg:#FCE3C8; --e2-ink:#FFFFFF;
-  --e3:#892122; --e3-bg:#FFDDD9; --e3-ink:#FFFFFF;
+  --e1:#0E5A73; --e1-bg:#E2F1F6; --e1-ink:#FFFFFF;
+  --e2:#7A4408; --e2-bg:#F8EBDC; --e2-ink:#FFFFFF;
+  --e3:#8A262A; --e3-bg:#FAE4E2; --e3-ink:#FFFFFF;
   --live:#5B2AB8;
 
   /* -apple-system first so Safari picks San Francisco, system-ui after it for
@@ -70,9 +70,9 @@
     --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.14);
     --edge:rgba(255,255,255,.055);   /* the 1px bevel along a surface top */
     --accent:#A78BFA; --accent-ink:#1E1B4B; --accent-soft:#2E1065;
-    --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
-    --e2:#F2B772; --e2-bg:#33260F; --e2-ink:#2B1F0C;
-    --e3:#FF9E96; --e3-bg:#331C1A; --e3-ink:#2B1512;
+    --e1:#7FD6EC; --e1-bg:#10303C; --e1-ink:#0C2126;
+    --e2:#F5C288; --e2-bg:#372A13; --e2-ink:#2B1F0C;
+    --e3:#FFAAA3; --e3-bg:#37201E; --e3-ink:#2B1512;
     --live:#B79BF0;
     --shadow:0 1px 2px rgba(0,0,0,.5);
     --shadow-up:0 -1px 16px rgba(0,0,0,.5);
@@ -84,9 +84,9 @@
   --line:rgba(255,255,255,.07); --line-strong:rgba(255,255,255,.14);
   --edge:rgba(255,255,255,.055);   /* the 1px bevel along a surface top */
   --accent:#A78BFA; --accent-ink:#1E1B4B; --accent-soft:#2E1065;
-  --e1:#69CEE6; --e1-bg:#0C2C36; --e1-ink:#0C2126;
-  --e2:#F2B772; --e2-bg:#33260F; --e2-ink:#2B1F0C;
-  --e3:#FF9E96; --e3-bg:#331C1A; --e3-ink:#2B1512;
+  --e1:#7FD6EC; --e1-bg:#10303C; --e1-ink:#0C2126;
+  --e2:#F5C288; --e2-bg:#372A13; --e2-ink:#2B1F0C;
+  --e3:#FFAAA3; --e3-bg:#37201E; --e3-ink:#2B1512;
   --live:#B79BF0;
   --shadow:0 1px 2px rgba(0,0,0,.5);
   --shadow-up:0 -1px 16px rgba(0,0,0,.5);
@@ -97,7 +97,16 @@
 html{-webkit-text-size-adjust:100%}
 body.locked{overflow:hidden}
 body{
-  margin:0;background:var(--ground);color:var(--ink);
+  margin:0;color:var(--ink);
+  /* Two very soft radials over the ground colour, pinned to the viewport so
+     they read as ambient light rather than as something that scrolls past.
+     Static CSS: one paint, no animation loop, nothing for a phone to burn
+     battery on while you decide what to play. */
+  background:
+    radial-gradient(1200px 560px at 50% -12%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 68%),
+    radial-gradient(760px 420px at 102% 2%, color-mix(in oklab, var(--e1) 9%, transparent), transparent 70%),
+    var(--ground);
+  background-attachment:fixed;
   font-family:var(--f-body);font-size:15px;line-height:1.5;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
   font-synthesis-weight:none;
@@ -347,6 +356,9 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
      hairline does all the work; in dark the bevel is what stops a stack of
      near-black panels reading as one flat sheet. */
   box-shadow:0 0 0 1px var(--line), inset 0 1px 0 var(--edge);
+  /* the faintest vertical gradient, so a surface reads as lit from above
+     rather than as a flat rectangle of one colour */
+  background-image:linear-gradient(180deg, var(--edge), transparent 42%);
 }
 .card{position:relative}
 .card:hover{box-shadow:0 0 0 1px var(--line-strong), inset 0 1px 0 var(--edge)}
@@ -357,10 +369,24 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
    plain strings until you give them a type. Browsers without @property get a
    still gradient ring, which is a perfectly good place to land. */
 @property --beam{ syntax:"<angle>"; initial-value:0deg; inherits:false }
+/* An ambient ring so the leader is obvious at a glance, standing or moving.
+   The travelling highlight is the detail on top, not the whole signal: a thin
+   arc on a tall card spends most of its life on one long edge, which reads as
+   a stray line rather than as light. Both selectors carry the same shadow
+   because the leader is usually also one of your picks, and `.card.on` would
+   otherwise out-specify this and blank it. */
+.card--lead, .card.on.card--lead{
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--accent) 42%, transparent),
+    inset 0 1px 0 var(--edge),
+    0 0 42px -12px color-mix(in oklab, var(--accent) 55%, transparent);
+}
 .card--lead::after{
   content:"";position:absolute;inset:0;border-radius:inherit;padding:2px;
   background:conic-gradient(from var(--beam),
-    transparent 0 62%, var(--accent) 80%, #fff 88%, var(--accent) 94%, transparent 100%);
+    transparent 0 30%, color-mix(in oklab, var(--accent) 70%, transparent) 55%,
+    var(--accent) 74%, #fff 82%, var(--accent) 90%,
+    color-mix(in oklab, var(--accent) 70%, transparent) 96%, transparent 100%);
   -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite:xor; mask-composite:exclude;
@@ -368,10 +394,27 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   animation:beam 4.5s linear infinite;
 }
 @keyframes beam{ to{ --beam:360deg } }
-/* The leader is usually also one of your picks, and two violet rings on one
-   card is just noise. The beam takes over; "picked" is already carried by the
-   button, which says Picked and is filled. */
-.card.on.card--lead{box-shadow:none}
+
+/* The border lights up where the cursor is. Same ring-mask trick as the beam,
+   but the gradient is a circle parked at the pointer instead of a rotating
+   cone. Gated on a real pointer so phones never pay for the listener or the
+   extra paint, and it sits under the leader beam rather than fighting it. */
+@media (hover:hover) and (pointer:fine){
+  .card::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;
+    background:radial-gradient(230px circle at var(--mx,50%) var(--my,0%),
+      color-mix(in oklab, var(--accent) 92%, white), transparent 62%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite:xor; mask-composite:exclude;
+    opacity:0;transition:opacity .28s ease;pointer-events:none;z-index:3;
+  }
+  .card:hover::before{opacity:1}
+  .card:hover{
+    box-shadow:0 0 0 1px var(--line-strong), inset 0 1px 0 var(--edge),
+               0 0 36px -16px color-mix(in oklab, var(--accent) 65%, transparent);
+  }
+}
 /* the reel that runs while Roll for it is deciding */
 .reel{display:inline-block;min-width:1ch}
 .reel.spinning{opacity:.55;filter:blur(.3px)}
@@ -403,7 +446,9 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .more:hover{text-decoration:underline}
 
 .facets{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
-.pill{font-size:10px;font-weight:600;letter-spacing:.03em;padding:3px 6px;border-radius:var(--r-sm);background:var(--surface-2);color:var(--muted)}
+/* a hairline instead of a solid block, so a row of them reads as labels on
+   the card rather than stickers stuck to it */
+.pill{font-size:10px;font-weight:600;letter-spacing:.03em;padding:3px 6px;border-radius:var(--r-sm);background:var(--surface-2);color:var(--muted);box-shadow:inset 0 0 0 1px var(--line)}
 /* three dots make it self-evidently a 1-to-3 scale, so the word does not
    have to carry the whole meaning on its own */
 .lvl{font-style:normal;letter-spacing:1px;margin-right:5px;font-size:8px;vertical-align:1px;opacity:.75}
@@ -1148,8 +1193,13 @@ function ago(iso){
 /** How far off calling it we are. There is no deadline: the cadence was always
  *  "whenever we finish a game", so a countdown was inventing one. */
 function callable(d, g){
-  const short = Math.max(0, g.quorum - d.votedCount);
-  return { ready: short === 0, short };
+  // Quorum is a floor for a group big enough to have one. With fewer people in
+  // the group than the quorum it is unreachable, and the strip used to sit on
+  // "3 more to call it" with every single person already voted. Everybody
+  // having had their say is always enough.
+  const everyone = d.lookedCount > 0 && d.votedCount >= d.lookedCount;
+  const short = Math.max(0, Math.min(g.quorum, d.lookedCount) - d.votedCount);
+  return { ready: everyone || short === 0, short };
 }
 const isLive = iso => iso && (Date.now()-new Date(iso).getTime()) < 180000;
 const shortDate = iso => new Date(iso).toLocaleDateString("en-AU", {day:"numeric", month:"short"});
@@ -2758,6 +2808,27 @@ function spinReel(d, pool){
   };
   setTimeout(step, wait);
 }
+
+/* Feeds the pointer position into whichever card is under it, so the border
+   glow can follow the cursor. One delegated listener on the app root rather
+   than fifteen, throttled to a frame, and never attached on a touch device. */
+(() => {
+  if(!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
+  let queued = null, raf = 0;
+  app.addEventListener("pointermove", e => {
+    const card = e.target.closest && e.target.closest(".card");
+    if(!card) return;
+    queued = [card, e.clientX, e.clientY];
+    if(raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      const [c, x, y] = queued;
+      const r = c.getBoundingClientRect();
+      c.style.setProperty("--mx", (((x - r.left) / r.width) * 100).toFixed(1) + "%");
+      c.style.setProperty("--my", (((y - r.top) / r.height) * 100).toFixed(1) + "%");
+    });
+  }, { passive: true });
+})();
 
 /* ---------- keyboard ---------- */
 // one listener instead of setting focusReturn in twenty separate handlers
