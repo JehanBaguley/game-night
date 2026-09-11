@@ -2,7 +2,27 @@
 
 Pick what we play next. One shelf, one vote, as many friend groups as you need.
 
-Live on GitHub Pages, data in your own free Supabase project. No accounts for anyone who votes, just a link.
+Live on GitHub Pages, data in a free Supabase project. No accounts for anyone who votes, just a link.
+
+## This one
+
+| | |
+| --- | --- |
+| App | https://jehanbaguley.github.io/game-night/ |
+| Source | https://github.com/JehanBaguley/game-night |
+| Backend | Supabase project `itlxniumucgrbiljvnge` (Sydney), edge functions `enrich` and `card` |
+
+### How the links work
+
+There are three kinds of link and they do different jobs.
+
+| Link | Looks like | Use it for |
+| --- | --- | --- |
+| **Group link** | `…/game-night/#/g/X9MWCDM` | The one to send round. Opens straight onto that crew's shelf. First visit asks your name once, then that device is you |
+| **Card link** | `https://itlxniumucgrbiljvnge.supabase.co/functions/v1/card?g=X9MWCDM` | Paste this in Discord, Slack, iMessage or WhatsApp when you want a preview. It unfurls with the group name, the current leader and its cover art, then bounces people to the group link |
+| **Bare link** | `…/game-night/` | The landing page. Start a crew, or type in a code. Not the one to share: a mate who lands here without a code will start a new crew by accident, which is exactly what happened on day one |
+
+The seven-character code is the group. Anyone with it can vote, add and call rounds, so treat it like a Discord invite rather than a password. **Send to the chat** in the app has a **Copy the link** button so nobody has to build it by hand.
 
 ---
 
@@ -214,7 +234,7 @@ Cover art comes straight off Steam's CDN by app ID, so there is nothing to uploa
 
 ### Adding a game
 
-Type a name and hit the arrow, or press Enter. Paste a Steam link or an app ID and it skips search entirely and fetches that exact game, which is what you want when you already have the store page open.
+**+** on the toolbar opens a sheet. Type a name and hit the arrow, or press Enter. Paste a Steam link or an app ID and it skips search entirely and fetches that exact game, which is what you want when you already have the store page open.
 
 A game counts as addable if Steam lists it as multiplayer, co-op, PvP or split screen. Party games often list only "Online PvP" with no co-op category at all, and rejecting those would throw out exactly the sort of thing a game night is for.
 
@@ -224,11 +244,9 @@ One button. It goes straight up for a vote:
 | --- | --- |
 | **Add it** | Onto the shelf, up for a vote, credited to you |
 
-**Two search boxes was the single most confusing thing in the app.** The toolbar one filters the shelf you already have. The one at the bottom searches Steam for something you don't. Both were a magnifying glass and the word "Search", and there was no way to tell them apart until you typed into the wrong one.
+**Two search boxes on one page was the single most confusing thing in the app.** The toolbar one filters the shelf you already have. The Steam one finds something you don't. For a while they sat on the same page, one at the top and one 6,000px down at the bottom, and renaming them only half fixed it. Now the Steam search lives in its own sheet behind **+**, so at any moment there is exactly one search box on screen and it is obvious which shelf it searches.
 
-They now say what they do. The toolbar reads *"Search the shelf…"*, the bottom one *"Search Steam, or paste a link"* under a heading that says **Add a game** and a line that says *this one searches Steam, not the shelf above*.
-
-Placement stayed at the bottom, because you browse constantly and add rarely, and putting the add form above the shelf would push the actual games below the fold. What changed is that you no longer have to scroll to reach it: **Add a game** sits in the shelf header and jumps you there with focus in the field. Measured before the fix, the add box was 6,322px down a 7,309px page.
+The sheet also fixed a real bug: the Steam box used to sit inside the page, and the page re-renders on every keystroke and every poll, which emptied the field and dropped focus after the first character. Search looked broken because it was. The field now keeps its value in state and the renderer puts the caret back where it was, so a poll landing mid-word changes nothing.
 
 ### After you've played it
 
@@ -269,16 +287,21 @@ The rules are weighted rather than counted, because one strong signal should bea
 
 ### Chrome, deliberately thin on a phone
 
-An earlier pass stacked a scrolling tab row, a scrolling toolbar and a header that all moved independently. Everything looked clipped and nothing sat still. The fix was less, not better:
+An earlier pass stacked a scrolling tab row, a scrolling toolbar and a header that all moved independently. Everything looked clipped and nothing sat still. A later pass had fixed that and then quietly grown a round panel, a cover-art hero, a vote leaderboard in the rail and a bottom bar, four of which named the same leading game. Measured on a 390px phone: 579px of controls before the first card, 87 tappable things on the page, 8 screens of scroll for 15 games.
+
+The fix, both times, was less:
 
 | | Phone | Desktop |
 | --- | --- | --- |
 | Tabs | None. One shelf, sectioned | Same |
-| Toolbar | Search on its own row, then Filters, Arrange, layout | One row, same four things |
+| Status | One strip: round, who leads, how many are in, **Call it** when it is ready, and a ⋯ menu for the rest | Same |
+| Toolbar | Search with **🎲** and **+** beside it, then Filters, Arrange, layout | One row, same six things |
 | Filters | Full screen, staged, Apply commits | Centred dialog, staged, Apply commits |
-| Shelf header | Two labelled actions, heading hidden | Heading plus the same two actions |
+| Leaderboard | The shelf, sorted. Nothing else lists the votes | Same |
+| Bottom bar | Your own picks and a Share button. Group state stays in the strip | None; the rail has Who's in and Send to the chat |
 | Theme | One toggle, light or dark | Same |
-| On scroll | The toolbar sticks under the header as one unit | Same |
+
+After: 305px before the first card, 57 tappable things, 5.3 screens for the same shelf. The card went from 13 pieces of text and six pills to 8 and none: cover, name, one line, energy, cap, length, and the first take. Reviews, setup, Steam link, who added it and the long blurb moved behind **⋯** on the card, along with the take box and the cap editor, so there is one details surface per game instead of three.
 
 **One filter surface.** There used to be two: a staged sheet on phones and a live inline panel on desktop. Two layouts, two behaviours and two sets of bugs for one feature. Now it is the same dialog everywhere, full screen where the screen is small and centred where it isn't, staged in both.
 
@@ -452,19 +475,29 @@ Four pieces, each tied to something that actually happened rather than added for
 | --- | --- | --- |
 | **Leader glow** | Continuously, on the card with the most votes | Once you have scrolled past the banner, nothing marked the leader. An ambient ring plus a travelling highlight does it without spending a badge or a colour on it |
 | **Pointer glow** | On any card, under the cursor | The border lights up where your mouse is. Pointer devices only, so a phone never pays for the listener or the paint |
-| **Sheen** | Once, when a different game takes the lead | The one moment in a round where the answer changes |
 | **Count tick** | When a tally goes up | A number that snaps looks like a re-render, a number that rolls looks like a vote |
 | **Reel** | While **Roll for it** decides | A result that just appears reads as the computer picking. A reel that runs down and lands reads as a roll |
 | **Tumbling die** | Alongside the reel | So the button and the answer read as one action rather than two |
 | **Confetti** | Once, when a round is called | The moment the whole app exists for, and it used to just swap a strip of text |
-| **Name scramble** | On the banner, when a different game takes over | Characters resolve left to right, so it reads as the name landing rather than as a glitch |
+| **Name scramble** | In the status strip, when a different game takes over | Characters resolve left to right, so it reads as the name landing rather than as a glitch |
 | **Call it shimmer** | Once enough people have voted | Says the round is ready without a badge or a colour change shouting about it |
+| **Night sky** | Always, behind everything | A few dozen faint stars with a slow twinkle and a shooting star every several seconds. One canvas at 30fps, stops when the tab is hidden, and light mode gets the streaks only, since stars on paper read as dust |
 
 Both glows are a gradient behind a ring-shaped mask. The mask is what keeps them a border rather than a wash over the card. The leader's is a conic gradient rotating on `@property --beam`, which is what lets the angle animate at all, since custom properties are plain strings until you give them a type; browsers without `@property` get a still gradient ring, which is a fine place to land. The pointer one is the same mask with a radial gradient parked at the cursor instead.
 
 **A travelling arc was not enough on its own.** First pass lit only a thin slice of the perimeter, and on a tall card that slice sits on one long edge most of the time, so it read as a stray violet line rather than as light going round. The leader now carries a permanent soft ring and bloom, with the highlight as detail on top.
 
 The reel only ever changes text inside one `<span>`, so nothing else on the page re-renders while it runs, and it lands on the game the button will actually pick.
+
+Under `prefers-reduced-motion` every one of these stops. The sky paints its stars once and leaves them there.
+
+## Colour
+
+Dark first. The accent is a soft lavender (`#C4B5FD`) leaning periwinkle, and the "blend" is a real two-stop gradient, lavender to periwinkle, that only the things that matter get: the primary button, the ring on a picked card, the beam on the leader, the progress line in the strip. Everything else is a near-black with a hint of blue so the greys sit in the same family as the accent rather than fighting it. Light mode uses the same hues two steps deeper (`#6252DA` to `#4B62DB`) because white text has to hold 4.5:1 on both ends of the gradient, and the QA suite checks that at the gradient's worst stop, not its average.
+
+Borders went. Cards, the strip and the rail panels get depth from a 1px top bevel and a soft drop shadow instead of a hairline, which is what stops a stack of near-black panels reading as one flat sheet without drawing boxes around everything. Light mode keeps a hairline because white on off-white needs an edge to exist at all. Three radii, nested: 16 for panels and sheets, 12 for cards and inputs, 8 for the buttons inside a card. Seven type sizes and three weights, down from fifteen and five.
+
+The page background is a mesh of three soft radials under a film-grain layer at a few percent, so the gradients never band, with the starfield behind that.
 
 ## When things break
 
