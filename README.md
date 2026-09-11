@@ -450,7 +450,8 @@ Four pieces, each tied to something that actually happened rather than added for
 
 | | When | Why |
 | --- | --- | --- |
-| **Border beam** | Continuously, on the card with the most votes | Once you have scrolled past the banner, nothing marked the leader. A light travelling the border does it without spending a badge or a colour on it |
+| **Leader glow** | Continuously, on the card with the most votes | Once you have scrolled past the banner, nothing marked the leader. An ambient ring plus a travelling highlight does it without spending a badge or a colour on it |
+| **Pointer glow** | On any card, under the cursor | The border lights up where your mouse is. Pointer devices only, so a phone never pays for the listener or the paint |
 | **Sheen** | Once, when a different game takes the lead | The one moment in a round where the answer changes |
 | **Count tick** | When a tally goes up | A number that snaps looks like a re-render, a number that rolls looks like a vote |
 | **Reel** | While **Roll for it** decides | A result that just appears reads as the computer picking. A reel that runs down and lands reads as a roll |
@@ -459,7 +460,9 @@ Four pieces, each tied to something that actually happened rather than added for
 | **Name scramble** | On the banner, when a different game takes over | Characters resolve left to right, so it reads as the name landing rather than as a glitch |
 | **Call it shimmer** | Once enough people have voted | Says the round is ready without a badge or a colour change shouting about it |
 
-The beam is a conic gradient rotated behind a ring-shaped mask. The mask is what keeps it a 2px border rather than a wash over the card, and the `@property --beam` declaration is what lets the angle animate at all, since custom properties are plain strings until you give them a type. Browsers without `@property` get a still gradient ring, which is a fine place to land.
+Both glows are a gradient behind a ring-shaped mask. The mask is what keeps them a border rather than a wash over the card. The leader's is a conic gradient rotating on `@property --beam`, which is what lets the angle animate at all, since custom properties are plain strings until you give them a type; browsers without `@property` get a still gradient ring, which is a fine place to land. The pointer one is the same mask with a radial gradient parked at the cursor instead.
+
+**A travelling arc was not enough on its own.** First pass lit only a thin slice of the perimeter, and on a tall card that slice sits on one long edge most of the time, so it read as a stray violet line rather than as light going round. The leader now carries a permanent soft ring and bloom, with the highlight as detail on top.
 
 The reel only ever changes text inside one `<span>`, so nothing else on the page re-renders while it runs, and it lands on the game the button will actually pick.
 
@@ -479,3 +482,5 @@ The script tag carries a **Subresource Integrity hash**, so a compromised CDN ca
 - **No deletes.** Nothing in the app can remove a game or a person, on purpose. If something needs to go, do it in the Supabase table editor.
 - **One CDN dependency.** `supabase-js` comes from jsdelivr rather than being vendored into the repo. Pinned and integrity-hashed, and it fails with a message rather than a blank page, but it is still a third party in the load path.
 - **Sorting by session length is not wired up.** The list view header offers it, the comparator exists, and nothing sets it. It is in `ARRANGE` as a gap, not a bug.
+
+**Quorum used to be able to exceed the group.** It ships at 5. A two-person group where both had voted still read *"3 more to call it"*, and the Call it shimmer could never fire, because the target was unreachable. Quorum is a floor for a group big enough to have one: everybody having had their say is now always enough, whatever the number says.
