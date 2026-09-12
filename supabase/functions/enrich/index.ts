@@ -167,6 +167,27 @@ async function steamSearch(q: string) {
     }));
 }
 
+/** Steam's marketing html to readable text. Block tags become line breaks so
+ *  paragraphs and feature lists survive; everything else is stripped; the
+ *  handful of entities Steam actually uses are decoded so the client can
+ *  escape the result once without showing "&amp;". Cut at a sentence end. */
+function plainText(html: string): string {
+  const t = html
+    .replace(/<\s*(br|\/p|\/li|\/h[1-6]|\/div|\/ul|\/ol)[^>]*>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "\u2022 ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/ *\n */g, "\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+  if (t.length <= 1600) return t;
+  const cut = t.slice(0, 1600);
+  const end = Math.max(cut.lastIndexOf(". "), cut.lastIndexOf("\n"));
+  return (end > 800 ? cut.slice(0, end + 1) : cut).trim();
+}
+
 async function steamDetails(appid: number) {
   const url =
     `https://store.steampowered.com/api/appdetails?appids=${appid}&cc=au&l=en`;
@@ -298,12 +319,8 @@ Deno.serve(async (req) => {
     appid,
     name: details.name,
     short_desc: details.short_description ?? null,
-    // strip Steam's marketing html down to plain text for the expanded view
-    long_desc: (details.about_the_game ?? details.detailed_description ?? "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 1200) || null,
+    // Steam's marketing html down to readable text, paragraphs intact
+    long_desc: plainText(details.about_the_game ?? details.detailed_description ?? "") || null,
     header: details.header_image ?? null,
     review_desc: summary?.review_score_desc ?? null,
     review_pct: total > 0 ? Math.round((positive / total) * 100) : null,

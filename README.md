@@ -481,7 +481,7 @@ Four pieces, each tied to something that actually happened rather than added for
 | **Confetti** | Once, when a round is called | The moment the whole app exists for, and it used to just swap a strip of text |
 | **Name scramble** | In the status strip, when a different game takes over | Characters resolve left to right, so it reads as the name landing rather than as a glitch |
 | **Call it shimmer** | Once enough people have voted | Says the round is ready without a badge or a colour change shouting about it |
-| **Night sky** | Always, behind everything | A few dozen faint stars with a slow twinkle and a shooting star every several seconds. One canvas at 30fps, stops when the tab is hidden, and light mode gets the streaks only, since stars on paper read as dust |
+| **Night sky** | Always, behind everything | A few dozen faint stars with a slow twinkle and a shooting star every few seconds. One canvas at 30fps, stops when the tab is hidden. Light mode inverts it: ink-lavender specks on paper, same field |
 
 Both glows are a gradient behind a ring-shaped mask. The mask is what keeps them a border rather than a wash over the card. The leader's is a conic gradient rotating on `@property --beam`, which is what lets the angle animate at all, since custom properties are plain strings until you give them a type; browsers without `@property` get a still gradient ring, which is a fine place to land. The pointer one is the same mask with a radial gradient parked at the cursor instead.
 

@@ -43,7 +43,7 @@
   --e2:#7A4408; --e2-bg:#F8EBDC; --e2-ink:#FFFFFF;
   --e3:#8A262A; --e3-bg:#FAE4E2; --e3-ink:#FFFFFF;
   --live:#5B48D9;
-  --star:rgba(90,70,200,.0);          /* starfield: off in light */
+  --star:rgba(74,62,150,.7);          /* starfield: inverted, ink specks on paper */
   --grain:.035;
 
   --f-body:-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
@@ -71,7 +71,7 @@
     --e2:#F5C288; --e2-bg:#372A13; --e2-ink:#2B1F0C;
     --e3:#FFAAA3; --e3-bg:#37201E; --e3-ink:#2B1512;
     --live:#B8B4FF;
-    --star:rgba(220,214,255,.9);
+    --star:rgba(220,214,255,.9);       /* starfield: pale on night */
     --grain:.05;
     --shadow:0 1px 2px rgba(0,0,0,.5);
     --shadow-up:0 -1px 16px rgba(0,0,0,.5);
@@ -197,8 +197,8 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* ---------- status strip ---------- */
 /* one line: where the round is, who leads, and the one button that matters */
 .status{
-  position:relative;margin-top:12px;background:var(--surface);border-radius:var(--r-lg);
-  padding:12px 14px;display:flex;align-items:center;gap:10px;overflow:hidden;
+  position:relative;margin-top:20px;background:var(--surface);border-radius:var(--r-lg);
+  padding:14px 16px;display:flex;align-items:center;gap:12px;overflow:hidden;
   box-shadow:inset 0 1px 0 var(--edge), var(--lift);
 }
 .status .st-main{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;line-height:1.3}
@@ -218,7 +218,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   .status .st-acts{margin-left:auto}
 }
 .flash{
-  margin-top:12px;background:var(--accent-soft);color:var(--accent-text);border-radius:var(--r-md);
+  margin-top:20px;background:var(--accent-soft);color:var(--accent-text);border-radius:var(--r-md);
   padding:9px 12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;
 }
 
@@ -233,8 +233,8 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* the toolbar sticks under the header, so filters stay reachable however far
    down a long shelf you have scrolled */
 .toolbar{
-  display:flex;gap:7px;align-items:center;flex-wrap:wrap;
-  background:var(--ground);padding:0 0 8px;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  background:var(--ground);padding:0 0 12px;
 }
 /* phone: search owns row one, the controls wrap onto row two. The tabs used to
    occupy that row, so this is height-neutral and nothing has to scroll sideways */
@@ -264,11 +264,11 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
    state, so there is no hidden slice and no "which tab was that in" moment. */
 .shelfbar{
   position:sticky;top:54px;z-index:30;background:var(--ground);
-  margin:0 -14px;padding:2px 14px 0;
+  margin:0 -14px;padding:16px 14px 0;
   transition:box-shadow .18s ease;
 }
 .shelfbar.is-stuck{box-shadow:0 8px 18px -14px rgba(0,0,0,.55)}
-@media (min-width:900px){ .shelfbar{margin:0 -24px;padding:2px 24px 0} }
+@media (min-width:900px){ .shelfbar{margin:0 -24px;padding:18px 24px 0} }
 
 .searchwrap{position:relative;flex:1 1 180px;min-width:0}
 .searchwrap .input{padding-left:34px}
@@ -356,7 +356,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* ==========================================================================
    CARDS  - cover led, no border, denser than before
    ========================================================================== */
-.grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:10px}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}
 @media (max-width:459px){ .card .art{aspect-ratio:auto;height:112px} }
 @media (min-width:460px){ .grid{grid-template-columns:repeat(2,1fr)} }
 @media (min-width:620px){ .grid{grid-template-columns:repeat(3,1fr)} }
@@ -513,7 +513,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 
 /* section heads for a shelf broken into groups */
 .grouphead{
-  display:flex;align-items:baseline;gap:9px;margin:22px 0 8px;
+  display:flex;align-items:baseline;gap:9px;margin:26px 0 10px;
   font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
 }
 .grouphead span{
@@ -607,6 +607,8 @@ td.r{text-align:right;white-space:nowrap}
 .resbtns{display:flex;gap:6px;flex:none;margin-left:auto}
 .res img{width:62px;height:29px;object-fit:cover;border-radius:var(--r-sm);flex:none;background:var(--surface-3)}
 .res .nm{font-size:13px;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.res .nm .sub{display:block;font-size:12px;color:var(--accent-text);font-weight:500;white-space:normal}
+.res--have{box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent)}
 .owns{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--ink-2)}
 .owns input{width:17px;height:17px;accent-color:var(--accent)}
 .msg{margin-top:9px;font-size:12px;padding:9px 11px;border-radius:var(--r-md);font-weight:500}
@@ -619,9 +621,9 @@ td.r{text-align:right;white-space:nowrap}
 .cols{display:block}
 @media (min-width:900px){
   .cols{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:26px;align-items:start}
-  .rail{position:sticky;top:66px;margin-top:0}
+  .rail{position:sticky;top:66px;margin-top:18px}
 }
-.rail{display:flex;flex-direction:column;gap:10px;margin-top:24px}
+.rail{display:flex;flex-direction:column;gap:12px;margin-top:28px}
 .panel{background:var(--surface);border-radius:var(--r-lg);padding:14px;box-shadow:inset 0 1px 0 var(--edge), var(--lift)}
 .panel h3{font-size:12px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 
@@ -794,7 +796,8 @@ td.r{text-align:right;white-space:nowrap}
 .sheet .danger{font-size:12px;color:var(--e3);font-weight:500;align-self:flex-start}
 .sheetbody{display:flex;flex-direction:column;gap:10px}
 .dl{display:flex;gap:5px;flex-wrap:wrap}
-.dlong{font-size:13px;color:var(--ink-2);line-height:1.5}
+.dlong{display:flex;flex-direction:column;gap:10px}
+.dlong p{font-size:13px;color:var(--ink-2);line-height:1.65}
 .menu{display:flex;flex-direction:column;gap:5px;margin-top:4px}
 .menuitem{display:flex;flex-direction:column;gap:1px;text-align:left;padding:11px 12px;border-radius:var(--r-md);background:var(--surface-2);transition:background .12s}
 .menuitem:hover{background:var(--surface-3)}
@@ -1622,7 +1625,8 @@ async function addGame(appid){
     await rpc("add_game", {p_code:code, p_device:deviceId, p_appid:appid,
                            p_energy:f.energy, p_crew_max:f.crew_max,
                            p_setup:f.setup, p_crew_mod:f.crew_mod, p_crew_note:f.crew_note});
-    addMsg = {kind:"ok", text: game.name + " is up for a vote"};
+    const had = (S.shelf||[]).find(x => x.appid === appid);
+    addMsg = {kind:"ok", text: had ? game.name + " was already on the shelf" + (had.added_name ? ", added by "+had.added_name : "") : game.name + " is up for a vote"};
     addResults = [];
     addQ = "";
     await refresh();
@@ -2295,7 +2299,7 @@ function renderSheet(d){
     return `<div class="sheetwrap" data-scrim><div class="sheet sheet--tall" role="dialog" aria-modal="true">
       <div class="sheethead">
         <h3>${esc(game.name||"Game")}</h3>
-        <button class="iconbtn" data-close aria-label="Close">✕</button>
+        <button class="iconbtn" data-dismiss aria-label="Close">✕</button>
       </div>
       <div class="sheetbody">
         <div class="dl">
@@ -2303,7 +2307,7 @@ function renderSheet(d){
           <a class="pill pill--link" href="https://store.steampowered.com/app/${sheet.appid}/" target="_blank" rel="noopener">Steam ↗</a>
           ${s.added_name ? `<span class="pill">Added by ${esc(s.added_name)}</span>` : ""}
         </div>
-        ${desc ? `<p class="dlong">${esc(desc)}</p>` : ""}
+        ${desc ? `<div class="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>` : ""}
 
         <span class="eyebrow">What people reckon</span>
         ${takes.length ? `<div class="takes">${takes.map(t=>`<p class="take"><b>${esc(t.by)}</b>${esc(t.body)}</p>`).join("")}</div>` : `<p class="notebox">No takes yet. Yours goes here.</p>`}
@@ -2356,15 +2360,23 @@ function renderSheet(d){
             : `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>`}
         </button>
       </div>
-      ${addResults.length ? `<div class="results">${addResults.map(r => `
-        <div class="res">
+      ${addResults.length ? `<div class="results">${addResults.map(r => {
+        const have = (S.shelf||[]).find(x => x.appid === r.appid);
+        const st = have ? stateOf(have, d) : null;
+        return `
+        <div class="res${have ? " res--have" : ""}">
           ${r.header ? `<img src="${esc(r.header)}" alt="" loading="lazy">`
-            : `<span style="width:62px;height:29px;border-radius:4px;flex:none;background:hsl(${hueOf(r.name)} 30% 40%)"></span>`}
-          <span class="nm">${esc(r.name)}</span>
+            : `<span style="width:62px;height:29px;border-radius:4px;flex:none;background:hsl(${hueOf(r.name)} 24% 36%)"></span>`}
+          <span class="nm">${esc(r.name)}${have ? `<span class="sub">${
+            st === "benched" ? "On the bench" : st === "playing" ? "On right now" : "Already on the shelf"}${
+            have.added_name ? " \u00B7 added by "+esc(have.added_name) : ""}${
+            st === "open" && (d.counts[r.appid]||0) ? " \u00B7 "+d.counts[r.appid]+(d.counts[r.appid]===1?" vote":" votes") : ""}</span>` : ""}</span>
           <span class="resbtns">
-            <button class="btn btn--sm" data-add="${r.appid}">Add it</button>
+            ${!have ? `<button class="btn btn--sm" data-add="${r.appid}">Add it</button>`
+              : st === "benched" ? `<button class="btn btn--sm" data-unbench="${r.appid}">Put it back</button>`
+              : `<button class="btn btn--ghost btn--sm" data-showcard="${r.appid}">Show it</button>`}
           </span>
-        </div>`).join("")}</div>` : ""}
+        </div>`; }).join("")}</div>` : ""}
       ${addMsg ? `<p class="msg msg--${addMsg.kind==="ok"?"ok":"bad"}">${esc(addMsg.text)}</p>` : ""}`);
   }
 
@@ -2565,8 +2577,7 @@ function wireCommon(d){
   const sc = document.querySelector("[data-scrim]");
   if(sc){
     sc.onclick = e => { if(e.target===sc){ closeSheet(); } };
-    const dis = document.querySelector("[data-dismiss]");
-    if(dis) dis.onclick = () => { closeSheet(); };
+    document.querySelectorAll("[data-dismiss]").forEach(b => b.onclick = () => { closeSheet(); });
     trapFocus(sc);
   }
 
@@ -2756,6 +2767,16 @@ function wireGroup(d, filtered){
   const addgo = document.getElementById("addgo");
   if(addgo) addgo.onclick = submitAdd;
   document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => addGame(+b.dataset.add));
+  document.querySelectorAll("[data-showcard]").forEach(b => b.onclick = () => {
+    const id = +b.dataset.showcard;
+    // the card is on the shelf but may be filtered out; clear the search at least
+    F.q = ""; if(F.benched) F.benched = false;
+    sheet = null; addResults = []; addQ = ""; pulse = id; render();
+    const el = document.querySelector(`[data-pick="${id}"], [data-unbench="${id}"]`);
+    const card = el && el.closest(".card, tr");
+    if(card) card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    setTimeout(() => { if(pulse === id){ pulse = null; render(); } }, 700);
+  });
 
   // rail + bar
   const cs = document.getElementById("copysum");   if(cs) cs.onclick = () => copy(summaryText(d), cs);
@@ -2927,12 +2948,12 @@ function applyTheme(){
 applyTheme();
 
 /* ---------- night sky ----------
-   A starfield behind everything, with the occasional shooting star. Quiet on
-   purpose: a few dozen faint points, a slow twinkle, one streak every several
-   seconds. It is one canvas painted at 30fps, it stops when the tab is hidden,
+   A starfield behind everything, with shooting stars. Quiet but present: a
+   field of faint points with a slow twinkle, and a streak every
+   couple of seconds. It is one canvas painted at 30fps, it stops when the tab is hidden,
    and under reduced motion it paints the stars once and never moves them. The
-   colours come from the theme tokens, so light mode gets no stars at all (they
-   would be dust on paper) and only the odd lavender streak. */
+   colours come from the theme tokens: pale points on the night, and the same
+   field inverted to ink-lavender specks on paper in light. */
 (() => {
   const c = document.createElement("canvas");
   c.id = "sky"; c.setAttribute("aria-hidden", "true");
@@ -2940,7 +2961,7 @@ applyTheme();
   const ctx = c.getContext("2d");
   if(!ctx) return;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)");
-  let W = 0, H = 0, stars = [], shot = null, nextShot = 0, raf = 0, last = 0, tick = 0;
+  let W = 0, H = 0, stars = [], shots = [], nextShot = 0, raf = 0, last = 0, tick = 0;
   let starCol = "rgba(220,214,255,.9)", headCol = "#B8B4FF", tailCol = "#93C5FD", darkNow = true;
 
   // the theme can flip at any moment, so re-read the tokens now and then
@@ -2956,8 +2977,10 @@ applyTheme();
     W = innerWidth; H = innerHeight;
     c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // ~1 star per 12,000px²: 27 on a phone, 108 on a big monitor
-    const n = Math.round(W * H * 0.00008);
+    // Area alone starves a phone (a fifth of a desktop's pixels on a screen
+    // you hold at arm's length), so there is a floor and the curve is flatter
+    // than linear: ~70 on a phone, ~140 on a big monitor.
+    const n = Math.min(300, Math.max(70, Math.round(Math.pow(W * H, 0.62) * 0.042)));
     stars = Array.from({ length: n }, () => ({
       x: Math.random() * W, y: Math.random() * H,
       r: 0.5 + Math.random() * 1.0,            // radius in css px
@@ -2969,46 +2992,45 @@ applyTheme();
     if(reduce.matches) paint(0, 0);            // one still frame, then nothing
   }
   function spawn(now){
-    // start just off the top or a side, heading down at a shallow angle, like
-    // the real thing rather than a laser
+    // start just off a side, heading down at a shallow angle, like the real
+    // thing rather than a laser
     const fromLeft = Math.random() < 0.5;
-    const ang = (fromLeft ? 1 : -1) * (0.45 + Math.random() * 0.35);   // radians from straight down, mirrored
-    shot = {
-      x: fromLeft ? -20 : W + 20, y: Math.random() * H * 0.5,
-      vx: Math.sin(ang) * 520 * (fromLeft ? 1 : 1), vy: Math.cos(ang) * 520 * 0.55,
-      len: 120 + Math.random() * 110, born: now, life: 1.7,
-    };
-    if(!fromLeft) shot.vx = -Math.abs(shot.vx); else shot.vx = Math.abs(shot.vx);
-    nextShot = now + 5000 + Math.random() * 9000;
+    const ang = 0.45 + Math.random() * 0.35;          // radians from straight down
+    const speed = 460 + Math.random() * 180;
+    shots.push({
+      x: fromLeft ? -20 : W + 20, y: Math.random() * H * 0.55,
+      vx: (fromLeft ? 1 : -1) * Math.sin(ang) * speed, vy: Math.cos(ang) * speed * 0.55,
+      len: 130 + Math.random() * 120, born: now, life: 1.7,
+    });
+    nextShot = now + 2000 + Math.random() * 3000;
   }
   function paint(now, dt){
     ctx.clearRect(0, 0, W, H);
-    if(darkNow){
-      ctx.fillStyle = starCol;
-      for(const st of stars){
-        if(!reduce.matches) st.t += dt * st.s;
-        ctx.globalAlpha = st.o * (0.6 + 0.4 * Math.sin(st.t));
-        ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2); ctx.fill();
-      }
-      ctx.globalAlpha = 1;
+    ctx.fillStyle = starCol;
+    for(const st of stars){
+      if(!reduce.matches) st.t += dt * st.s;
+      ctx.globalAlpha = st.o * (0.6 + 0.4 * Math.sin(st.t));
+      ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2); ctx.fill();
     }
-    if(shot){
-      const age = (now - shot.born) / 1000;
-      shot.x += shot.vx * dt; shot.y += shot.vy * dt;
-      const fade = age < 0.25 ? age / 0.25 : Math.max(0, 1 - (age - 0.25) / (shot.life - 0.25));
-      const sp = Math.hypot(shot.vx, shot.vy);
-      const tx = shot.x - (shot.vx / sp) * shot.len, ty = shot.y - (shot.vy / sp) * shot.len;
-      const g = ctx.createLinearGradient(tx, ty, shot.x, shot.y);
+    ctx.globalAlpha = 1;
+    for(const sh of shots){
+      const age = (now - sh.born) / 1000;
+      sh.x += sh.vx * dt; sh.y += sh.vy * dt;
+      const fade = age < 0.25 ? age / 0.25 : Math.max(0, 1 - (age - 0.25) / (sh.life - 0.25));
+      const sp = Math.hypot(sh.vx, sh.vy);
+      const tx = sh.x - (sh.vx / sp) * sh.len, ty = sh.y - (sh.vy / sp) * sh.len;
+      const g = ctx.createLinearGradient(tx, ty, sh.x, sh.y);
       g.addColorStop(0, "transparent"); g.addColorStop(0.7, tailCol); g.addColorStop(1, headCol);
-      ctx.globalAlpha = (darkNow ? 0.75 : 0.35) * fade;
-      ctx.strokeStyle = g; ctx.lineWidth = 1.6; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(shot.x, shot.y); ctx.stroke();
+      ctx.globalAlpha = (darkNow ? 0.85 : 0.7) * fade;
+      ctx.strokeStyle = g; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(sh.x, sh.y); ctx.stroke();
       // a small bright head
       ctx.fillStyle = headCol;
-      ctx.beginPath(); ctx.arc(shot.x, shot.y, 1.6, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sh.x, sh.y, 1.8, 0, Math.PI * 2); ctx.fill();
       ctx.globalAlpha = 1;
-      if(age > shot.life || shot.x < -200 || shot.x > W + 200 || shot.y > H + 200) shot = null;
+      sh.dead = age > sh.life || sh.x < -260 || sh.x > W + 260 || sh.y > H + 260;
     }
+    if(shots.some(sh => sh.dead)) shots = shots.filter(sh => !sh.dead);
   }
   function frame(now){
     raf = requestAnimationFrame(frame);
@@ -3016,10 +3038,10 @@ applyTheme();
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     if(++tick % 60 === 0) palette();
-    if(!shot && now > nextShot) spawn(now);
+    if(shots.length < 2 && now > nextShot) spawn(now);
     paint(now, dt);
   }
-  function start(){ if(reduce.matches || raf) return; last = performance.now(); nextShot = last + 2500; raf = requestAnimationFrame(frame); }
+  function start(){ if(reduce.matches || raf) return; last = performance.now(); nextShot = last + 900; raf = requestAnimationFrame(frame); }
   function stop(){ cancelAnimationFrame(raf); raf = 0; }
   addEventListener("resize", resize, { passive: true });
   document.addEventListener("visibilitychange", () => document.hidden ? stop() : start());
