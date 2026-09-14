@@ -43,7 +43,7 @@
   --e2:#7A4408; --e2-bg:#F8EBDC; --e2-ink:#FFFFFF;
   --e3:#8A262A; --e3-bg:#FAE4E2; --e3-ink:#FFFFFF;
   --live:#5B48D9;
-  --star:rgba(74,62,150,.7);          /* starfield: inverted, ink specks on paper */
+  --star:rgba(42,32,104,.92);         /* starfield: inverted, ink specks on paper */
   --grain:.035;
 
   --f-body:-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
@@ -106,7 +106,7 @@ body{
      periwinkle top-right, a warm one low-left, none above 12% so fifteen
      saturated covers stay the brightest thing on the page. */
   background:
-    radial-gradient(1100px 560px at 50% -14%, color-mix(in oklab, var(--grad-a) 13%, transparent), transparent 66%),
+    radial-gradient(1200px 620px at 50% -2%, color-mix(in oklab, var(--grad-a) 11%, transparent), transparent 68%),
     radial-gradient(760px 460px at 104% 4%, color-mix(in oklab, var(--grad-b) 10%, transparent), transparent 70%),
     radial-gradient(900px 520px at -8% 104%, color-mix(in oklab, var(--e2) 6%, transparent), transparent 70%),
     var(--ground);
@@ -171,9 +171,12 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* ---------- header ---------- */
 .top{
   position:sticky;top:0;z-index:40;
-  background:color-mix(in oklab, var(--ground) 78%, transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--line);
+  background:transparent;border-bottom:1px solid transparent;
+  transition:background .2s ease,border-color .2s ease,backdrop-filter .2s ease;
+}
+.top.is-stuck{
+  background:color-mix(in oklab, var(--ground) 86%, transparent);
+  backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);
 }
 .top .inner{display:flex;align-items:center;gap:8px;min-height:54px}
 .brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:1}
@@ -263,11 +266,21 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* one shelf, no tabs. Everything is always on it and the sections carry the
    state, so there is no hidden slice and no "which tab was that in" moment. */
 .shelfbar{
-  position:sticky;top:54px;z-index:30;background:var(--ground);
+  position:sticky;top:54px;z-index:30;
+  /* transparent while the page sits at the top, for the same reason as .top;
+     once pinned it takes the identical glass recipe so header and toolbar
+     read as one slab rather than two bands with an edge between them */
+  background:transparent;
+  border-bottom:1px solid transparent;
   margin:0 -14px;padding:16px 14px 0;
-  transition:box-shadow .18s ease;
+  transition:background .2s ease,border-color .18s ease,box-shadow .18s ease;
 }
-.shelfbar.is-stuck{box-shadow:0 8px 18px -14px rgba(0,0,0,.55)}
+.shelfbar.is-stuck{
+  background:color-mix(in oklab, var(--ground) 86%, transparent);
+  backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);
+  border-bottom-color:var(--line);
+  box-shadow:0 8px 18px -14px rgba(20,16,60,.28);
+}
 @media (min-width:900px){ .shelfbar{margin:0 -24px;padding:18px 24px 0} }
 
 .searchwrap{position:relative;flex:1 1 180px;min-width:0}
@@ -3064,8 +3077,10 @@ window.addEventListener("focus", () => refresh());
   let ticking = false;
   const apply = () => {
     ticking = false;
-    const bar = document.querySelector(".shelfbar");
-    if(bar) bar.classList.toggle("is-stuck", window.scrollY > 90);
+    // one threshold for both sticky surfaces, so they can never disagree
+    // about whether they are glass or invisible
+    const stuck = window.scrollY > 24;
+    for(const el of document.querySelectorAll(".top,.shelfbar")) el.classList.toggle("is-stuck", stuck);
   };
   window.addEventListener("scroll", () => {
     if(!ticking){ ticking = true; requestAnimationFrame(apply); }
