@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Game Night</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
 <meta name="description" content="Pick what we play next.">
 <meta name="color-scheme" content="light dark">
 
@@ -175,8 +176,8 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   transition:background .2s ease,border-color .2s ease,backdrop-filter .2s ease;
 }
 .top.is-stuck{
-  background:color-mix(in oklab, var(--ground) 86%, transparent);
-  backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);
+  background:color-mix(in oklab, var(--ground) 97%, transparent);
+  backdrop-filter:blur(18px) saturate(1.1);-webkit-backdrop-filter:blur(18px) saturate(1.1);
 }
 .top .inner{display:flex;align-items:center;gap:8px;min-height:54px}
 .brand{display:flex;align-items:baseline;gap:9px;min-width:0;flex:1}
@@ -237,7 +238,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
    down a long shelf you have scrolled */
 .toolbar{
   display:flex;gap:8px;align-items:center;flex-wrap:wrap;
-  background:var(--ground);padding:0 0 12px;
+  padding:0 0 12px;
 }
 /* phone: search owns row one, the controls wrap onto row two. The tabs used to
    occupy that row, so this is height-neutral and nothing has to scroll sideways */
@@ -276,12 +277,19 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   transition:background .2s ease,border-color .18s ease,box-shadow .18s ease;
 }
 .shelfbar.is-stuck{
-  background:color-mix(in oklab, var(--ground) 86%, transparent);
-  backdrop-filter:blur(14px) saturate(1.1);-webkit-backdrop-filter:blur(14px) saturate(1.1);
+  background:color-mix(in oklab, var(--ground) 97%, transparent);
+  backdrop-filter:blur(18px) saturate(1.1);-webkit-backdrop-filter:blur(18px) saturate(1.1);
   border-bottom-color:var(--line);
   box-shadow:0 8px 18px -14px rgba(20,16,60,.28);
 }
-@media (min-width:900px){ .shelfbar{margin:0 -24px;padding:18px 24px 0} }
+@media (min-width:900px){
+  .shelfbar{margin:0 -10px;padding:18px 10px 0;border-radius:0 0 var(--r-lg) var(--r-lg)}
+  /* pinned: pull the top padding in and round the whole thing so it reads as a
+     deliberate floating bar with breathing room around the buttons */
+  .shelfbar.is-stuck{
+    padding-top:10px;top:62px;border:1px solid var(--line);border-radius:var(--r-lg);
+  }
+}
 
 .searchwrap{position:relative;flex:1 1 180px;min-width:0}
 .searchwrap .input{padding-left:34px}
@@ -3077,10 +3085,16 @@ window.addEventListener("focus", () => refresh());
   let ticking = false;
   const apply = () => {
     ticking = false;
-    // one threshold for both sticky surfaces, so they can never disagree
-    // about whether they are glass or invisible
-    const stuck = window.scrollY > 24;
-    for(const el of document.querySelectorAll(".top,.shelfbar")) el.classList.toggle("is-stuck", stuck);
+    // header: glass as soon as anything has scrolled under it
+    const top = document.querySelector(".top");
+    if(top) top.classList.toggle("is-stuck", window.scrollY > 0);
+    // toolbar: glass only once it has genuinely pinned under the header, so it
+    // never shows a backing box while it is still sitting in the page flow
+    const bar = document.querySelector(".shelfbar");
+    if(bar){
+      const pin = parseFloat(getComputedStyle(bar).top) || 54;
+      bar.classList.toggle("is-stuck", window.scrollY > 0 && bar.getBoundingClientRect().top <= pin + 1);
+    }
   };
   window.addEventListener("scroll", () => {
     if(!ticking){ ticking = true; requestAnimationFrame(apply); }
