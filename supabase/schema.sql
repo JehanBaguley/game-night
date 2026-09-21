@@ -350,7 +350,8 @@ begin
        'code', g.code, 'name', g.name, 'quorum', g.quorum,
        'round_no', g.round_no, 'round_started_at', g.round_started_at,
        'locked_appid', g.locked_appid, 'paused_at', g.paused_at,
-       'emoji', g.emoji, 'sesh_need', g.sesh_need, 'sesh_time', g.sesh_time),
+       'emoji', g.emoji, 'sesh_need', g.sesh_need, 'sesh_time', g.sesh_time,
+       'tint_h', g.tint_h, 'tint_s', g.tint_s, 'tint_emoji', g.tint_emoji),
     'members', coalesce((
        select json_agg(json_build_object(
          'member_id', m.member_id, 'name', m.name,
@@ -868,3 +869,28 @@ begin
   return n;
 end; $$;
 grant execute on function unlink_other_devices(text, uuid) to anon;
+
+-- ---------------------------------------------------------------------------
+-- CREW COLOUR
+-- The accent comes from the crew's emoji. It is worked out in the browser (the
+-- server has no emoji font to draw with) and saved here, so every device shows
+-- the same shade. tint_emoji records which emoji it was taken from: when the
+-- emoji changes, the first member to open the crew works it out again.
+-- tint_h = -1 means "this emoji has no real colour, use the default".
+-- ---------------------------------------------------------------------------
+alter table groups add column if not exists tint_h     int;
+alter table groups add column if not exists tint_s     int;
+alter table groups add column if not exists tint_emoji text;
+
+create or replace function set_tint(p_code text, p_device uuid, p_emoji text, p_h int, p_s int)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_member(p_code, p_device);
+  if p_h is null or p_h < -1 or p_h > 359 or coalesce(p_s, 0) < 0 or coalesce(p_s, 0) > 100 then
+    raise exception 'bad colour';
+  end if;
+  -- only if the emoji is still the one the colour was taken from
+  update groups set tint_h = p_h, tint_s = coalesce(p_s, 0), tint_emoji = p_emoji
+   where code = p_code and emoji = p_emoji;
+end; $$;
+grant execute on function set_tint(text, uuid, text, int, int) to anon;

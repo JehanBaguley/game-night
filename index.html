@@ -158,9 +158,12 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 }
 .btn--ghost{box-shadow:none}
 .btn:hover{filter:brightness(1.06)}
-.btn:disabled{opacity:.45;cursor:not-allowed}
+/* one disabled look everywhere: a neutral chip, not a faded gradient */
+.btn:disabled{background:var(--surface-2);color:var(--muted);box-shadow:none;cursor:not-allowed;filter:none}
 .btn--ghost{background:var(--surface-2);color:var(--ink-2);font-weight:500}
 .btn--ghost:hover{background:var(--surface-3);color:var(--ink);filter:none}
+/* a ghost button sitting on a surface-2 panel needs one step more fill to show */
+.btn--on2{background:var(--surface-3)}
 .btn--sm{min-height:34px;padding:0 11px;font-size:12px}
 .input{
   min-height:42px;width:100%;padding:0 12px;background:var(--surface-2);color:var(--ink);
@@ -248,6 +251,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 @media (max-width:899px){
   .toolbar .tbtn--icon{order:0}
   .toolbar #fbtn,.toolbar #sortbtn,.toolbar .seg{order:1}
+  .toolbar #sortbtn{flex:1 1 auto;justify-content:flex-start}  /* row two ends on the gutter like row one */
 }
 /* Group and the Fits shortcut stay off the phone toolbar: with sections on by
    default they are rare, and they are both a tap away in the sheet.
@@ -510,7 +514,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .pill--link{color:var(--ink-2)}
 .pill--link:hover{background:var(--surface-3);text-decoration:none}
 .pill--set{cursor:pointer;box-shadow:inset 0 0 0 1px var(--line-strong);background:transparent}
-.modhint{opacity:.6;font-weight:500}
+.modhint{font-weight:500}
 .bdg--mods{background:var(--e2);color:var(--e2-ink)}
 .pill--set:hover{background:var(--surface-2)}
 
@@ -564,9 +568,12 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .pick--quiet{background:var(--surface-2);color:var(--muted);font-weight:500}
 .pick--quiet .n{font-weight:700;color:var(--ink-2);margin-right:4px}
 .pick--static{
-  flex:1;min-height:38px;border-radius:var(--r-sm);background:var(--accent-soft);color:var(--accent-text);
-  display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;
+  flex:1;min-height:38px;border-radius:var(--r-sm);background:transparent;color:var(--accent-text);
+  display:inline-flex;align-items:center;justify-content:flex-start;padding:0 2px;font-size:13px;font-weight:650;
 }
+/* a status, not a button: plain text in one colour, no fill */
+.pick--static.pick--quiet{color:var(--muted);font-weight:500}
+.pick--static.pick--quiet .n{color:var(--ink-2);font-weight:650;opacity:1;font-size:13px;margin-right:4px}
 
 /* ==========================================================================
    LIST VIEW
@@ -659,7 +666,8 @@ td.r{text-align:right;white-space:nowrap}
 
 .crew{display:flex;flex-wrap:wrap;gap:5px}
 .who{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px 3px 3px;font-size:12px;font-weight:500;background:var(--surface-2)}
-.who.novote{opacity:.45}
+.who.novote{color:var(--muted)}
+.who.novote .dot{opacity:.55}
 .who .dot{width:19px;height:19px;border-radius:999px;display:grid;place-items:center;font-size:10.5px;font-weight:700;color:#fff;flex:none}
 .who .livedot{width:6px;height:6px;border-radius:999px;background:var(--live);flex:none;margin-left:4px}
 .who .devs{
@@ -730,7 +738,7 @@ td.r{text-align:right;white-space:nowrap}
 .fhint{font-size:12px;color:var(--ink-2);line-height:1.35}
 .fset--seg{display:flex;gap:0;background:var(--surface-2);border-radius:var(--r-md);padding:3px;width:fit-content;max-width:100%}
 .fset--seg .chip{background:transparent;flex:1;min-height:36px}
-.fset--seg .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.fset--seg .chip[aria-pressed="true"]{background:var(--grad);color:var(--accent-ink)}
 @media (max-width:640px){ .fset--seg .chip{min-height:40px} }
 .acts .lbl{margin-left:5px}
 .sechead .acts{display:flex;gap:6px;align-items:center}
@@ -745,7 +753,7 @@ td.r{text-align:right;white-space:nowrap}
 /* ---------- sticky vote bar ---------- */
 .votebar{
   position:fixed;left:0;right:0;bottom:0;z-index:50;
-  background:color-mix(in oklab, var(--surface) 86%, transparent);
+  background:var(--surface);
   backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border-top:1px solid var(--line);box-shadow:var(--shadow-up);
   padding:9px 14px calc(9px + var(--safe-b));display:flex;align-items:center;gap:10px;
@@ -840,7 +848,7 @@ td.r{text-align:right;white-space:nowrap}
 /* ---------- landing ---------- */
 .hero{padding:38px 0 6px;max-width:50ch}
 .hero h1{font-size:clamp(28px,6.5vw,42px);font-weight:700;line-height:1.05;letter-spacing:-.02em}
-.hero p{margin-top:11px;font-size:15px;color:var(--ink-2)}
+.hero p{margin-top:14px;font-size:15px;color:var(--ink-2);text-wrap:balance}
 .mygroups{display:flex;flex-direction:column;gap:6px}
 .mygroup{display:flex;align-items:center;gap:11px;min-height:54px;padding:0 13px;border-radius:var(--r-md);background:var(--surface);text-align:left;width:100%;transition:background .12s}
 .mygroup:hover{background:var(--surface-2)}
@@ -950,16 +958,27 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 .sesh--ask{flex-wrap:wrap;background:var(--accent-soft);color:var(--accent-text)}
 .sesh--ask .sesh-t b{color:var(--accent-text)}
 .sesh-acts{display:flex;gap:6px;flex:none}
+/* phone: the question gets its own line and the answers split the row */
+@media (max-width:520px){
+  .sesh--ask .sesh-t{flex:1 1 calc(100% - 40px)}
+  .sesh--ask .sesh-acts{flex:1 1 100%}
+  .sesh--ask .sesh-acts .btn{flex:1}
+}
 
 /* side games: slim strips under the status card */
 .sides{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .side{background:var(--surface);border-radius:var(--r-lg);padding:11px 14px;display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 1px 0 var(--edge), var(--lift)}
-.side-top{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;min-height:34px}
+.side-top{display:flex;align-items:center;gap:10px;min-height:34px}
+.side-id{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
+.side-acts{display:flex;gap:6px;flex:none}
 .side .st-k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
 .side-name{font-weight:650;color:var(--ink);font-size:14px}
 .side-who{font-size:12px;color:var(--muted)}
 .side .sp{flex:1}
+/* the ••• beside a button is always a square the button's height */
 .iconbtn--sm{min-width:34px;min-height:34px}
+.st-acts .iconbtn{min-width:34px;min-height:34px}
+@media (pointer: coarse), (max-width:520px){ .iconbtn--sm,.st-acts .iconbtn{min-width:40px;min-height:40px} }
 
 /* the day picker */
 .dgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
@@ -976,7 +995,11 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 .dchip .dbar{width:64%;height:3px;border-radius:2px;background:var(--line-strong);overflow:hidden;margin-top:2px}
 .dchip .dbar i{display:block;height:100%;background:var(--grad);transition:width .2s ease}
 .dchip .dc{font-size:10.5px;color:var(--muted)}
+.dchip{position:relative}
 .dchip.on{background:var(--accent-soft);border-color:var(--accent)}
+/* your own ticks carry a tick, so they can't be mistaken for 'best night' */
+.dchip.on::after{content:"✓";position:absolute;top:4px;right:6px;font-size:10px;font-weight:800;color:var(--accent-text)}
+.dchip.locked::after{color:var(--accent-ink)}
 .dchip.on .dw,.dchip.hit .dc{color:var(--accent-text)}
 .dchip.hit .dc{font-weight:700}
 .dchip.locked{background:var(--grad);border-color:transparent}
@@ -1010,6 +1033,7 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 
 /* crew rules in Edit crew */
 .rules{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--r-md);background:var(--surface-2)}
+.fld{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted);font-weight:500}
 .rulesrow{display:flex;align-items:center;gap:8px 10px;font-size:13px;color:var(--ink-2);flex-wrap:wrap}
 .rules .stepper .sbtn{background:var(--surface)}
 .rules .input{background:var(--surface);width:110px;min-height:38px}
@@ -1289,7 +1313,8 @@ function seshSummary(x){
   if(x.pencil) return `<b>${esc(dayLabel(x.pencil))}</b> pencilled in · ${x.byDay[x.pencil].length} of ${x.total} free · tap to lock it`;
   if(!x.answered.size) return x.sessions.length ? "When's the next sesh? Tap your nights" : "When are we playing? Tap your nights";
   const b = x.best && x.byDay[x.best].length;
-  return `${x.answered.size} of ${x.total} answered · ${b ? `best so far <b>${esc(dayLabel(x.best))}</b> ${b}/${x.need}` : "no night works yet"}`;
+  const gap = b ? x.need - b : 0;
+  return `${x.answered.size} of ${x.total} answered · ${b ? `<b>${esc(dayLabel(x.best))}</b> ${gap > 0 ? `is ${gap} short` : "works"}` : "no night works yet"}`;
 }
 
 /** The line under a game in play: tappable, or the did-you-play question once the night has passed. */
@@ -1320,12 +1345,15 @@ function renderSides(d){
     const who = ip.players.map(id => nameOf(d, id));
     return `<section class="side" aria-label="Side game: ${esc(game.name || "")}">
       <div class="side-top">
-        <span class="st-k">On the side</span>
-        <b class="side-name">${esc(game.name || "")}</b>
-        <span class="side-who">${who.length ? esc(listNames(who)) : "nobody in yet"}</span>
-        <span class="sp"></span>
+        <div class="side-id">
+          <span class="st-k">On the side</span>
+          <b class="side-name">${esc(game.name || "")}</b>
+          <span class="side-who">${who.length ? esc(listNames(who)) : "nobody in yet"}</span>
+        </div>
+        <div class="side-acts">
         <button class="btn btn--sm${x.iAmIn ? " btn--ghost" : ""}" data-sidejoin="${ip.appid}" data-on="${x.iAmIn ? 0 : 1}">${x.iAmIn ? "I'm out" : "I'm in"}</button>
         <button class="iconbtn iconbtn--sm" data-sidemenu="${ip.appid}" aria-label="Wrap up ${esc(game.name || "")}"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>
+        </div>
       </div>
       ${x.iAmIn || x.lock ? seshLine(x) : ""}
     </section>`;
@@ -1359,12 +1387,12 @@ function seshBody(d, x){
     const n = x.byDay[day].length, mine = x.mineDays.has(day), locked = x.lock && x.lock.day === day;
     const names = x.byDay[day].map(id => nameOf(d, id));
     return `<button class="dchip${mine ? " on" : ""}${x.total && n >= x.need ? " hit" : ""}${locked ? " locked" : ""}" data-dday="${day}"
-        aria-pressed="${mine}" aria-label="${esc(dayLong(day))}: ${n} of ${x.need} free${mine ? ", including you" : ""}"
+        aria-pressed="${mine}" aria-label="${esc(dayLong(day))}: ${n} free, needs ${x.need}${mine ? ", including you" : ""}"
         title="${esc(names.length ? listNames(names) : "Nobody yet")}"${x.iAmIn ? "" : " disabled"}>
       <span class="dw">${esc(dayShort(day))}</span>
       <span class="dn num">${dayDate(day).getDate()}</span>
       <span class="dbar" aria-hidden="true"><i style="width:${Math.min(100, Math.round(n / Math.max(1, x.need) * 100))}%"></i></span>
-      <span class="dc num">${n}/${x.need}</span>
+      <span class="dc num">${n ? n + " free" : "–"}</span>
     </button>`;
   }).join("");
   // names for the sheet: you first, as "You"
@@ -1454,7 +1482,7 @@ function seshShareText(d){
     const name = (g.name || "") + (ip.side ? " (side game)" : "");
     if(x.lock){ lines.push(name + ": locked in for " + dayLong(x.lock.day) + ", " + t); return; }
     const focus = x.pencil || (x.best && x.byDay[x.best].length ? x.best : null);
-    lines.push(name + ": " + (focus ? dayLong(focus) + " has " + x.byDay[focus].length + " of " + x.need + (x.pencil ? ", pencilled in" : "") : "no night picked yet"));
+    lines.push(name + ": " + (focus ? dayLong(focus) + ": " + x.byDay[focus].length + " free, need " + x.need + (x.pencil ? ", pencilled in" : "") : "no night picked yet"));
     const waiting = x.players.filter(id => !x.answered.has(id)).map(id => nameOf(d, id));
     if(waiting.length) lines.push("still need nights from " + listNames(waiting));
   });
@@ -1541,19 +1569,34 @@ function emojiColour(e){
   return tintCache[e] = out;
 }
 
+/** Relative luminance of an hsl colour (h deg, s and l in %), for contrast checks. */
+function hslLum(h, s, l){
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  const lin = c => c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * lin(f(0)) + 0.7152 * lin(f(8)) + 0.0722 * lin(f(4));
+}
 /** The accent tokens for an emoji's colour in the current theme, or null for the default. */
 function crewVars(emoji){
   const col = emoji ? emojiColour(emoji) : null;
   if(!col) return null;
   const dark = isDark();
   const h = Math.round(col.h), s = Math.round(Math.min(88, Math.max(48, col.s * 100)));
-  const h2 = (h + 24) % 360;                      // the gradient's second stop leans a touch warmer/cooler
   const yellowish = h >= 38 && h <= 85;           // yellows go dark ink, white on yellow is unreadable
+  // the gradient's second stop leans 24deg along the wheel, but never into yellow when the label is white
+  let h2 = (h + 24) % 360;
+  if(!yellowish && h2 >= 38 && h2 <= 85) h2 = (h + 336) % 360;
+  // in light mode white labels sit on the fill, so walk each stop darker until white clears 4.5:1
+  const whiteOk = (hh, l) => { while(l > 22 && 1.05 / (hslLum(hh, s, l) + 0.05) < 4.5) l -= 2; return l; };
   const v = dark
     ? { accent: `hsl(${h} ${s}% 70%)`, soft: `hsl(${h} 32% 20%)`, text: `hsl(${h} ${s}% 76%)`,
         ink: `hsl(${h} 45% 11%)`, a: `hsl(${h} ${s}% 70%)`, b: `hsl(${h2} ${s}% 74%)` }
-    : { accent: `hsl(${h} ${s}% ${yellowish ? 42 : 50}%)`, soft: `hsl(${h} 75% 94%)`, text: `hsl(${h} ${s}% ${yellowish ? 28 : 38}%)`,
-        ink: yellowish ? "#1d1a10" : "#ffffff", a: `hsl(${h} ${s}% ${yellowish ? 50 : 48}%)`, b: `hsl(${h2} ${s}% ${yellowish ? 46 : 44}%)` };
+    : yellowish
+    ? { accent: `hsl(${h} ${s}% 42%)`, soft: `hsl(${h} 75% 94%)`, text: `hsl(${h} ${s}% 28%)`,
+        ink: "#1d1a10", a: `hsl(${h} ${s}% 50%)`, b: `hsl(${h2} ${s}% 46%)` }
+    : { accent: `hsl(${h} ${s}% ${whiteOk(h, 50)}%)`, soft: `hsl(${h} 75% 94%)`, text: `hsl(${h} ${s}% ${Math.min(38, whiteOk(h, 38))}%)`,
+        ink: "#ffffff", a: `hsl(${h} ${s}% ${whiteOk(h, 48)}%)`, b: `hsl(${h2} ${s}% ${whiteOk(h2, 44)}%)` };
   return {
     "--accent": v.accent, "--accent-soft": v.soft, "--accent-text": v.text, "--accent-ink": v.ink,
     "--grad-a": v.a, "--grad-b": v.b,
@@ -1569,6 +1612,24 @@ function tintEl(el, emoji){
   const v = crewVars(emoji);
   TINT_PROPS.forEach(p => v ? el.style.setProperty(p, v[p]) : el.style.removeProperty(p));
   return !!v;
+}
+
+/* The saved colour wins, so every device shows the same shade. If there isn't
+   one for the current emoji (a new crew, a changed emoji, or a crew from before
+   this existed), work it out here and save it for everyone. Members only, and
+   once per emoji per visit. */
+let tintSaving = "";
+function syncTint(){
+  const g = S.group, e = g.emoji || DEFAULT_EMOJI;
+  if(g.tint_emoji === e && g.tint_h != null){
+    tintCache[e] = g.tint_h < 0 ? null : { h: g.tint_h, s: (g.tint_s || 0) / 100 };
+    return;
+  }
+  if(!myMemberId || tintSaving === code + e) return;
+  tintSaving = code + e;
+  const c = emojiColour(e);
+  rpc("set_tint", { p_code: code, p_device: deviceId, p_emoji: e,
+    p_h: c ? Math.round(c.h) % 360 : -1, p_s: c ? Math.round(c.s * 100) : 0 }).catch(() => {});
 }
 
 let tintKey = "";
@@ -2524,6 +2585,7 @@ function render(){
   if(code !== wasCode) loadF();
   if(!S || S.group.code !== code) return renderLoading();
   setTabIdentity(S.group.emoji, S.group.name);
+  syncTint();
   applyCrewColour(sheet && sheet.kind === "crew" ? sheet.emoji : S.group.emoji);
   renderGroup();
 }
@@ -2580,9 +2642,9 @@ function renderLanding(){
       <div class="add add--tap" data-focus="joincode"><div class="row row--one">
         <input class="input codebox" id="joincode" placeholder="e.g. X9MWCDM" maxlength="7" inputmode="text"
                autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-describedby="joinhint">
-        <button class="btn btn--ghost" id="joinbtn" disabled>Join</button>
+        <button class="btn" id="joinbtn" disabled>Join</button>
       </div><p class="hint" id="joinhint" aria-live="polite"></p></div>
-      <p class="footer">Data lives in your own Supabase project. Cover art and stats come from Steam.</p>
+      <p class="footer">Your crews live in your own database, no accounts anywhere. Cover art and stats come from Steam.</p>
     </div>
     ${sheet ? renderSheet(null) : ""}`;
 
@@ -2738,12 +2800,12 @@ function renderGroup(){
                   <p>Chuck in the games you're keen on. Search Steam by name or paste a store link, and each one is up for a vote straight away.</p>
                   <div class="shelf0-acts">
                     <button class="btn" id="addfirst">Add a game</button>
-                    <button class="btn btn--ghost" id="sharefirst">Send the link to the crew</button>
+                    <button class="btn btn--ghost" id="sharefirst">Send to the chat</button>
                   </div>
                   <ol class="shelf0-steps">
                     <li><b>Add</b> anything you'd play together</li>
                     <li><b>Pick</b> up to three each</li>
-                    <li><b>Call it</b> when enough of you are in</li>
+                    <li><b>Call it</b> once enough of you have picked</li>
                   </ol>
                 </div>`
             : `<div class="empty"><b>Nothing survived that</b>
@@ -2758,7 +2820,7 @@ function renderGroup(){
           <section class="panel">
             <h3>Who's in</h3>
             <div class="crew">${d.members.length ? d.members.map(mm => {
-              const voted = (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
+              const voted = mm.member_id === myMemberId || (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
               return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
                 ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
                 <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
@@ -2770,7 +2832,7 @@ function renderGroup(){
       </div>
     </div>
 
-    ${pool.length ? `<div class="votebar">
+    ${pool.length && !g.locked_appid ? `<div class="votebar">
       <div class="st">
         <div class="a">${g.locked_appid ? "Round's called" : d.myPicks.length === 3 ? "Your three are in" : d.myPicks.length ? "Your picks" : "Pick up to three"}</div>
         <div class="pips" aria-hidden="true">${[0,1,2].map(i => `<i class="${i < d.myPicks.length ? "f":""}"></i>`).join("")}</div>
@@ -2924,7 +2986,7 @@ function renderStatus(d, g, call){
           return n ? n + (n === 1 ? " session" : " sessions") + " so far" : "started " + esc(ago((d.nowPlaying||{}).started_at)); })()}</span>
       </div>
       <div class="st-acts">
-        <button class="btn btn--sm" id="closebtn">Finished it</button>
+        <button class="btn btn--ghost btn--sm" id="closebtn">Finished it</button>
         ${menu}
       </div>
       ${seshLine(seshFor(d, inPlay(d)[0]))}
@@ -2948,7 +3010,7 @@ function renderStatus(d, g, call){
   const lead = !game ? `<span class="st-lead st-lead--none">No votes yet</span>`
     : tied.length > 1 ? `<span class="st-lead">Dead heat: <b class="leadname">${esc(game.name)}</b> and ${tied.length-1} more on ${top.n}</span>`
     : `<span class="st-lead"><b class="leadname${tookover === top.appid ? " tookover" : ""}">${esc(game.name)}</b> leads with ${top.n}</span>`;
-  const sub = solo ? "just you so far · send the link round"
+  const sub = solo ? "just you so far"
     : `${d.votedCount} of ${d.lookedCount} in${call.ready ? " · enough to call it" : call.short ? " · "+call.short+" more to call it" : ""}`;
   const pct = Math.min(100, Math.round((d.votedCount / Math.max(1, Math.min(g.quorum, d.lookedCount))) * 100));
   return `<section class="status${call.ready ? " status--ready" : ""}" aria-live="polite">
@@ -3008,7 +3070,7 @@ function card(s, d){
         ${eff ? `<span class="e e${eff}${energyIsGuess(s,d)?" guess":""}" title="Energy: ${esc(ENERGY[eff])}${energyIsGuess(s,d)?", guessed from Steam tags":""}"><i class="lvl" aria-hidden="true">${
           "●".repeat(eff)}${"○".repeat(3-eff)}</i>${esc(ENERGY[eff])}</span>` : ""}
         <button class="cap" data-facets="${s.appid}" title="${esc(s.crew_note||"Tap to set the player cap")}">${
-          s.crew_max ? "Up to "+s.crew_max : "Cap?"}${s.crew_mod ? ` <span class="modhint">${s.crew_mod} modded</span>` : ""}</button>
+          s.crew_max ? "Up to "+s.crew_max : "Cap?"}${s.crew_mod ? `<span class="modhint"> · ${s.crew_mod} modded</span>` : ""}</button>
         ${game.shape ? `<span>${esc(SHAPE[game.shape]||game.shape)}</span>` : ""}
         ${lastPlay && !isNow && lastPlay.verdict ? `<span class="v v-${lastPlay.verdict}">${VERDICT_ICON[lastPlay.verdict]} ${esc(VERDICT[lastPlay.verdict])}</span>` : ""}
       </div>
@@ -3105,14 +3167,14 @@ function renderSheet(d){
         ${desc ? `<div class="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>` : ""}
 
         <span class="eyebrow">What people reckon</span>
-        ${takes.length ? `<div class="takes">${takes.map(t=>`<p class="take"><b>${esc(t.by)}</b>${esc(t.body)}</p>`).join("")}</div>` : `<p class="notebox">No takes yet. Yours goes here.</p>`}
-        <input class="input" id="takeinput" maxlength="140" placeholder="Your one-liner, e.g. peaks at 4, grindy after that" value="${esc(mine?mine.body:"")}">
+        ${takes.length ? `<div class="takes">${takes.map(t=>`<p class="take"><b>${esc(t.by)}</b>${esc(t.body)}</p>`).join("")}</div>` : ""}
+        <input class="input" id="takeinput" maxlength="140" placeholder="Your one-liner, e.g. grindy after 4" value="${esc(mine?mine.body:"")}">
 
         <span class="eyebrow">How many can play</span>
         ${s.crew_note ? `<p class="notebox">${esc(s.crew_note)}</p>` : ""}
         <div class="row">
-          <input class="input" id="fcrew" type="number" min="1" max="500" placeholder="Out of the box" value="${s.crew_max ?? ""}" aria-label="Player cap out of the box">
-          <input class="input" id="fmod" type="number" min="1" max="9999" placeholder="With mods" value="${s.crew_mod ?? ""}" aria-label="Player cap with mods or a server">
+          <label class="fld"><span>Out of the box</span><input class="input" id="fcrew" type="number" min="1" max="500" placeholder="?" value="${s.crew_max ?? ""}"></label>
+          <label class="fld"><span>With mods or a server</span><input class="input" id="fmod" type="number" min="1" max="9999" placeholder="?" value="${s.crew_mod ?? ""}"></label>
         </div>
         <span class="eyebrow">Energy</span>
         <div class="eopts">${[1,2,3].map(v => `<button class="eopt" data-fe="${v}" aria-pressed="${(sheet.e ?? energyOf(s,d))===v}"><b>${esc(ENERGY[v])}</b></button>`).join("")}</div>
@@ -3188,15 +3250,16 @@ function renderSheet(d){
     return shell(`<h3>${ip.side ? "Side game" : "Next sesh"}: ${esc(game.name || "")}</h3>
       <p>${x.lock ? "Locked in. Change it if plans move." : `Tap every night you could play. ${x.total <= 1 ? (x.total ? "Just one of you in so far." : "Nobody's in on it yet.") : x.need >= x.total ? "Needs all " + x.total + " of you." : "Needs " + x.need + " of " + x.total + "."}`}</p>
       <div id="seshbody">${seshBody(d, x)}</div>
-      ${ip.side ? "" : `<button class="linkbtn" id="seshrulesjump">Rules: ${esc(needWords(S.group.sesh_need, (S.members||[]).length).val)} free, starts ${esc(S.group.sesh_time || "8pm")} · change</button>`}`);
+      ${ip.side ? "" : `<button class="linkbtn" id="seshrulesjump">Night rules: ${esc(needWords(S.group.sesh_need, (S.members||[]).length).val)} free, starts ${esc(S.group.sesh_time || "8pm")} · change</button>`}
+      <div class="row"><button class="btn btn--ghost" data-dismiss>Done</button></div>`);
   }
 
   if(sheet.kind === "seshrules"){
     const total = (S.members||[]).length, w = needWords(sheet.need, total);
-    return shell(`<h3>Next sesh</h3>
+    return shell(`<h3>Night rules</h3>
       <p>How the crew picks a night. Changes it for everyone.</p>
       <div class="rules">
-        <div class="rulesrow">Lock a night in when this many are free</div>
+        <div class="rulesrow">A night works when this many are free</div>
         <div class="rulesrow"><span class="stepper"><button class="sbtn" data-need="-" aria-label="Fewer">\u2212</button><span class="val num" id="needval">${esc(w.val)}</span><button class="sbtn" data-need="+" aria-label="More">+</button></span></div>
         <p class="fhint" id="needhint">${esc(w.hint)}</p>
         <label class="rulesrow">Usual start <input class="input" id="seshtime" maxlength="12" value="${esc(sheet.time)}" placeholder="8pm" autocomplete="off"></label>
@@ -3245,7 +3308,7 @@ function renderSheet(d){
       <div class="menu">
         <button class="menuitem" id="sharemenu"><b>Send to the chat</b><span>Copy the link, an update, or a reminder</span></button>
         <button class="menuitem" id="editcrew"><b>Edit crew</b><span>Name and emoji</span></button>
-        <button class="menuitem" id="seshrulesbtn"><b>Next sesh</b><span>How many make a night, and the usual start</span></button>
+        <button class="menuitem" id="seshrulesbtn"><b>Night rules</b><span>How many make a night, and the usual start</span></button>
         ${S.group.locked_appid
           ? `<button class="menuitem" id="reopenbtn"><b>Changed our minds</b><span>Reopen the vote</span></button>`
           : S.group.paused_at ? ""
@@ -3367,14 +3430,15 @@ function renderSheet(d){
   if(sheet.kind === "me"){
     const me = d.meMember || {};
     return shell(`<h3>That's you</h3>
-      <p>You're <b>${esc(me.name||"")}</b>. Rename yourself here and your votes come with you.</p>
+      <p>Rename yourself here and your votes come with you.</p>
+      <label class="rulesrow" for="renameinput">Your name</label>
+      <input class="input" id="renameinput" maxlength="24" value="${esc(me.name||"")}">
+      <div class="row"><button class="btn" id="renamego">Save name</button></div>
       ${me.device_count > 1 ? `<div class="rules">
         <div class="rulesrow"><b>Linked on ${me.device_count} browsers</b></div>
-        <p class="fhint">Every browser or phone that opened this crew as you counts as one. They all vote as the same you, so there's nothing to fix. Unlink the others if you've swapped phones or used a borrowed laptop; they'll just ask who you are next time.</p>
-        <button class="btn btn--ghost btn--sm" id="unlinkothers" style="align-self:flex-start">Unlink the others</button>
-      </div>` : ""}
-      <input class="input" id="renameinput" maxlength="24" aria-label="Your name" value="${esc(me.name||"")}">
-      <div class="row"><button class="btn" id="renamego">Save name</button></div>`);
+        <p class="fhint">They all count as the same you. Swapped phones or used a borrowed laptop? Unlink the others and they'll ask who you are next time.</p>
+        <button class="btn btn--ghost btn--sm btn--on2" id="unlinkothers" style="align-self:flex-start">Unlink the others</button>
+      </div>` : ""}`);
   }
 
   if(sheet.kind === "switch"){

@@ -33,6 +33,12 @@ const esc = (v: unknown) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!)
   );
 
+/** The crews are in Australia; "today" and the day names follow that, not the server's UTC clock. */
+const todayAU = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Melbourne" }).format(new Date());
+/** "Fri 26 Sept" from "2026-09-26" */
+const dayName = (iso: string) =>
+  new Date(iso + "T12:00:00Z").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).replace(",", "");
+
 /** Steam hosts a 460x215 header for every app, so there is no image to render. */
 const headerFor = (appid: number) =>
   `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
@@ -45,6 +51,7 @@ Deno.serve(async (req) => {
   let title = "Game Night";
   let desc = "Pick what we play next.";
   let image = "";
+  let theme = "#5B2AB8";
 
   if (code) {
     // get_state is a security-definer RPC, so this is the same read the app does
@@ -69,7 +76,9 @@ Deno.serve(async (req) => {
       const members = (data.members ?? []).length;
       const playing = (data.plays ?? []).find((p: { finished_at: string | null }) => !p.finished_at);
 
-      title = g.name ?? "Game Night";
+      title = (g.emoji ? g.emoji + " " : "") + (g.name ?? "Game Night");
+      // the crew's saved colour tints the preview's accent bar where the app supports it
+      if (typeof g.tint_h === "number" && g.tint_h >= 0) theme = `hsl(${g.tint_h} ${Math.max(45, Math.min(88, g.tint_s ?? 60))}% 45%)`;
 
       // there is no deadline to report; a round runs until someone calls it
       if (g.paused_at) {
@@ -81,6 +90,23 @@ Deno.serve(async (req) => {
         const nm = games[playing.appid]?.name ?? "something";
         desc = `Playing ${nm} right now`;
         image = headerFor(playing.appid);
+        // where the next night is at: locked, pencilled in, or still collecting
+        const appid = g.locked_appid ?? playing.appid;
+        const today = todayAU();
+        const lock = (data.sesh_lock ?? []).find((l: { appid: number }) => l.appid === appid);
+        const need = Math.max(1, Math.min(members, g.sesh_need ?? members));
+        const byDay: Record<string, number> = {};
+        const answered = new Set<string>();
+        for (const f of data.sesh_free ?? []) {
+          if (f.appid !== appid || f.day < today) continue;
+          byDay[f.day] = (byDay[f.day] ?? 0) + 1;
+          answered.add(f.member_id);
+        }
+        for (const n of data.sesh_none ?? []) if (n.appid === appid) answered.add(n.member_id);
+        const pencil = Object.keys(byDay).sort().find((d) => byDay[d] >= need);
+        if (lock && lock.day >= today) desc += ` · next sesh ${dayName(lock.day)}, ${g.sesh_time ?? "8pm"}`;
+        else if (pencil) desc += ` · ${dayName(pencil)} pencilled in (${byDay[pencil]} of ${members} free)`;
+        else desc += ` · next sesh: ${answered.size} of ${members} have picked their nights`;
       } else if (ranked.length) {
         const top = ranked[0];
         const nm = games[top.appid]?.name ?? "Something";
@@ -113,7 +139,7 @@ ${image ? `<meta property="og:image" content="${esc(image)}">
 <meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(desc)}">
-<meta name="theme-color" content="#5B2AB8">
+<meta name="theme-color" content="${esc(theme)}">
 <meta http-equiv="refresh" content="0; url=${esc(target)}">
 <link rel="canonical" href="${esc(target)}">
 </head><body style="font:15px -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;padding:40px">
