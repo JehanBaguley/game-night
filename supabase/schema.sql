@@ -850,3 +850,21 @@ grant execute on function end_side_game(text, uuid, int, text)       to anon;
 -- release state: Steam's coming-soon flag and the demo, alongside the date text
 alter table games add column if not exists coming_soon boolean not null default false;
 alter table games add column if not exists demo_appid  int;
+
+-- ---------------------------------------------------------------------------
+-- UNLINK OTHER DEVICES
+-- Every browser that opens a crew as you is linked to you, so the count only
+-- grows. This keeps the one you're on and unlinks the rest; they'll ask who
+-- you are next time. Votes, takes and history belong to the person, not the
+-- device, so nothing else changes.
+-- ---------------------------------------------------------------------------
+create or replace function unlink_other_devices(p_code text, p_device uuid)
+returns int language plpgsql security definer set search_path = public as $$
+declare m uuid; n int;
+begin
+  m := assert_member(p_code, p_device);
+  delete from member_devices where group_code = p_code and member_id = m and device_id <> p_device;
+  get diagnostics n = row_count;
+  return n;
+end; $$;
+grant execute on function unlink_other_devices(text, uuid) to anon;

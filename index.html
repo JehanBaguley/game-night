@@ -882,6 +882,9 @@ td.r{text-align:right;white-space:nowrap}
 .ebtn:hover{background:var(--surface-3)}
 .ebtn--lg{width:56px;min-height:56px;font-size:30px;border-radius:14px}
 .crewedit{display:flex;gap:10px;align-items:center}
+/* a new crew's card wearing its emoji's colour before it exists */
+.add--tinted{box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent), var(--lift)}
+.add--tinted .ebtn{background:var(--accent-soft)}
 .crewedit .input{flex:1;min-height:56px;font-size:16px}
 
 .ep{display:flex;flex-direction:column;gap:8px}
@@ -1538,17 +1541,11 @@ function emojiColour(e){
   return tintCache[e] = out;
 }
 
-let tintKey = "";
-/** Point the accent tokens at a crew's emoji colour, or back at the default. */
-function applyCrewColour(emoji){
+/** The accent tokens for an emoji's colour in the current theme, or null for the default. */
+function crewVars(emoji){
   const col = emoji ? emojiColour(emoji) : null;
+  if(!col) return null;
   const dark = isDark();
-  const key = col ? Math.round(col.h) + ":" + Math.round(col.s * 100) + (dark ? "d" : "l") : "none";
-  if(key === tintKey) return;
-  tintKey = key;
-  const root = document.documentElement.style;
-  const props = ["--accent", "--accent-soft", "--accent-text", "--accent-ink", "--grad-a", "--grad-b"];
-  if(!col){ props.forEach(p => root.removeProperty(p)); return; }
   const h = Math.round(col.h), s = Math.round(Math.min(88, Math.max(48, col.s * 100)));
   const h2 = (h + 24) % 360;                      // the gradient's second stop leans a touch warmer/cooler
   const yellowish = h >= 38 && h <= 85;           // yellows go dark ink, white on yellow is unreadable
@@ -1557,9 +1554,34 @@ function applyCrewColour(emoji){
         ink: `hsl(${h} 45% 11%)`, a: `hsl(${h} ${s}% 70%)`, b: `hsl(${h2} ${s}% 74%)` }
     : { accent: `hsl(${h} ${s}% ${yellowish ? 42 : 50}%)`, soft: `hsl(${h} 75% 94%)`, text: `hsl(${h} ${s}% ${yellowish ? 28 : 38}%)`,
         ink: yellowish ? "#1d1a10" : "#ffffff", a: `hsl(${h} ${s}% ${yellowish ? 50 : 48}%)`, b: `hsl(${h2} ${s}% ${yellowish ? 46 : 44}%)` };
-  root.setProperty("--accent", v.accent);   root.setProperty("--accent-soft", v.soft);
-  root.setProperty("--accent-text", v.text); root.setProperty("--accent-ink", v.ink);
-  root.setProperty("--grad-a", v.a);        root.setProperty("--grad-b", v.b);
+  return {
+    "--accent": v.accent, "--accent-soft": v.soft, "--accent-text": v.text, "--accent-ink": v.ink,
+    "--grad-a": v.a, "--grad-b": v.b,
+    // --grad and --glow are built from these on :root, and a custom property resolves where
+    // it's declared, so an element that wants the tint has to be handed the finished values too
+    "--grad": `linear-gradient(135deg, ${v.a}, ${v.b})`,
+    "--glow": `0 10px 30px -12px color-mix(in oklab, ${v.accent} 60%, transparent)`,
+  };
+}
+const TINT_PROPS = ["--accent", "--accent-soft", "--accent-text", "--accent-ink", "--grad-a", "--grad-b", "--grad", "--glow"];
+/** Put an emoji's colours on one element (or clear them); returns whether anything was set. */
+function tintEl(el, emoji){
+  const v = crewVars(emoji);
+  TINT_PROPS.forEach(p => v ? el.style.setProperty(p, v[p]) : el.style.removeProperty(p));
+  return !!v;
+}
+
+let tintKey = "";
+/** Point the page's accent at a crew's emoji colour, or back at the default. */
+function applyCrewColour(emoji){
+  const col = emoji ? emojiColour(emoji) : null;
+  const key = col ? Math.round(col.h) + ":" + Math.round(col.s * 100) + (isDark() ? "d" : "l") : "none";
+  if(key === tintKey) return;
+  tintKey = key;
+  // on the root only the base tokens are set: --grad and --glow already derive from them there
+  const v = crewVars(emoji), root = document.documentElement.style;
+  ["--accent", "--accent-soft", "--accent-text", "--accent-ink", "--grad-a", "--grad-b"]
+    .forEach(p => v ? root.setProperty(p, v[p]) : root.removeProperty(p));
 }
 
 /* the crew being started on the landing page: survives re-renders */
@@ -2410,9 +2432,7 @@ async function reopenRound(){ await rpc("reopen_round", {p_code:code, p_device:d
 async function saveCrew(draft){
   if(needName(() => saveCrew(draft))) return;
   await rpc("update_group", {p_code:code, p_device:deviceId, p_name:draft.name, p_emoji:draft.emoji});
-  if("need" in draft && ((S.group.sesh_need ?? null) !== draft.need || (S.group.sesh_time || "8pm") !== draft.time)){
-    await rpc("set_sesh_rules", {p_code:code, p_device:deviceId, p_need:draft.need, p_time:draft.time});
-  }
+
   const saved = myGroups.find(g => g.code === code);
   if(saved){ saved.name = draft.name; saved.emoji = draft.emoji; store.set("groups", myGroups); }
   sheet = null;
@@ -2575,6 +2595,8 @@ function renderLanding(){
   }));
 
   // ---- start a crew
+  const createCard = app.querySelector('[data-focus="newname"]');
+  if(createCard) createCard.classList.toggle("add--tinted", tintEl(createCard, newCrew.emoji));
   const nameIn = document.getElementById("newname"), create = document.getElementById("createbtn");
   const createHint = document.getElementById("createhint");
   nameIn.addEventListener("input", () => { newCrew.name = nameIn.value; create.disabled = !nameIn.value.trim(); createHint.textContent = ""; });
@@ -2740,7 +2762,6 @@ function renderGroup(){
               return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
                 ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
                 <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
-                ${mm.device_count>1 ? `<span class="devs" title="${mm.device_count} devices linked">${mm.device_count}</span>` : ""}
               </span>`;
             }).join("") : `<span class="empty">Just you so far.</span>`}</div>
             <button class="btn btn--ghost btn--sm railshare" id="railshare">Send to the chat</button>
@@ -3166,7 +3187,22 @@ function renderSheet(d){
     const x = seshFor(d, ip), game = d.gamesById[ip.appid] || {};
     return shell(`<h3>${ip.side ? "Side game" : "Next sesh"}: ${esc(game.name || "")}</h3>
       <p>${x.lock ? "Locked in. Change it if plans move." : `Tap every night you could play. ${x.total <= 1 ? (x.total ? "Just one of you in so far." : "Nobody's in on it yet.") : x.need >= x.total ? "Needs all " + x.total + " of you." : "Needs " + x.need + " of " + x.total + "."}`}</p>
-      <div id="seshbody">${seshBody(d, x)}</div>`);
+      <div id="seshbody">${seshBody(d, x)}</div>
+      ${ip.side ? "" : `<button class="linkbtn" id="seshrulesjump">Rules: ${esc(needWords(S.group.sesh_need, (S.members||[]).length).val)} free, starts ${esc(S.group.sesh_time || "8pm")} · change</button>`}`);
+  }
+
+  if(sheet.kind === "seshrules"){
+    const total = (S.members||[]).length, w = needWords(sheet.need, total);
+    return shell(`<h3>Next sesh</h3>
+      <p>How the crew picks a night. Changes it for everyone.</p>
+      <div class="rules">
+        <div class="rulesrow">Lock a night in when this many are free</div>
+        <div class="rulesrow"><span class="stepper"><button class="sbtn" data-need="-" aria-label="Fewer">\u2212</button><span class="val num" id="needval">${esc(w.val)}</span><button class="sbtn" data-need="+" aria-label="More">+</button></span></div>
+        <p class="fhint" id="needhint">${esc(w.hint)}</p>
+        <label class="rulesrow">Usual start <input class="input" id="seshtime" maxlength="12" value="${esc(sheet.time)}" placeholder="8pm" autocomplete="off"></label>
+      </div>
+      <p class="hint hint--bad" id="rulesmsg" hidden></p>
+      <div class="row"><button class="btn btn--ghost" data-${sheet.back ? "rulesback" : "dismiss"}>${sheet.back ? "Back" : "Cancel"}</button><button class="btn" id="rulessave">Save</button></div>`);
   }
 
   if(sheet.kind === "sidewrap"){
@@ -3185,14 +3221,7 @@ function renderSheet(d){
         <input class="input" id="crewname" maxlength="40" aria-label="Crew name" value="${esc(sheet.name)}" autocomplete="off">
       </div>
       ${emojiPicker(sheet.emoji)}
-      ${(() => { const total = (S.members||[]).length, w = needWords(sheet.need, total); return `
-      <div class="rules">
-        <span class="eyebrow">Next sesh</span>
-        <div class="rulesrow">Lock a night in when this many are free</div>
-        <div class="rulesrow"><span class="stepper"><button class="sbtn" data-need="-" aria-label="Fewer">−</button><span class="val num" id="needval">${esc(w.val)}</span><button class="sbtn" data-need="+" aria-label="More">+</button></span></div>
-        <p class="fhint" id="needhint">${esc(w.hint)}</p>
-        <label class="rulesrow">Usual start <input class="input" id="seshtime" maxlength="12" value="${esc(sheet.time)}" placeholder="8pm" autocomplete="off"></label>
-      </div>`; })()}
+
       <p class="hint hint--bad" id="crewmsg" hidden></p>
       <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="crewsave">Save</button></div>`);
   }
@@ -3216,6 +3245,7 @@ function renderSheet(d){
       <div class="menu">
         <button class="menuitem" id="sharemenu"><b>Send to the chat</b><span>Copy the link, an update, or a reminder</span></button>
         <button class="menuitem" id="editcrew"><b>Edit crew</b><span>Name and emoji</span></button>
+        <button class="menuitem" id="seshrulesbtn"><b>Next sesh</b><span>How many make a night, and the usual start</span></button>
         ${S.group.locked_appid
           ? `<button class="menuitem" id="reopenbtn"><b>Changed our minds</b><span>Reopen the vote</span></button>`
           : S.group.paused_at ? ""
@@ -3337,8 +3367,12 @@ function renderSheet(d){
   if(sheet.kind === "me"){
     const me = d.meMember || {};
     return shell(`<h3>That's you</h3>
-      <p>You're <b>${esc(me.name||"")}</b>${me.device_count>1?" on "+me.device_count+" devices":""}.
-         Rename yourself here and your votes come with you.</p>
+      <p>You're <b>${esc(me.name||"")}</b>. Rename yourself here and your votes come with you.</p>
+      ${me.device_count > 1 ? `<div class="rules">
+        <div class="rulesrow"><b>Linked on ${me.device_count} browsers</b></div>
+        <p class="fhint">Every browser or phone that opened this crew as you counts as one. They all vote as the same you, so there's nothing to fix. Unlink the others if you've swapped phones or used a borrowed laptop; they'll just ask who you are next time.</p>
+        <button class="btn btn--ghost btn--sm" id="unlinkothers" style="align-self:flex-start">Unlink the others</button>
+      </div>` : ""}
       <input class="input" id="renameinput" maxlength="24" aria-label="Your name" value="${esc(me.name||"")}">
       <div class="row"><button class="btn" id="renamego">Save name</button></div>`);
   }
@@ -3417,29 +3451,17 @@ function wireCommon(d){
     const prev = document.getElementById("crewpreview"), nm = document.getElementById("crewname");
     const msg = document.getElementById("crewmsg"), save = document.getElementById("crewsave");
     wireEmojiPicker(e => { sheet.emoji = e; prev.textContent = e; applyCrewColour(e); });
-    // the rule stepper: null means everyone, so it keeps meaning "all of us" as the crew grows
-    document.querySelectorAll("[data-need]").forEach(b => b.onclick = () => {
-      const total = (S.members||[]).length, cur = sheet.need ?? total;
-      const next = b.dataset.need === "-" ? Math.max(1, cur - 1) : cur + 1;
-      sheet.need = next >= total ? null : next;
-      const w = needWords(sheet.need, total);
-      document.getElementById("needval").textContent = w.val;
-      document.getElementById("needhint").textContent = w.hint;
-    });
-    const st = document.getElementById("seshtime");
-    if(st) st.addEventListener("input", () => { sheet.time = st.value; });
     nm.addEventListener("input", () => { sheet.name = nm.value; msg.hidden = true; });
     nm.addEventListener("keydown", e => { if(e.key === "Enter") save.click(); });
     save.onclick = async () => {
-      const draft = { name: nm.value.trim(), emoji: sheet.emoji, need: sheet.need ?? null, time: (sheet.time || "").trim() || "8pm" };
+      const draft = { name: nm.value.trim(), emoji: sheet.emoji };
       if(!draft.name){ msg.textContent = "Give it a name."; msg.hidden = false; nm.focus(); return; }
       save.disabled = true; save.textContent = "Saving…";
       try{ await saveCrew(draft); }
       catch(err){ save.disabled = false; save.textContent = "Save"; msg.textContent = err.message; msg.hidden = false; }
     };
   }
-  const openCrew = () => { sheet = { kind:"crew", name: S.group.name, emoji: S.group.emoji || DEFAULT_EMOJI,
-    need: S.group.sesh_need ?? null, time: S.group.sesh_time || "8pm" }; render(); };
+  const openCrew = () => { sheet = { kind:"crew", name: S.group.name, emoji: S.group.emoji || DEFAULT_EMOJI }; render(); };
   const cb = document.getElementById("crewbtn"); if(cb) cb.onclick = openCrew;
   const ec = document.getElementById("editcrew"); if(ec) ec.onclick = openCrew;
 
@@ -3519,6 +3541,40 @@ function wireSesh(d){
     if(go) go.onclick = async () => { const { appid, verdict } = sheet; sheet = null; await act("end_side_game", { p_appid: appid, p_verdict: verdict }, go); };
   }
   if(sheet && sheet.kind === "sesh") wireSeshBody(d);
+
+  // next-sesh rules: from the menu, or from the day picker (then Back returns to it)
+  const openRules = back => { sheet = { kind:"seshrules", need: S.group.sesh_need ?? null, time: S.group.sesh_time || "8pm", back }; render(); };
+  const rb = document.getElementById("seshrulesbtn"); if(rb) rb.onclick = () => openRules(null);
+  const rj = document.getElementById("seshrulesjump"); if(rj) rj.onclick = () => openRules(sheet.appid);
+  if(sheet && sheet.kind === "seshrules"){
+    const back = sheet.back;
+    const bb = app.querySelector("[data-rulesback]"); if(bb) bb.onclick = () => { sheet = { kind:"sesh", appid: back }; render(); };
+    // the stepper: null means everyone, so it keeps meaning "all of us" as the crew grows
+    app.querySelectorAll("[data-need]").forEach(b => b.onclick = () => {
+      const total = (S.members||[]).length, cur = sheet.need ?? total;
+      const next = b.dataset.need === "-" ? Math.max(1, cur - 1) : cur + 1;
+      sheet.need = next >= total ? null : next;
+      const w = needWords(sheet.need, total);
+      document.getElementById("needval").textContent = w.val;
+      document.getElementById("needhint").textContent = w.hint;
+    });
+    const st = document.getElementById("seshtime");
+    if(st) st.addEventListener("input", () => { sheet.time = st.value; });
+    const sv = document.getElementById("rulessave");
+    if(sv) sv.onclick = async () => {
+      if(needName(() => {})) return;
+      const need = sheet.need ?? null, time = (sheet.time || "").trim() || "8pm";
+      sv.disabled = true; sv.textContent = "Saving…";
+      try{
+        await rpc("set_sesh_rules", { p_code: code, p_device: deviceId, p_need: need, p_time: time });
+        sheet = back ? { kind:"sesh", appid: back } : null;
+        await refresh(); render();
+      }catch(err){
+        sv.disabled = false; sv.textContent = "Save";
+        const m = document.getElementById("rulesmsg"); m.textContent = err.message; m.hidden = false;
+      }
+    };
+  }
 }
 
 function wireSeshBody(d){
@@ -3776,6 +3832,13 @@ function wireGroup(d, filtered){
   });
   const cshare = document.getElementById("copyshare");
   if(cshare) cshare.onclick = () => copy(sheet.mode === "sesh" ? seshShareText(d) : sheet.mode === "nudge" ? nudgeText(d) : summaryText(d), cshare);
+  const ul2 = document.getElementById("unlinkothers");
+  if(ul2) ul2.onclick = async () => {
+    ul2.disabled = true; ul2.textContent = "Unlinking…";
+    try{ await rpc("unlink_other_devices", { p_code: code, p_device: deviceId }); }
+    catch(err){ ul2.disabled = false; ul2.textContent = "Unlink the others"; console.warn(err && err.message); return; }
+    await refresh(); render();
+  };
   const rn = document.getElementById("renamego");
   if(rn) rn.onclick = async () => {
     const v = document.getElementById("renameinput").value.trim();

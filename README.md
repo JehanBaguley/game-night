@@ -41,7 +41,9 @@ Each crew has an emoji. It's the browser tab icon while you're looking at that c
 
 The picker is about 330 hand-picked emoji in nine tabs (games, faces, animals, food, nature, activity, travel, objects, symbols) with search words on each, plus your recent picks at the top. Anything outside the set can be pasted into the search box, or typed with the OS emoji picker (Ctrl+Cmd+Space on a Mac, Win+. on Windows).
 
-**Crew colour (trial).** The accent takes the emoji's main colour: 🦀 goes orange, 👾 purple, 🌿 green, 💙 blue. The emoji is drawn on a small off-screen canvas and the strongest colour wins; only its hue and a capped saturation carry over, with lightness fixed per theme so buttons stay readable (yellows get dark text). Emoji with no real colour, like 🎮 or 💀, keep the lavender. It's worked out on each device rather than saved, so an iPhone and a Windows PC can land a few degrees apart. Picking an emoji in Edit crew previews the colour before you save.
+**Crew colour.** The accent takes the emoji's main colour: 🦀 goes orange, 👾 purple, 🌿 green, 💙 blue. The emoji is drawn on a small off-screen canvas and the strongest colour wins; only its hue and a capped saturation carry over, with lightness fixed per theme so buttons stay readable (yellows get dark text). Emoji with no real colour, like 🎮 or 💀, keep the lavender. It's worked out on each device rather than saved, so an iPhone and a Windows PC can land a few degrees apart. Picking an emoji in Edit crew previews the colour before you save.
+
+**Linked browsers.** Every browser or phone that opens a crew as you is linked to you, so *That's you* might say "Linked on 6 browsers". They all vote as the same person; votes, takes and history belong to you, not the device. **Unlink the others** keeps the one you're on and forgets the rest (they'll ask who you are next time), which is worth doing after swapping phones or using someone else's laptop.
 
 Your crews list is saved per browser, not per account. There are no accounts. A browser that has never opened a crew link has an empty list; open the link or type the code and it's added.
 
@@ -67,7 +69,7 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates fourteen tables, locks them all behind row level security with no policies, and exposes twenty-nine functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates fourteen tables, locks them all behind row level security with no policies, and exposes thirty functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
@@ -172,7 +174,7 @@ Picking the game and picking the nights are two separate decisions. A game like 
 | Locked | The line goes solid. **Add to calendar** downloads a calendar file with the game, the crew and the link. **Change night** unlocks it |
 | The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 sessions so far"). Either answer clears the slate for the next one |
 
-**The crew's number** lives in **Edit crew → Next sesh**: "Lock a night when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. Crabs only plays when everyone's free; a bigger crew might go at 80%.
+**The crew's number** lives in **⋯ → Next sesh** (also one tap from the day picker, which shows the current rule): "Lock a night when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. Crabs only plays when everyone's free; a bigger crew might go at 80%.
 
 On a phone it's the line on the status card. On desktop it's also a **Next sesh** card at the top of the right-hand rail, with ten little bars per game so you can see the shape of the fortnight at a glance.
 
@@ -467,7 +469,7 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Fourteen tables, row level security, twenty-nine RPCs |
+| `supabase/schema.sql` | Fourteen tables, row level security, thirty RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
 | `supabase/functions/enrich/index.ts` | Steam search, fetch, validation, facet classification |
 | `data/curated.json` | 76 verified games with caps, energy, setup and mod caveats, mirrored as `CURATED` inside index.html |
