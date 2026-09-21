@@ -331,6 +331,11 @@ Deno.serve(async (req) => {
     coop,
     online_coop: categories.some((c) => /online co-?op/i.test(c)),
     released: details.release_date?.date ?? null,
+    // Steam says outright when a game is not out yet; the date text alone is
+    // things like "Coming soon", "Q2 2027" or "2027", which is not a date
+    coming_soon: !!details.release_date?.coming_soon,
+    // a free demo is a separate app on Steam; the first one listed is the one to try
+    demo_appid: Number(details.demos?.[0]?.appid) || null,
     doing: classifyDoing(forClassify, categories),
     shape: classify(SHAPE_RULES, forClassify),
     // no strong signal either way lands on 2, a normal night

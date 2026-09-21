@@ -44,6 +44,8 @@ create table groups (
   locked_appid     int,                       -- set when a round is called
   paused_at        timestamptz,               -- set while the group is on a break
   emoji            text not null default '🎮',  -- crew icon: favicon, header, crews list
+  sesh_need        int,                       -- free people that make a night; null = everyone
+  sesh_time        text not null default '8pm', -- usual start, shown on a locked night
   created_at       timestamptz not null default now()
 );
 
@@ -135,6 +137,8 @@ create table games (
   coop         boolean not null default false,
   online_coop  boolean not null default false,
   released     text,
+  coming_soon  boolean not null default false,  -- Steam's own "not out yet" flag
+  demo_appid   int,                             -- a free demo you can try first, if there is one
   doing        text,                           -- mucking | building | story | scary | rounds
   shape        text,                           -- dropin | sitting | campaign | longhaul
   energy_guess int,                            -- tag-derived fallback when the group has not set one
@@ -346,7 +350,7 @@ begin
        'code', g.code, 'name', g.name, 'quorum', g.quorum,
        'round_no', g.round_no, 'round_started_at', g.round_started_at,
        'locked_appid', g.locked_appid, 'paused_at', g.paused_at,
-       'emoji', g.emoji),
+       'emoji', g.emoji, 'sesh_need', g.sesh_need, 'sesh_time', g.sesh_time),
     'members', coalesce((
        select json_agg(json_build_object(
          'member_id', m.member_id, 'name', m.name,
@@ -378,7 +382,27 @@ begin
        from plays pl where pl.group_code = p_code), '[]'::json),
     'games', coalesce((
        select json_agg(to_json(ga)) from games ga
-        where ga.appid in (select appid from shelf where group_code = p_code)), '[]'::json)
+        where ga.appid in (select appid from shelf where group_code = p_code)), '[]'::json),
+    -- next sesh: free nights from yesterday on (server clock is UTC, the crew is not)
+    'sesh_free', coalesce((
+       select json_agg(json_build_object('appid', sf.appid, 'day', sf.day, 'member_id', sf.member_id))
+       from sesh_free sf where sf.group_code = p_code and sf.day >= current_date - 1), '[]'::json),
+    'sesh_none', coalesce((
+       select json_agg(json_build_object('appid', sn.appid, 'member_id', sn.member_id))
+       from sesh_none sn where sn.group_code = p_code), '[]'::json),
+    'sesh_lock', coalesce((
+       select json_agg(json_build_object('appid', sl.appid, 'day', sl.day, 'locked_by', sl.locked_by))
+       from sesh_lock sl where sl.group_code = p_code), '[]'::json),
+    'sessions', coalesce((
+       select json_agg(json_build_object('appid', se.appid, 'day', se.day) order by se.day)
+       from sessions se where se.group_code = p_code), '[]'::json),
+    'side', coalesce((
+       select json_agg(json_build_object(
+         'appid', sg.appid, 'started_at', sg.started_at, 'started_by', sg.started_by,
+         'players', coalesce((select json_agg(sp.member_id) from side_players sp
+                               where sp.group_code = p_code and sp.appid = sg.appid), '[]'::json))
+         order by sg.started_at)
+       from side_games sg where sg.group_code = p_code), '[]'::json)
   ) into result;
   return result;
 end; $$;
@@ -611,3 +635,218 @@ grant execute on function new_round(text, uuid, text, boolean, boolean)     to a
 grant execute on function set_break(text, uuid, boolean)                    to anon;
 grant execute on function reopen_round(text, uuid)                          to anon;
 grant select on games to anon;
+
+-- ---------------------------------------------------------------------------
+-- NEXT SESH, SESSIONS AND SIDE GAMES
+-- Picking the game is one decision; picking the nights is another. A game in
+-- play (the called one, or a side game) collects "I'm free" days, a night that
+-- reaches the crew's number is pencilled in, someone locks it, and once it has
+-- passed one question logs whether it happened.
+-- ---------------------------------------------------------------------------
+alter table groups add column if not exists sesh_need int;                         -- null = everyone in the crew
+alter table groups add column if not exists sesh_time text not null default '8pm'; -- shown on a locked night
+
+create table if not exists sesh_free (            -- one row per person per free night per game
+  group_code text not null references groups(code) on delete cascade,
+  appid      int  not null,
+  day        date not null,
+  member_id  uuid not null,
+  primary key (group_code, appid, day, member_id)
+);
+create table if not exists sesh_none (            -- "can't do any of these", so a no still counts as an answer
+  group_code text not null references groups(code) on delete cascade,
+  appid      int  not null,
+  member_id  uuid not null,
+  set_at     timestamptz not null default now(),
+  primary key (group_code, appid, member_id)
+);
+create table if not exists sesh_lock (            -- the night we're going with; one per game in play
+  group_code text not null references groups(code) on delete cascade,
+  appid      int  not null,
+  day        date not null,
+  locked_by  uuid,
+  locked_at  timestamptz not null default now(),
+  primary key (group_code, appid)
+);
+create table if not exists sessions (             -- nights that actually happened
+  group_code text not null references groups(code) on delete cascade,
+  appid      int  not null,
+  day        date not null,
+  logged_at  timestamptz not null default now(),
+  primary key (group_code, appid, day)
+);
+create table if not exists side_games (           -- a second, smaller game running alongside the called one
+  group_code text not null references groups(code) on delete cascade,
+  appid      int  not null,
+  started_by uuid,
+  started_at timestamptz not null default now(),
+  primary key (group_code, appid)
+);
+create table if not exists side_players (
+  group_code text not null,
+  appid      int  not null,
+  member_id  uuid not null,
+  primary key (group_code, appid, member_id),
+  foreign key (group_code, appid) references side_games(group_code, appid) on delete cascade
+);
+
+alter table sesh_free    enable row level security;
+alter table sesh_none    enable row level security;
+alter table sesh_lock    enable row level security;
+alter table sessions     enable row level security;
+alter table side_games   enable row level security;
+alter table side_players enable row level security;
+revoke all on sesh_free, sesh_none, sesh_lock, sessions, side_games, side_players from anon, authenticated;
+
+-- is this game on right now, as the called game or on the side?
+create or replace function in_play(p_code text, p_appid int)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from groups where code = p_code and locked_appid = p_appid)
+      or exists (select 1 from side_games where group_code = p_code and appid = p_appid);
+$$;
+
+-- replace my free nights for a game with this set
+create or replace function set_free(p_code text, p_device uuid, p_appid int, p_days date[])
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid; n int := coalesce(array_length(p_days, 1), 0);
+begin
+  m := assert_member(p_code, p_device);
+  if not in_play(p_code, p_appid) then raise exception 'that game is not on right now'; end if;
+  if n > 16 then raise exception 'too many days'; end if;
+  delete from sesh_free where group_code = p_code and appid = p_appid and member_id = m;
+  insert into sesh_free(group_code, appid, day, member_id)
+       select p_code, p_appid, d, m from unnest(p_days) d
+        where d between current_date - 1 and current_date + 16
+  on conflict do nothing;
+  if n > 0 then
+    delete from sesh_none where group_code = p_code and appid = p_appid and member_id = m;
+  end if;
+end; $$;
+
+-- "can't do any of these"
+create or replace function set_none(p_code text, p_device uuid, p_appid int)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if not in_play(p_code, p_appid) then raise exception 'that game is not on right now'; end if;
+  delete from sesh_free where group_code = p_code and appid = p_appid and member_id = m;
+  insert into sesh_none(group_code, appid, member_id) values (p_code, p_appid, m)
+  on conflict (group_code, appid, member_id) do update set set_at = now();
+end; $$;
+
+create or replace function lock_sesh(p_code text, p_device uuid, p_appid int, p_day date)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if not in_play(p_code, p_appid) then raise exception 'that game is not on right now'; end if;
+  if p_day < current_date - 1 then raise exception 'that night has been'; end if;
+  insert into sesh_lock(group_code, appid, day, locked_by) values (p_code, p_appid, p_day, m)
+  on conflict (group_code, appid) do update set day = excluded.day, locked_by = excluded.locked_by, locked_at = now();
+end; $$;
+
+create or replace function unlock_sesh(p_code text, p_device uuid, p_appid int)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_member(p_code, p_device);
+  delete from sesh_lock where group_code = p_code and appid = p_appid;
+end; $$;
+
+-- after the night: did it happen? Either way the slate is wiped for the next one
+create or replace function resolve_sesh(p_code text, p_device uuid, p_appid int, p_played boolean)
+returns void language plpgsql security definer set search_path = public as $$
+declare d date;
+begin
+  perform assert_member(p_code, p_device);
+  select day into d from sesh_lock where group_code = p_code and appid = p_appid;
+  if d is null then return; end if;
+  if p_played then
+    insert into sessions(group_code, appid, day) values (p_code, p_appid, d) on conflict do nothing;
+  end if;
+  delete from sesh_lock where group_code = p_code and appid = p_appid;
+  delete from sesh_free where group_code = p_code and appid = p_appid;
+  delete from sesh_none where group_code = p_code and appid = p_appid;
+end; $$;
+
+-- the crew's rules: how many free makes a night, and the usual start time
+create or replace function set_sesh_rules(p_code text, p_device uuid, p_need int, p_time text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_member(p_code, p_device);
+  if p_need is not null and (p_need < 1 or p_need > 60) then raise exception 'pick a number from 1 up'; end if;
+  update groups
+     set sesh_need = p_need,
+         sesh_time = coalesce(nullif(left(trim(coalesce(p_time,'')), 12), ''), '8pm')
+   where code = p_code;
+end; $$;
+
+create or replace function start_side_game(p_code text, p_device uuid, p_appid int)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if not exists (select 1 from shelf where group_code = p_code and appid = p_appid and not benched) then
+    raise exception 'that game is not on the shelf';
+  end if;
+  if exists (select 1 from groups where code = p_code and locked_appid = p_appid) then
+    raise exception 'that is already the main game';
+  end if;
+  if (select count(*) from side_games where group_code = p_code) >= 3 then
+    raise exception 'three side games is plenty';
+  end if;
+  insert into side_games(group_code, appid, started_by) values (p_code, p_appid, m) on conflict do nothing;
+  insert into side_players(group_code, appid, member_id) values (p_code, p_appid, m) on conflict do nothing;
+end; $$;
+
+create or replace function side_join(p_code text, p_device uuid, p_appid int, p_on boolean)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if not exists (select 1 from side_games where group_code = p_code and appid = p_appid) then
+    raise exception 'that side game has wrapped up';
+  end if;
+  if p_on then
+    insert into side_players(group_code, appid, member_id) values (p_code, p_appid, m) on conflict do nothing;
+  else
+    delete from side_players where group_code = p_code and appid = p_appid and member_id = m;
+  end if;
+end; $$;
+
+-- wrap a side game up: it lands in play history like any other game
+create or replace function end_side_game(p_code text, p_device uuid, p_appid int, p_verdict text)
+returns void language plpgsql security definer set search_path = public as $$
+declare s side_games%rowtype; r int;
+begin
+  perform assert_member(p_code, p_device);
+  if p_verdict is not null and p_verdict not in ('banger','fine','never_again') then
+    raise exception 'unknown verdict';
+  end if;
+  select * into s from side_games where group_code = p_code and appid = p_appid;
+  if not found then return; end if;
+  select round_no into r from groups where code = p_code;
+  insert into plays(group_code, appid, round_no, started_at, finished_at, verdict)
+       values (p_code, p_appid, r, s.started_at, now(), p_verdict)
+  on conflict (group_code, appid, round_no) do update
+       set finished_at = now(), verdict = coalesce(excluded.verdict, plays.verdict);
+  delete from side_games where group_code = p_code and appid = p_appid;
+  delete from sesh_lock  where group_code = p_code and appid = p_appid;
+  delete from sesh_free  where group_code = p_code and appid = p_appid;
+  delete from sesh_none  where group_code = p_code and appid = p_appid;
+end; $$;
+
+revoke execute on function in_play(text, int) from public;
+grant execute on function set_free(text, uuid, int, date[])          to anon;
+grant execute on function set_none(text, uuid, int)                  to anon;
+grant execute on function lock_sesh(text, uuid, int, date)           to anon;
+grant execute on function unlock_sesh(text, uuid, int)               to anon;
+grant execute on function resolve_sesh(text, uuid, int, boolean)     to anon;
+grant execute on function set_sesh_rules(text, uuid, int, text)      to anon;
+grant execute on function start_side_game(text, uuid, int)           to anon;
+grant execute on function side_join(text, uuid, int, boolean)        to anon;
+grant execute on function end_side_game(text, uuid, int, text)       to anon;
+
+-- release state: Steam's coming-soon flag and the demo, alongside the date text
+alter table games add column if not exists coming_soon boolean not null default false;
+alter table games add column if not exists demo_appid  int;

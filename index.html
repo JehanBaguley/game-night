@@ -902,6 +902,98 @@ td.r{text-align:right;white-space:nowrap}
 .add .row--one{flex-wrap:nowrap}
 .add .row--one .input{flex:1 1 0;min-width:0}
 .hint--bad{color:var(--e3)}
+
+/* ---------- next sesh ---------- */
+.status{flex-wrap:wrap}
+/* the line under a game in play: one tap into the day picker */
+.sesh{
+  display:flex;align-items:center;gap:9px;flex:1 1 100%;width:100%;
+  padding:9px 11px;border-radius:var(--r-md);background:var(--surface-2);
+  font-size:12.5px;line-height:1.4;color:var(--ink-2);text-align:left;transition:background .12s;
+}
+button.sesh:hover{background:var(--surface-3)}
+.sesh-i{font-size:15px;line-height:1;flex:none}
+.sesh-t{flex:1;min-width:0}
+.sesh-t b{color:var(--ink);font-weight:650}
+.sesh-go{color:var(--muted);font-size:17px;line-height:1;flex:none}
+.sesh-you{flex:none;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent-text);background:var(--accent-soft);padding:3px 7px;border-radius:999px}
+.sesh--pencil{background:var(--accent-soft);color:var(--accent-text)}
+.sesh--pencil .sesh-t b,.sesh--pencil .sesh-go{color:var(--accent-text)}
+button.sesh--pencil:hover{background:color-mix(in oklab, var(--accent-soft) 80%, var(--accent))}
+.sesh--locked{background:var(--grad);color:var(--accent-ink)}
+.sesh--locked .sesh-t b,.sesh--locked .sesh-go{color:var(--accent-ink)}
+button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
+.sesh--ask{flex-wrap:wrap;background:var(--accent-soft);color:var(--accent-text)}
+.sesh--ask .sesh-t b{color:var(--accent-text)}
+.sesh-acts{display:flex;gap:6px;flex:none}
+
+/* side games: slim strips under the status card */
+.sides{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.side{background:var(--surface);border-radius:var(--r-lg);padding:11px 14px;display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 1px 0 var(--edge), var(--lift)}
+.side-top{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;min-height:34px}
+.side .st-k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.side-name{font-weight:650;color:var(--ink);font-size:14px}
+.side-who{font-size:12px;color:var(--muted)}
+.side .sp{flex:1}
+.iconbtn--sm{min-width:34px;min-height:34px}
+
+/* the day picker */
+.dgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.dchip{
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 2px 8px;
+  border-radius:var(--r-md);background:var(--surface-2);border:1.5px solid transparent;
+  transition:background .12s,border-color .12s,transform .1s;
+}
+.dchip:not(:disabled):hover{background:var(--surface-3)}
+.dchip:not(:disabled):active{transform:scale(.95)}
+.dchip:disabled{cursor:default}
+.dchip .dw{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.dchip .dn{font-size:19px;font-weight:700;color:var(--ink);line-height:1.15}
+.dchip .dbar{width:64%;height:3px;border-radius:2px;background:var(--line-strong);overflow:hidden;margin-top:2px}
+.dchip .dbar i{display:block;height:100%;background:var(--grad);transition:width .2s ease}
+.dchip .dc{font-size:10.5px;color:var(--muted)}
+.dchip.on{background:var(--accent-soft);border-color:var(--accent)}
+.dchip.on .dw,.dchip.hit .dc{color:var(--accent-text)}
+.dchip.hit .dc{font-weight:700}
+.dchip.locked{background:var(--grad);border-color:transparent}
+.dchip.locked .dw,.dchip.locked .dn,.dchip.locked .dc{color:var(--accent-ink)}
+.dchip.locked .dbar{background:rgba(255,255,255,.35)}
+.dchip.locked .dbar i{background:var(--accent-ink)}
+.dchip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seshwho{font-size:12.5px;color:var(--ink-2);line-height:1.55}
+.seshwho b{color:var(--ink);font-weight:650}
+.linkbtn{align-self:flex-start;font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
+.linkbtn:hover{color:var(--ink-2)}
+.linkbtn:disabled{text-decoration:none;cursor:default}
+#seshbody{display:flex;flex-direction:column;gap:12px}
+
+/* desktop rail: ten little bars per game in play */
+.seshmini{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left;padding:10px 11px;border-radius:var(--r-md);background:var(--surface-2);transition:background .12s}
+.seshmini + .seshmini{margin-top:6px}
+.seshmini:hover{background:var(--surface-3)}
+.sm-top{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--ink)}
+.sm-top b{font-weight:650}
+.sm-tag{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.sm-days{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;align-items:end;height:24px}
+.sm-days i{display:block;height:calc(4px + var(--h) * 20px);border-radius:3px;background:var(--line-strong)}
+.sm-days i.hit{background:var(--accent)}
+.sm-days i.lk{background:var(--grad)}
+.sm-days i.me{box-shadow:inset 0 -3px 0 var(--accent-text)}
+.sm-state{font-size:12px;line-height:1.4;color:var(--ink-2)}
+.sm-state b{color:var(--ink);font-weight:650}
+@media (max-width:899px){ .seshpanel{display:none} }
+.railshare{margin-top:12px}
+
+/* crew rules in Edit crew */
+.rules{display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:var(--r-md);background:var(--surface-2)}
+.rulesrow{display:flex;align-items:center;gap:8px 10px;font-size:13px;color:var(--ink-2);flex-wrap:wrap}
+.rules .stepper .sbtn{background:var(--surface)}
+.rules .input{background:var(--surface);width:110px;min-height:38px}
+.rules .fhint{margin:0}
+
+/* a card that's on the side, or not out yet */
+.bdg--side{background:var(--accent-soft);color:var(--accent-text)}
+.bdg--soon{background:rgba(10,12,15,.7);color:#fff}
 </style>
 
 </head>
@@ -1082,6 +1174,286 @@ function parseCode(raw){
   const s = String(raw || "").trim();
   const m = s.match(/#\/g\/([A-Za-z0-9]+)/);
   return (m ? m[1] : s).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+}
+
+/* ============================================================================
+   NEXT SESH
+   Picking the game and picking the nights are separate decisions. Anything in
+   play (the called game, or a side game) collects "I'm free" nights over the
+   next ten days. A night that reaches the crew's number is pencilled in,
+   anyone locks it, and once it has passed one question logs whether it
+   happened. Days are local calendar dates, never UTC, so "Friday" means the
+   crew's Friday.
+   ========================================================================== */
+const SESH_DAYS = 10;
+const pad2 = n => String(n).padStart(2, "0");
+/** yyyy-mm-dd in local time (toISOString would shift it to UTC) */
+const isoDay = dt => dt.getFullYear() + "-" + pad2(dt.getMonth() + 1) + "-" + pad2(dt.getDate());
+const todayIso = () => isoDay(new Date());
+function seshWindow(){
+  const t = new Date(); t.setHours(12, 0, 0, 0);          // midday: immune to DST edges
+  return Array.from({ length: SESH_DAYS }, (_, i) => { const d = new Date(t); d.setDate(t.getDate() + i); return isoDay(d); });
+}
+function dayDate(iso){ const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d, 12); }
+const daysFromToday = iso => Math.round((dayDate(iso) - dayDate(todayIso())) / 864e5);
+/** "Tonight", "Tomorrow", "Fri 26" */
+function dayLabel(iso){
+  const n = daysFromToday(iso);
+  if(n === 0) return "Tonight";
+  if(n === 1) return "Tomorrow";
+  const d = dayDate(iso);
+  return d.toLocaleDateString("en-AU", { weekday: "short" }) + " " + d.getDate();
+}
+/** "Friday 26 Sep" */
+const dayLong = iso => dayDate(iso).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "short" });
+/** the chip's top line: "Tue", or "Today" for today */
+const dayShort = iso => daysFromToday(iso) === 0 ? "Today" : dayDate(iso).toLocaleDateString("en-AU", { weekday: "short" });
+
+const nameOf = (d, id) => (d.members.find(m => m.member_id === id) || {}).label || "Someone";
+/** "Jehan", "Jehan and Kat", "Jehan, Kat and Tim" */
+function listNames(names){
+  if(names.length <= 1) return names.join("");
+  return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+}
+
+/** Everything in play: the called game first, then side games. */
+function inPlay(d){
+  const out = [];
+  if(S.group.locked_appid) out.push({ appid: S.group.locked_appid, side: false, players: d.members.map(m => m.member_id) });
+  (S.side || []).forEach(sg => out.push({ appid: sg.appid, side: true, players: sg.players || [], started_at: sg.started_at }));
+  return out;
+}
+
+/** The whole picture for one game's next night. */
+function seshFor(d, ip){
+  const appid = ip.appid, pset = new Set(ip.players), days = seshWindow(), today = todayIso();
+  const free = (S.sesh_free || []).filter(f => f.appid === appid && pset.has(f.member_id));
+  const byDay = {}; days.forEach(x => { byDay[x] = []; });
+  free.forEach(f => { if(byDay[f.day]) byDay[f.day].push(f.member_id); });
+  const none = new Set((S.sesh_none || []).filter(n => n.appid === appid && pset.has(n.member_id)).map(n => n.member_id));
+  const answered = new Set([...free.filter(f => f.day >= today).map(f => f.member_id), ...none]);
+  const total = ip.players.length;
+  // the called game uses the crew's number; a side game needs everyone who's in on it
+  const need = ip.side ? total : Math.max(1, Math.min(total, S.group.sesh_need || total));
+  const lock = (S.sesh_lock || []).find(l => l.appid === appid) || null;
+  const pencil = total ? days.find(x => byDay[x].length >= need) || null : null;
+  const best = days.reduce((b, x) => byDay[x].length > (b ? byDay[b].length : 0) ? x : b, null);
+  return {
+    appid, side: ip.side, players: ip.players, total, need, days, byDay, none, answered, lock, pencil, best,
+    mineDays: new Set(free.filter(f => f.member_id === myMemberId).map(f => f.day)),
+    mineNone: none.has(myMemberId),
+    past: !!(lock && lock.day < today),
+    sessions: (S.sessions || []).filter(s => s.appid === appid),
+    iAmIn: pset.has(myMemberId),
+  };
+}
+
+/** One sentence for where a game's next night is at. */
+function seshSummary(x){
+  const t = S.group.sesh_time || "8pm";
+  if(x.lock) return `<b>${esc(dayLong(x.lock.day))}, ${esc(t)}</b> · locked in`;
+  if(x.pencil) return `<b>${esc(dayLabel(x.pencil))}</b> pencilled in · ${x.byDay[x.pencil].length} of ${x.total} free · tap to lock it`;
+  if(!x.answered.size) return x.sessions.length ? "When's the next sesh? Tap your nights" : "When are we playing? Tap your nights";
+  const b = x.best && x.byDay[x.best].length;
+  return `${x.answered.size} of ${x.total} answered · ${b ? `best so far <b>${esc(dayLabel(x.best))}</b> ${b}/${x.need}` : "no night works yet"}`;
+}
+
+/** The line under a game in play: tappable, or the did-you-play question once the night has passed. */
+function seshLine(x){
+  if(x.lock && x.past){
+    return `<div class="sesh sesh--ask">
+      <span class="sesh-i" aria-hidden="true">🎮</span>
+      <span class="sesh-t">Did you play <b>${esc(dayLong(x.lock.day))}</b>?</span>
+      <span class="sesh-acts">
+        <button class="btn btn--sm" data-resolve="${x.appid}" data-played="1">We did</button>
+        <button class="btn btn--ghost btn--sm" data-resolve="${x.appid}" data-played="0">Didn't happen</button>
+      </span></div>`;
+  }
+  const cls = x.lock ? " sesh--locked" : x.pencil ? " sesh--pencil" : "";
+  const you = x.iAmIn && !x.lock && !x.answered.has(myMemberId) ? `<span class="sesh-you">your nights?</span>` : "";
+  return `<button class="sesh${cls}" data-sesh="${x.appid}">
+    <span class="sesh-i" aria-hidden="true">${x.lock ? "✅" : "📅"}</span>
+    <span class="sesh-t">${seshSummary(x)}</span>${you}
+    <span class="sesh-go" aria-hidden="true">›</span></button>`;
+}
+
+/** Side games, as slim strips under the status card. */
+function renderSides(d){
+  const sides = inPlay(d).filter(ip => ip.side);
+  if(!sides.length) return "";
+  return `<div class="sides">${sides.map(ip => {
+    const x = seshFor(d, ip), game = d.gamesById[ip.appid] || {};
+    const who = ip.players.map(id => nameOf(d, id));
+    return `<section class="side" aria-label="Side game: ${esc(game.name || "")}">
+      <div class="side-top">
+        <span class="st-k">On the side</span>
+        <b class="side-name">${esc(game.name || "")}</b>
+        <span class="side-who">${who.length ? esc(listNames(who)) : "nobody in yet"}</span>
+        <span class="sp"></span>
+        <button class="btn btn--sm${x.iAmIn ? " btn--ghost" : ""}" data-sidejoin="${ip.appid}" data-on="${x.iAmIn ? 0 : 1}">${x.iAmIn ? "I'm out" : "I'm in"}</button>
+        <button class="iconbtn iconbtn--sm" data-sidemenu="${ip.appid}" aria-label="Wrap up ${esc(game.name || "")}"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>
+      </div>
+      ${x.iAmIn || x.lock ? seshLine(x) : ""}
+    </section>`;
+  }).join("")}</div>`;
+}
+
+/** Desktop rail: every game in play, ten little bars each. Hidden on a phone,
+ *  where the status card already carries the same line. */
+function seshPanel(d){
+  const list = inPlay(d);
+  if(!list.length) return "";
+  return `<section class="panel seshpanel"><h3>Next sesh</h3>${list.map(ip => {
+    const x = seshFor(d, ip), game = d.gamesById[ip.appid] || {};
+    const bars = x.days.map(day => {
+      const n = x.byDay[day].length;
+      const cls = [x.lock && x.lock.day === day ? "lk" : x.total && n >= x.need ? "hit" : "", x.mineDays.has(day) ? "me" : ""].join(" ").trim();
+      return `<i class="${cls}" style="--h:${Math.min(1, n / Math.max(1, x.need)).toFixed(2)}" title="${esc(dayLabel(day))}: ${n} of ${x.need}"></i>`;
+    }).join("");
+    return `<button class="seshmini" data-sesh="${ip.appid}">
+      <span class="sm-top"><b>${esc(game.name || "")}</b>${ip.side ? `<span class="sm-tag">side</span>` : ""}</span>
+      <span class="sm-days" aria-hidden="true">${bars}</span>
+      <span class="sm-state">${x.lock && x.past ? `Did you play ${esc(dayLong(x.lock.day))}?` : seshSummary(x)}</span>
+    </button>`;
+  }).join("")}</section>`;
+}
+
+/** The day picker's body. Re-rendered on its own when you tap, so the sheet never jumps. */
+function seshBody(d, x){
+  const t = S.group.sesh_time || "8pm";
+  const chips = x.days.map(day => {
+    const n = x.byDay[day].length, mine = x.mineDays.has(day), locked = x.lock && x.lock.day === day;
+    const names = x.byDay[day].map(id => nameOf(d, id));
+    return `<button class="dchip${mine ? " on" : ""}${x.total && n >= x.need ? " hit" : ""}${locked ? " locked" : ""}" data-dday="${day}"
+        aria-pressed="${mine}" aria-label="${esc(dayLong(day))}: ${n} of ${x.need} free${mine ? ", including you" : ""}"
+        title="${esc(names.length ? listNames(names) : "Nobody yet")}"${x.iAmIn ? "" : " disabled"}>
+      <span class="dw">${esc(dayShort(day))}</span>
+      <span class="dn num">${dayDate(day).getDate()}</span>
+      <span class="dbar" aria-hidden="true"><i style="width:${Math.min(100, Math.round(n / Math.max(1, x.need) * 100))}%"></i></span>
+      <span class="dc num">${n}/${x.need}</span>
+    </button>`;
+  }).join("");
+  // names for the sheet: you first, as "You"
+  const people = ids => { const l = [...ids].sort((a, b) => (b === myMemberId) - (a === myMemberId))
+    .map(id => id === myMemberId ? "you" : nameOf(d, id)); const t = listNames(l); return t.charAt(0).toUpperCase() + t.slice(1); };
+  // who's in on the night that matters most right now
+  const focus = (x.lock && x.lock.day) || x.pencil || (x.best && x.byDay[x.best].length ? x.best : null);
+  let who = "";
+  if(focus){
+    const inn = x.byDay[focus] || [];
+    const waiting = x.players.filter(id => !inn.includes(id) && !x.none.has(id) && !x.answered.has(id));
+    const out = x.players.filter(id => !inn.includes(id) && (x.none.has(id) || x.answered.has(id)));
+    who = `<p class="seshwho"><b>${esc(dayLong(focus))}</b>: ${inn.length ? esc(people(inn)) : "nobody yet"}${
+      out.length ? ` · can't: ${esc(people(out))}` : ""}${
+      waiting.length ? ` · waiting on ${esc(people(waiting))}` : ""}</p>`;
+  } else if(x.total){
+    const waiting = x.players.filter(id => !x.answered.has(id));
+    if(waiting.length) who = `<p class="seshwho">Waiting on ${esc(people(waiting))}</p>`;
+  }
+  const acts = x.lock
+    ? `<div class="row"><button class="btn" id="icsgo">Add to calendar</button><button class="btn btn--ghost" id="unlockgo">Change night</button></div>`
+    : x.pencil
+    ? `<div class="row"><button class="btn" id="lockgo" data-lday="${x.pencil}">Lock in ${esc(dayLabel(x.pencil))}, ${esc(t)}</button></div>`
+    : "";
+  const none = x.iAmIn && !x.lock
+    ? `<button class="linkbtn" id="nonego"${x.mineNone ? " disabled" : ""}>${x.mineNone ? "You've said none of these work" : "Can't do any of these"}</button>`
+    : !x.iAmIn ? `<p class="fhint">You're not in on this one. Tap I'm in on its strip to pick nights.</p>` : "";
+  return `<div class="dgrid">${chips}</div>${who}${acts}${none}`;
+}
+
+/* ---------- saving free nights: optimistic, debounced ----------
+   Taps update the page straight away and save 600ms after the last one, so
+   tapping four nights is one request. While a save is pending the background
+   refresh stands down, so the server can't briefly undo a tap you just made. */
+let freeTimer = null, seshDirty = false;
+function queueFree(appid){
+  seshDirty = true;
+  clearTimeout(freeTimer);
+  const id = freeTimer = setTimeout(async () => {
+    const days = seshWindow().filter(day => (S.sesh_free || []).some(f => f.appid === appid && f.day === day && f.member_id === myMemberId));
+    try{ await rpc("set_free", { p_code: code, p_device: deviceId, p_appid: appid, p_days: days }); }
+    catch(err){ console.warn("set_free", err && err.message); }
+    if(freeTimer === id){ freeTimer = null; seshDirty = false; refresh(); }
+  }, 600);
+}
+
+/* ---------- calendar file ---------- */
+/** "8pm", "7:30pm", "20:00", "8.30 pm" -> {h, m}; anything else is 8pm */
+function parseTime(t){
+  const m = String(t || "").trim().toLowerCase().match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?$/);
+  if(!m) return { h: 20, m: 0 };
+  let h = +m[1]; const mm = +(m[2] || 0);
+  if(m[3] === "pm" && h < 12) h += 12;
+  if(m[3] === "am" && h === 12) h = 0;
+  return h < 24 && mm < 60 ? { h, m: mm } : { h: 20, m: 0 };
+}
+const icsEsc = s => String(s).replace(/[\;,]/g, c => "\\" + c).replace(/\n/g, "\\n");
+function downloadIcs(game, day){
+  const t = parseTime(S.group.sesh_time);
+  const start = dayDate(day); start.setHours(t.h, t.m, 0, 0);
+  const end = new Date(start.getTime() + 3 * 36e5);                 // three hours, a normal night
+  // floating local time: the calendar puts it at 8pm wherever the phone is
+  const stamp = dt => isoDay(dt).replace(/-/g, "") + "T" + pad2(dt.getHours()) + pad2(dt.getMinutes()) + "00";
+  const link = location.origin + location.pathname + "#/g/" + S.group.code;
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Game Night//EN", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+    "UID:" + S.group.code + "-" + game.appid + "-" + day + "@gamenight",
+    "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
+    "DTSTART:" + stamp(start), "DTEND:" + stamp(end),
+    "SUMMARY:" + icsEsc((S.group.emoji || DEFAULT_EMOJI) + " " + (game.name || "Game night") + " · " + S.group.name),
+    "DESCRIPTION:" + icsEsc("Locked in on Game Night. " + link),
+    "URL:" + link, "END:VEVENT", "END:VCALENDAR",
+  ].join("\r\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+  a.download = (game.name || "game-night").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + day + ".ics";
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+/** Copy-for-the-chat text: where every game in play is at, and who still owes nights. */
+function seshShareText(d){
+  const t = S.group.sesh_time || "8pm";
+  const lines = [(S.group.emoji || DEFAULT_EMOJI) + " " + S.group.name + ": next sesh", ""];
+  inPlay(d).forEach(ip => {
+    const x = seshFor(d, ip), g = d.gamesById[ip.appid] || {};
+    const name = (g.name || "") + (ip.side ? " (side game)" : "");
+    if(x.lock){ lines.push(name + ": locked in for " + dayLong(x.lock.day) + ", " + t); return; }
+    const focus = x.pencil || (x.best && x.byDay[x.best].length ? x.best : null);
+    lines.push(name + ": " + (focus ? dayLong(focus) + " has " + x.byDay[focus].length + " of " + x.need + (x.pencil ? ", pencilled in" : "") : "no night picked yet"));
+    const waiting = x.players.filter(id => !x.answered.has(id)).map(id => nameOf(d, id));
+    if(waiting.length) lines.push("still need nights from " + listNames(waiting));
+  });
+  lines.push("", "tap your nights: " + location.origin + location.pathname + "#/g/" + S.group.code);
+  return lines.join("\n");
+}
+
+/** The crew's "lock a night when" rule, in words. */
+function needWords(need, total){
+  if(need == null || need >= total) return { val: "all " + total, hint: "Everyone has to be free. Right for a small crew that only plays together." };
+  return { val: need + " of " + total, hint: need + " free is enough, so a night still works if " + (total - need) + " can't make it." };
+}
+
+/* ============================================================================
+   RELEASE STATE
+   Steam flags "coming soon" itself and lists Early Access as a genre, so the
+   shelf can tell released, early access and not-out-yet apart. Older rows
+   fetched before the flag existed fall back to reading the date text.
+   ========================================================================== */
+const RELEASE = { out: "Released", early: "Early access", soon: "Not out yet" };
+function soonText(t){
+  if(!t) return false;
+  if(/coming soon|to be announced|\btba\b|\btbd\b/i.test(t)) return true;
+  const p = Date.parse(t);
+  if(!isNaN(p)) return p > Date.now();
+  const y = (t.match(/\b(20\d\d)\b/) || [])[1];
+  return !!y && +y >= new Date().getFullYear();
+}
+function releaseOf(game){
+  if(!game) return "out";
+  if(game.coming_soon || soonText(game.released)) return "soon";
+  if([...(game.genres || []), ...(game.tags || [])].includes("Early Access")) return "early";
+  return "out";
 }
 
 /* the crew being started on the landing page: survives re-renders */
@@ -1303,6 +1675,8 @@ let F = {             // every filter, all combinable
   played: null,      // null = don't care, "fresh" = never played, "again" = played before
   benched: false,    // benched games stay out of sight until you ask for them
   wellrated: false,  // 85% or better on Steam
+  release: new Set(), // out | early | soon
+  demo: false,        // only games with a free demo to try first
 };
 // sections by state is the default: everything is on one shelf, but the stuff
 // you can actually vote for is still what you hit first
@@ -1314,8 +1688,8 @@ let F = {             // every filter, all combinable
    games, both read as the app being broken. */
 function saveF(){
   if(!code) return;
-  store.set("f."+code, { crew:F.crew, mine:F.mine, played:F.played, wellrated:F.wellrated,
-    energy:[...F.energy], shape:[...F.shape], doing:[...F.doing], setup:[...F.setup] });
+  store.set("f."+code, { crew:F.crew, mine:F.mine, played:F.played, wellrated:F.wellrated, demo:F.demo,
+    energy:[...F.energy], shape:[...F.shape], doing:[...F.doing], setup:[...F.setup], release:[...F.release] });
 }
 function loadF(){
   const v = code && store.get("f."+code, null);
@@ -1323,6 +1697,7 @@ function loadF(){
   F.crew = v.crew ?? null; F.mine = !!v.mine; F.played = v.played ?? null; F.wellrated = !!v.wellrated;
   F.energy = new Set(v.energy||[]); F.shape = new Set(v.shape||[]);
   F.doing  = new Set(v.doing||[]);  F.setup = new Set(v.setup||[]);
+  F.release = new Set(v.release||[]); F.demo = !!v.demo;
 }
 
 let fDraft = null;   // staged copy of the filters while the phone sheet is open
@@ -1332,6 +1707,7 @@ const cloneF = f => ({
   q:f.q, crew:f.crew, mine:f.mine, played:f.played,
   benched:f.benched, wellrated:f.wellrated,
   energy:new Set(f.energy), shape:new Set(f.shape), doing:new Set(f.doing), setup:new Set(f.setup),
+  release:new Set(f.release), demo:f.demo,
 });
 
 
@@ -1511,6 +1887,8 @@ function activeFilters(f = F){
   f.shape .forEach(v => out.push({k:"shape",  v, label:SHAPE[v]}));
   f.doing .forEach(v => out.push({k:"doing",  v, label:DOING[v]}));
   f.setup .forEach(v => out.push({k:"setup",  v, label:SETUP[v]}));
+  f.release.forEach(v => out.push({k:"release", v, label:RELEASE[v]}));
+  if(f.demo) out.push({k:"demo", label:"has a demo"});
   return out;
 }
 function clearFilter(k, v, f = F){
@@ -1520,12 +1898,14 @@ function clearFilter(k, v, f = F){
   else if(k==="played"){ f.played=null; }
   else if(k==="benched"){ f.benched=false; }
   else if(k==="wellrated"){ f.wellrated=false; }
+  else if(k==="demo"){ f.demo=false; }
   else f[k].delete(v);
 }
 function clearAll(f = F){
   f.q=""; f.crew=null; f.mine=false; f.played=null;
   f.benched=false; f.wellrated=false;
   f.energy.clear(); f.shape.clear(); f.doing.clear(); f.setup.clear();
+  f.release.clear(); f.demo=false;
 }
 
 /** A game passes if it clears every active filter. Crew is the one that maps
@@ -1564,6 +1944,8 @@ function passes(s, d, f = F){
   if(f.setup.size && !f.setup.has(s.setup)) return false;
   if(f.shape.size && !f.shape.has(game.shape)) return false;
   if(f.doing.size && !f.doing.has(doingOf(s, d))) return false;
+  if(f.release.size && !f.release.has(releaseOf(game))) return false;
+  if(f.demo && !game.demo_appid) return false;
   return true;
 }
 
@@ -1656,6 +2038,7 @@ function needName(action){
 
 async function refresh(){
   if(!code) return;
+  if(seshDirty) return;          // a free-nights save is in flight; don't let the server undo a tap
   try{
     // whoami first: a returning visitor is recognised without being asked again
     if(myMemberId === null){
@@ -1921,6 +2304,9 @@ async function reopenRound(){ await rpc("reopen_round", {p_code:code, p_device:d
 async function saveCrew(draft){
   if(needName(() => saveCrew(draft))) return;
   await rpc("update_group", {p_code:code, p_device:deviceId, p_name:draft.name, p_emoji:draft.emoji});
+  if("need" in draft && ((S.group.sesh_need ?? null) !== draft.need || (S.group.sesh_time || "8pm") !== draft.time)){
+    await rpc("set_sesh_rules", {p_code:code, p_device:deviceId, p_need:draft.need, p_time:draft.time});
+  }
   const saved = myGroups.find(g => g.code === code);
   if(saved){ saved.name = draft.name; saved.emoji = draft.emoji; store.set("groups", myGroups); }
   sheet = null;
@@ -1965,12 +2351,12 @@ async function joinByCode(c){
    ========================================================================== */
 function summaryText(d){
   const g = S.group;
-  const lines = ["🎮 " + g.name + " — what are we playing"];
+  const lines = [(g.emoji || DEFAULT_EMOJI) + " " + g.name + ": what are we playing"];
   lines.push("");
   if(!d.ranked.length) lines.push("nothing yet, someone go first");
   else d.ranked.slice(0,5).forEach((r,i) => {
     const g2 = d.gamesById[r.appid];
-    lines.push((i+1)+". "+(g2?g2.name:r.appid)+" — "+r.n+(r.n===1?" vote":" votes"));
+    lines.push((i+1)+". "+(g2?g2.name:r.appid)+" · "+r.n+(r.n===1?" vote":" votes"));
   });
   lines.push("");
   lines.push(S.group.paused_at ? "on a break, votes still welcome"
@@ -1983,7 +2369,7 @@ function nudgeText(d){
   const missing = d.members.filter(m => !voted.has(m.member_id)).map(m=>m.label);
   const link = location.origin+location.pathname+"#/g/"+S.group.code;
   if(!missing.length) return "that's everyone in 🎉 " + link;
-  return missing.join(", ") + " — still waiting on your picks 👀\n" + link;
+  return missing.join(", ") + ": still waiting on your picks 👀\n" + link;
 }
 async function copy(text, btn){
   try{
@@ -2180,6 +2566,7 @@ function renderGroup(){
       ${flash ? `<div class="flash">\u26A1 ${esc(flash)}</div>` : ""}
 
       ${renderStatus(d, g, call)}
+      ${renderSides(d)}
 
       <div class="cols">
         <main>
@@ -2237,6 +2624,7 @@ function renderGroup(){
         </main>
 
         <aside class="rail">
+          ${seshPanel(d)}
           <section class="panel">
             <h3>Who's in</h3>
             <div class="crew">${d.members.length ? d.members.map(mm => {
@@ -2247,15 +2635,7 @@ function renderGroup(){
                 ${mm.device_count>1 ? `<span class="devs" title="${mm.device_count} devices linked">${mm.device_count}</span>` : ""}
               </span>`;
             }).join("") : `<span class="empty">Just you so far.</span>`}</div>
-          </section>
-
-          <section class="panel share">
-            <h3>Send to the chat</h3>
-            <pre>${esc(summaryText(d))}</pre>
-            <div class="row">
-              <button class="btn btn--ghost btn--sm" id="copysum">Copy update</button>
-              <button class="btn btn--ghost btn--sm" id="copynudge">Copy reminder</button>
-            </div>
+            <button class="btn btn--ghost btn--sm railshare" id="railshare">Send to the chat</button>
           </section>
         </aside>
       </div>
@@ -2274,6 +2654,7 @@ function renderGroup(){
     ${sheet ? renderSheet(d) : ""}`;
 
   wireGroup(d, filtered);
+  wireSesh(d);
   settleImages();
   restoreFocus();
   if(tookover){
@@ -2351,6 +2732,7 @@ function filterPanel(d, pool, counts){
       <div class="fset">
         <button class="chip" data-toggle="mine" aria-pressed="${FT().mine}" ${d.myPicks.length?"":"disabled"}>My picks<span class="n num">${d.myPicks.length}</span></button>
         <button class="chip" data-toggle="wellrated" aria-pressed="${FT().wellrated}">85%+ on Steam<span class="n num">${n(s => ((d.gamesById[s.appid]||{}).review_pct ?? 0) >= 85)}</span></button>
+        ${n(s => (d.gamesById[s.appid]||{}).demo_appid) || FT().demo ? `<button class="chip" data-toggle="demo" aria-pressed="${FT().demo}">Has a demo<span class="n num">${n(s => (d.gamesById[s.appid]||{}).demo_appid)}</span></button>` : ""}
         ${counts.benched ? `<button class="chip" data-toggle="benched" aria-pressed="${FT().benched}">The bench<span class="n num">${counts.benched}</span></button>` : ""}
       </div>
     </div>`;
@@ -2361,6 +2743,7 @@ function filterPanel(d, pool, counts){
     ${grp("How long", "shape", SHAPE, (s,dd) => (dd.gamesById[s.appid]||{}).shape)}
     ${grp("What we'll be doing", "doing", DOING, (s,dd) => doingOf(s, dd))}
     ${grp("Setup", "setup", SETUP, s => s.setup)}
+    ${grp("Release", "release", RELEASE, (s,dd) => releaseOf(dd.gamesById[s.appid]))}
     ${played}
     ${only}
   </div>`;
@@ -2408,12 +2791,14 @@ function renderStatus(d, g, call){
       <div class="st-main">
         <span class="st-k">▶ Playing</span>
         <span class="st-lead"><b class="leadname">${esc(game.name||"")}</b></span>
-        <span class="st-sub">round ${g.round_no} · ${esc(ago((d.nowPlaying||{}).started_at))}</span>
+        <span class="st-sub">round ${g.round_no} · ${(() => { const n = (S.sessions||[]).filter(x => x.appid === g.locked_appid).length;
+          return n ? n + (n === 1 ? " session" : " sessions") + " so far" : "started " + esc(ago((d.nowPlaying||{}).started_at)); })()}</span>
       </div>
       <div class="st-acts">
         <button class="btn btn--sm" id="closebtn">Finished it</button>
         ${menu}
       </div>
+      ${seshLine(seshFor(d, inPlay(d)[0]))}
     </section>`;
   }
   if(g.paused_at){
@@ -2475,8 +2860,11 @@ function card(s, d){
       ${game.header ? `<img src="${esc(game.header)}" alt="" loading="lazy" onload="this.classList.add('in')">` : ""}
       <div class="badges">
         ${isNow ? `<span class="bdg bdg--now">▶ playing now</span>`
+          : (S.side||[]).some(x => x.appid === s.appid) ? `<span class="bdg bdg--side">on the side</span>`
           : cf === "mods" ? `<span class="bdg bdg--mods">needs a mod</span>`
           : cf === "unknown" && F.crew ? `<span class="bdg">cap unknown</span>`
+          : releaseOf(game) === "soon" ? `<span class="bdg bdg--soon">not out yet</span>`
+          : releaseOf(game) === "early" ? `<span class="bdg">early access</span>`
           : ""}
         <span class="sp"></span>
         ${state === "benched" ? `<span class="bdg bdg--backlog">benched</span>`
@@ -2582,6 +2970,8 @@ function renderSheet(d){
           ${game.review_pct != null ? `<span class="pill pill--rev" title="${esc(game.review_desc||"")}">${game.review_pct}% on Steam · ${(game.review_count||0).toLocaleString()} reviews</span>` : ""}
           <a class="pill pill--link" href="https://store.steampowered.com/app/${sheet.appid}/" target="_blank" rel="noopener">Steam ↗</a>
           ${s.added_name ? `<span class="pill">Added by ${esc(s.added_name)}</span>` : ""}
+          ${releaseOf(game) !== "out" ? `<span class="pill">${esc(RELEASE[releaseOf(game)])}${releaseOf(game) === "soon" && game.released ? " · " + esc(game.released) : ""}</span>` : ""}
+          ${game.demo_appid ? `<a class="pill pill--link" href="https://store.steampowered.com/app/${game.demo_appid}/" target="_blank" rel="noopener">Try the demo ↗</a>` : ""}
         </div>
         ${desc ? `<div class="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>` : ""}
 
@@ -2616,6 +3006,12 @@ function renderSheet(d){
             VERDICT_ICON[k]} ${esc(VERDICT[k])}</button>`).join("")}
           <button class="chip" data-past="">Played, no verdict</button>
         </div>
+        ${(() => { const ses = (S.sessions||[]).filter(x => x.appid === sheet.appid);
+          return ses.length ? `<p class="notebox">${ses.length} ${ses.length === 1 ? "session" : "sessions"}: ${ses.map(x => esc(dayDate(x.day).toLocaleDateString("en-AU",{day:"numeric",month:"short"}))).join(", ")}</p>` : ""; })()}
+        ${S.group.locked_appid && stateOf(s, d) === "open" && !(S.side||[]).some(x => x.appid === sheet.appid) ? `
+          <span class="eyebrow">On the side</span>
+          <p class="fhint">Fewer of you, alongside ${esc((d.gamesById[S.group.locked_appid]||{}).name || "the main game")}. It gets its own strip and picks its own nights.</p>
+          <button class="btn btn--ghost" id="sidego">Play it on the side</button>` : ""}
         ${stateOf(s, d) === "open" ? `<button class="danger" id="retirego">Bench it</button>` : ""}
       </div>
       <div class="sheetfoot"><button class="btn" id="facetgo">Save</button></div>
@@ -2656,6 +3052,23 @@ function renderSheet(d){
       ${addMsg ? `<p class="msg msg--${addMsg.kind==="ok"?"ok":"bad"}">${esc(addMsg.text)}</p>` : ""}`);
   }
 
+  if(sheet.kind === "sesh"){
+    const ip = inPlay(d).find(z => z.appid === sheet.appid);
+    if(!ip){ return shell(`<h3>That one's wrapped up</h3><div class="row"><button class="btn btn--ghost" data-dismiss>Close</button></div>`); }
+    const x = seshFor(d, ip), game = d.gamesById[ip.appid] || {};
+    return shell(`<h3>${ip.side ? "Side game" : "Next sesh"}: ${esc(game.name || "")}</h3>
+      <p>${x.lock ? "Locked in. Change it if plans move." : `Tap every night you could play. ${x.total <= 1 ? (x.total ? "Just one of you in so far." : "Nobody's in on it yet.") : x.need >= x.total ? "Needs all " + x.total + " of you." : "Needs " + x.need + " of " + x.total + "."}`}</p>
+      <div id="seshbody">${seshBody(d, x)}</div>`);
+  }
+
+  if(sheet.kind === "sidewrap"){
+    const game = d.gamesById[sheet.appid] || {};
+    return shell(`<h3>Wrap up ${esc(game.name || "")}?</h3>
+      <p>It goes into play history like any other game. Nothing's deleted, and it can go on the side again later.</p>
+      <div class="fset">${Object.keys(VERDICT).map(k => `<button class="chip" data-sv="${k}" aria-pressed="${sheet.verdict === k}">${VERDICT_ICON[k]} ${esc(VERDICT[k])}</button>`).join("")}</div>
+      <div class="row"><button class="btn btn--ghost" data-dismiss>Not yet</button><button class="btn" id="sidewrapgo">Wrap it up</button></div>`);
+  }
+
   if(sheet.kind === "crew"){
     return shell(`<h3>Edit crew</h3>
       <p>Changes it for everyone in the crew. The emoji shows on the browser tab too.</p>
@@ -2664,6 +3077,15 @@ function renderSheet(d){
         <input class="input" id="crewname" maxlength="40" aria-label="Crew name" value="${esc(sheet.name)}" autocomplete="off">
       </div>
       ${emojiPicker(sheet.emoji)}
+      ${(() => { const total = (S.members||[]).length, w = needWords(sheet.need, total); return `
+      <div class="rules">
+        <span class="eyebrow">Next sesh</span>
+        <div class="rulesrow">Lock a night when
+          <span class="stepper"><button class="sbtn" data-need="-" aria-label="Fewer">−</button><span class="val num" id="needval">${esc(w.val)}</span><button class="sbtn" data-need="+" aria-label="More">+</button></span>
+          are free</div>
+        <p class="fhint" id="needhint">${esc(w.hint)}</p>
+        <label class="rulesrow">Usual start <input class="input" id="seshtime" maxlength="12" value="${esc(sheet.time)}" placeholder="8pm" autocomplete="off"></label>
+      </div>`; })()}
       <p class="hint hint--bad" id="crewmsg" hidden></p>
       <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="crewsave">Save</button></div>`);
   }
@@ -2755,15 +3177,17 @@ function renderSheet(d){
   }
 
   if(sheet.kind === "share"){
-    const nudging = sheet.mode === "nudge";
-    const body = nudging ? nudgeText(d) : summaryText(d);
+    const nudging = sheet.mode === "nudge", seshing = sheet.mode === "sesh";
+    const canSesh = inPlay(d).length > 0;
+    const body = seshing ? seshShareText(d) : nudging ? nudgeText(d) : summaryText(d);
     return shell(`<h3>Send to the chat</h3>
       <div class="row"><button class="btn btn--ghost" id="copylink">Copy the link</button></div>
       <div class="fset">
-        <button class="chip" data-sharemode="state" aria-pressed="${!nudging}">Update</button>
+        <button class="chip" data-sharemode="state" aria-pressed="${!nudging && !seshing}">Update</button>
         <button class="chip" data-sharemode="nudge" aria-pressed="${nudging}">Reminder</button>
+        ${canSesh ? `<button class="chip" data-sharemode="sesh" aria-pressed="${seshing}">When's next</button>` : ""}
       </div>
-      <p>${nudging ? "Names whoever has not picked yet." : "The leaderboard, plus the link."}</p>
+      <p>${seshing ? "Where the next night is at, and who still owes theirs." : nudging ? "Names whoever has not picked yet." : "The leaderboard, plus the link."}</p>
       <pre style="margin:0;white-space:pre-wrap;font-family:var(--f-mono);font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px;max-height:200px;overflow:auto">${esc(body)}</pre>
       <div class="row"><button class="btn" id="copyshare">Copy it</button></div>`);
   }
@@ -2886,17 +3310,29 @@ function wireCommon(d){
     const prev = document.getElementById("crewpreview"), nm = document.getElementById("crewname");
     const msg = document.getElementById("crewmsg"), save = document.getElementById("crewsave");
     wireEmojiPicker(e => { sheet.emoji = e; prev.textContent = e; });
+    // the rule stepper: null means everyone, so it keeps meaning "all of us" as the crew grows
+    document.querySelectorAll("[data-need]").forEach(b => b.onclick = () => {
+      const total = (S.members||[]).length, cur = sheet.need ?? total;
+      const next = b.dataset.need === "-" ? Math.max(1, cur - 1) : cur + 1;
+      sheet.need = next >= total ? null : next;
+      const w = needWords(sheet.need, total);
+      document.getElementById("needval").textContent = w.val;
+      document.getElementById("needhint").textContent = w.hint;
+    });
+    const st = document.getElementById("seshtime");
+    if(st) st.addEventListener("input", () => { sheet.time = st.value; });
     nm.addEventListener("input", () => { sheet.name = nm.value; msg.hidden = true; });
     nm.addEventListener("keydown", e => { if(e.key === "Enter") save.click(); });
     save.onclick = async () => {
-      const draft = { name: nm.value.trim(), emoji: sheet.emoji };
+      const draft = { name: nm.value.trim(), emoji: sheet.emoji, need: sheet.need ?? null, time: (sheet.time || "").trim() || "8pm" };
       if(!draft.name){ msg.textContent = "Give it a name."; msg.hidden = false; nm.focus(); return; }
       save.disabled = true; save.textContent = "Saving…";
       try{ await saveCrew(draft); }
       catch(err){ save.disabled = false; save.textContent = "Save"; msg.textContent = err.message; msg.hidden = false; }
     };
   }
-  const openCrew = () => { sheet = { kind:"crew", name: S.group.name, emoji: S.group.emoji || DEFAULT_EMOJI }; render(); };
+  const openCrew = () => { sheet = { kind:"crew", name: S.group.name, emoji: S.group.emoji || DEFAULT_EMOJI,
+    need: S.group.sesh_need ?? null, time: S.group.sesh_time || "8pm" }; render(); };
   const cb = document.getElementById("crewbtn"); if(cb) cb.onclick = openCrew;
   const ec = document.getElementById("editcrew"); if(ec) ec.onclick = openCrew;
 
@@ -2946,6 +3382,69 @@ function wireCommon(d){
     notme.disabled = true;
     try{ await finishAsNew(sheet.typed); }catch(e){ notme.disabled=false; alert(e.message); }
   };
+}
+
+/* next sesh, side games, and the sheets that go with them */
+function wireSesh(d){
+  const act = async (fn, args, btn) => {
+    if(needName(() => {})) return;
+    if(btn) btn.disabled = true;
+    try{ await rpc(fn, { p_code: code, p_device: deviceId, ...args }); }
+    catch(err){ if(btn) btn.disabled = false; console.warn(fn, err && err.message); }
+    finally{ refresh(); }
+  };
+  app.querySelectorAll("[data-sesh]").forEach(b => b.onclick = () => { sheet = { kind:"sesh", appid: +b.dataset.sesh }; render(); });
+  app.querySelectorAll("[data-resolve]").forEach(b => b.onclick = () =>
+    act("resolve_sesh", { p_appid: +b.dataset.resolve, p_played: b.dataset.played === "1" }, b));
+  app.querySelectorAll("[data-sidejoin]").forEach(b => b.onclick = () =>
+    act("side_join", { p_appid: +b.dataset.sidejoin, p_on: b.dataset.on === "1" }, b));
+  app.querySelectorAll("[data-sidemenu]").forEach(b => b.onclick = () => { sheet = { kind:"sidewrap", appid: +b.dataset.sidemenu, verdict: null }; render(); });
+  const rs = document.getElementById("railshare"); if(rs) rs.onclick = () => { sheet = { kind:"share" }; render(); };
+  const sg = document.getElementById("sidego");
+  if(sg) sg.onclick = async () => { const a = sheet.appid; sheet = null; await act("start_side_game", { p_appid: a }, sg); };
+
+  if(sheet && sheet.kind === "sidewrap"){
+    app.querySelectorAll("[data-sv]").forEach(b => b.onclick = () => {
+      sheet.verdict = sheet.verdict === b.dataset.sv ? null : b.dataset.sv;
+      app.querySelectorAll("[data-sv]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.sv === sheet.verdict)));
+    });
+    const go = document.getElementById("sidewrapgo");
+    if(go) go.onclick = async () => { const { appid, verdict } = sheet; sheet = null; await act("end_side_game", { p_appid: appid, p_verdict: verdict }, go); };
+  }
+  if(sheet && sheet.kind === "sesh") wireSeshBody(d);
+}
+
+function wireSeshBody(d){
+  const ip = inPlay(d).find(z => z.appid === sheet.appid);
+  const body = document.getElementById("seshbody");
+  if(!ip || !body) return;
+  const appid = ip.appid;
+  // tapping a night: update the page now, save shortly after
+  body.querySelectorAll("[data-dday]").forEach(c => c.onclick = () => {
+    if(needName(() => {})) return;
+    const day = c.dataset.dday;
+    S.sesh_free = S.sesh_free || [];
+    const i = S.sesh_free.findIndex(f => f.appid === appid && f.day === day && f.member_id === myMemberId);
+    if(i >= 0) S.sesh_free.splice(i, 1); else S.sesh_free.push({ appid, day, member_id: myMemberId });
+    S.sesh_none = (S.sesh_none || []).filter(n => !(n.appid === appid && n.member_id === myMemberId));
+    body.innerHTML = seshBody(d, seshFor(d, ip));
+    wireSeshBody(d);
+    const again = body.querySelector(`[data-dday="${day}"]`); if(again) again.focus({ preventScroll: true });
+    queueFree(appid);
+  });
+  const game = d.gamesById[appid] || { appid };
+  const run = async (fn, args, btn) => {
+    if(needName(() => {})) return;
+    btn.disabled = true;
+    try{ await rpc(fn, { p_code: code, p_device: deviceId, p_appid: appid, ...args }); }
+    catch(err){ btn.disabled = false; console.warn(fn, err && err.message); }
+    refresh();
+  };
+  const lk = document.getElementById("lockgo");   if(lk) lk.onclick = () => run("lock_sesh", { p_day: lk.dataset.lday }, lk);
+  const ul = document.getElementById("unlockgo"); if(ul) ul.onclick = () => run("unlock_sesh", {}, ul);
+  const no = document.getElementById("nonego");   if(no) no.onclick = () => run("set_none", {}, no);
+  const ic = document.getElementById("icsgo");
+  if(ic) ic.onclick = () => { const x = seshFor(d, ip); if(x.lock) downloadIcs({ ...game, appid }, x.lock.day); };
 }
 
 function wireGroup(d, filtered){
@@ -3168,7 +3667,7 @@ function wireGroup(d, filtered){
     sheet.mode = b.dataset.sharemode; render();
   });
   const cshare = document.getElementById("copyshare");
-  if(cshare) cshare.onclick = () => copy(sheet.mode === "nudge" ? nudgeText(d) : summaryText(d), cshare);
+  if(cshare) cshare.onclick = () => copy(sheet.mode === "sesh" ? seshShareText(d) : sheet.mode === "nudge" ? nudgeText(d) : summaryText(d), cshare);
   const rn = document.getElementById("renamego");
   if(rn) rn.onclick = async () => {
     const v = document.getElementById("renameinput").value.trim();

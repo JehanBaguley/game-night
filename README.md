@@ -65,7 +65,7 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates eight tables, locks them all behind row level security with no policies, and exposes twenty functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates fourteen tables, locks them all behind row level security with no policies, and exposes twenty-nine functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
@@ -157,6 +157,41 @@ Between games, hit **Taking a break** on the round strip:
 Voting still works, so people can throw picks in whenever they think of something. The share text says *on a break, votes still welcome* rather than reporting a tally nobody is acting on. Wrapping up a game offers it directly, **Not yet / Take a break / Next round**, since between games is exactly when you know.
 
 **Pick it back up** asks one thing: how many of you this time. It sets your crew filter so a night with three people isn't shown the games that need six. It's your own filter, not the group's, and it's skippable. The crew filter always existed; the problem was remembering to use it, and coming back with a different crowd is the moment it matters.
+
+### Next sesh
+
+Picking the game and picking the nights are two separate decisions. A game like Valheim runs over several nights, so the date vote hangs off whatever's being played, not off the round. It only shows up once a game is called, so it never competes with the vote.
+
+| Step | What you see |
+| --- | --- |
+| A game gets called | A line on the status card: "When are we playing? Tap your nights" |
+| Tap it | The next 10 days as chips. Tap every night you're free. Each chip shows how many are in and fills towards the crew's number. **Can't do any of these** counts as an answer too |
+| A night reaches the number | It's **pencilled in**, and the line turns lilac. Anyone can tap **Lock in Thu 24, 8pm** to lock it |
+| Locked | The line goes solid. **Add to calendar** downloads a calendar file with the game, the crew and the link. **Change night** unlocks it |
+| The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 sessions so far"). Either answer clears the slate for the next one |
+
+**The crew's number** lives in **Edit crew → Next sesh**: "Lock a night when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. Crabs only plays when everyone's free; a bigger crew might go at 80%.
+
+On a phone it's the line on the status card. On desktop it's also a **Next sesh** card at the top of the right-hand rail, with ten little bars per game so you can see the shape of the fortnight at a glance.
+
+Taps save 600ms after the last one, so picking four nights is one request, and the background refresh stands down while a save is in flight so the server can't briefly undo a tap.
+
+**Reminders:** there are no accounts, so there are no push notifications. **Send to the chat → When's next** writes it up for Discord instead: which night has how many, what's pencilled or locked, and who still owes their nights.
+
+### Side games
+
+For when a few of you want something else going alongside the main game, without a second vote or a second crew.
+
+- Open any game's **⋯** while something is called, then **Play it on the side**. It gets its own strip under the status card, with who's in and an **I'm in / I'm out** button
+- A side game picks its own nights the same way, and it needs everyone who's in on it
+- **⋯ → Wrap it up** asks for a verdict and puts it in play history like any other game. Nothing is deleted
+- Up to three at once. The card carries an "on the side" badge
+
+A separate crew is still right for a different friend group. Side games are for the same crew splitting for a bit.
+
+### Released, early access, not out yet
+
+Steam flags "coming soon" itself and lists Early Access as a genre, so every game is one of **Released**, **Early access** or **Not out yet**. Cards badge the last two in the corner, the details sheet says so next to the reviews (with the date text for unreleased ones, e.g. "Q2 2027"), and **Filters → Release** narrows to any of them. Games with a free demo get **Try the demo ↗** in details and a **Has a demo** filter.
 
 ### Game states
 
@@ -330,7 +365,7 @@ Nothing scrolls sideways and nothing animates out of the way, because a control 
 
 ### Filters
 
-Eight filters, all combinable, in one staged dialog at every screen size.
+Every filter combines with every other, in one staged dialog at every screen size.
 
 **Crew size is not one of eight equal things.** It is the only filter that maps to the decision you are actually making, so it sits at the top on its own surface, with a line underneath saying in words what it is doing to the shelf. Everything else is a row of chips.
 
@@ -430,7 +465,7 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Eight tables, row level security, twenty RPCs |
+| `supabase/schema.sql` | Fourteen tables, row level security, twenty-nine RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
 | `supabase/functions/enrich/index.ts` | Steam search, fetch, validation, facet classification |
 | `data/curated.json` | 76 verified games with caps, energy, setup and mod caveats, mirrored as `CURATED` inside index.html |
