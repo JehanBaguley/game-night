@@ -43,6 +43,7 @@ create table groups (
   round_started_at timestamptz not null default now(),
   locked_appid     int,                       -- set when a round is called
   paused_at        timestamptz,               -- set while the group is on a break
+  emoji            text not null default '🎮',  -- crew icon: favicon, header, crews list
   created_at       timestamptz not null default now()
 );
 
@@ -219,11 +220,24 @@ begin
   return m;
 end; $$;
 
-create or replace function create_group(p_name text, p_device uuid, p_person text)
+-- the emoji is free text from the client, so bound it: a single emoji can run
+-- to ~10 code points (ZWJ families, flags, skin tones) but never to a word
+create or replace function clean_emoji(p text)
+returns text language plpgsql immutable as $$
+declare e text := trim(coalesce(p,''));
+begin
+  if e = '' then return '🎮'; end if;
+  if char_length(e) > 16 or e ~ '^[\x20-\x7E]+$' then
+    raise exception 'pick an emoji';
+  end if;
+  return e;
+end; $$;
+
+create or replace function create_group(p_name text, p_device uuid, p_person text, p_emoji text default '🎮')
 returns text language plpgsql security definer set search_path = public as $$
 declare c text; tries int := 0; m uuid;
 begin
-  if length(coalesce(p_name,'')) = 0 or length(p_name) > 40 then
+  if length(coalesce(trim(p_name),'')) = 0 or length(p_name) > 40 then
     raise exception 'group name must be 1 to 40 characters';
   end if;
   loop
@@ -233,12 +247,25 @@ begin
     if tries > 20 then raise exception 'could not allocate a code'; end if;
   end loop;
 
-  insert into groups(code, name) values (c, p_name);
+  insert into groups(code, name, emoji) values (c, trim(p_name), clean_emoji(p_emoji));
   insert into members(group_code, name)
        values (c, left(coalesce(nullif(trim(p_person),''),'Host'), 24))
   returning member_id into m;
   insert into member_devices(group_code, device_id, member_id) values (c, p_device, m);
   return c;
+end; $$;
+
+-- any member can rename the crew or change its emoji, same trust level as
+-- benching a game; someone who only holds the code has to join first
+create or replace function update_group(p_code text, p_device uuid, p_name text, p_emoji text)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if length(coalesce(trim(p_name),'')) = 0 or length(trim(p_name)) > 40 then
+    raise exception 'group name must be 1 to 40 characters';
+  end if;
+  update groups set name = trim(p_name), emoji = clean_emoji(p_emoji) where code = p_code;
 end; $$;
 
 -- Create a NEW person in the group and link this device to them.
@@ -318,7 +345,8 @@ begin
     'group', json_build_object(
        'code', g.code, 'name', g.name, 'quorum', g.quorum,
        'round_no', g.round_no, 'round_started_at', g.round_started_at,
-       'locked_appid', g.locked_appid, 'paused_at', g.paused_at),
+       'locked_appid', g.locked_appid, 'paused_at', g.paused_at,
+       'emoji', g.emoji),
     'members', coalesce((
        select json_agg(json_build_object(
          'member_id', m.member_id, 'name', m.name,
@@ -558,11 +586,13 @@ revoke all on all functions in schema public from anon;
 -- Postgres grants EXECUTE to PUBLIC on new functions, so revoking from anon
 -- alone still leaves these three internal helpers callable by anyone.
 revoke execute on function make_code() from public;
+revoke execute on function clean_emoji(text) from public;
 revoke execute on function member_of(text, uuid) from public;
 revoke execute on function assert_member(text, uuid) from public;
 
 grant execute on function whoami(text, uuid)                                to anon;
-grant execute on function create_group(text, uuid, text)                    to anon;
+grant execute on function create_group(text, uuid, text, text)              to anon;
+grant execute on function update_group(text, uuid, text, text)              to anon;
 grant execute on function join_as_new(text, uuid, text)                     to anon;
 grant execute on function claim_member(text, uuid, uuid)                    to anon;
 grant execute on function rename_me(text, uuid, text)                       to anon;

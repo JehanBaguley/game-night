@@ -851,6 +851,56 @@ td.r{text-align:right;white-space:nowrap}
 .footer{margin-top:40px;padding:16px 0 0;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
+
+/* ---------- crew emoji ---------- */
+/* a crew's tile in lists: emoji on a soft square, replacing the old monogram */
+.ctile{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:19px;line-height:1;background:var(--surface-2)}
+/* header: the crew's emoji doubles as the way into Edit crew */
+.gemoji{width:38px;height:38px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:20px;line-height:1;transition:background .12s,transform .12s;align-self:center}
+.gemoji:hover{background:var(--surface-2)}
+.gemoji:active{transform:scale(.94)}
+/* the emoji button that sits in front of a name field */
+.ebtn{width:46px;min-height:42px;flex:none;border-radius:var(--r-md);display:grid;place-items:center;font-size:22px;line-height:1;background:var(--surface-2);transition:background .12s}
+.ebtn:hover{background:var(--surface-3)}
+.ebtn--lg{width:56px;min-height:56px;font-size:30px;border-radius:14px}
+.crewedit{display:flex;gap:10px;align-items:center}
+.crewedit .input{flex:1;min-height:56px;font-size:16px}
+
+.ep{display:flex;flex-direction:column;gap:8px}
+.ep-search{flex:none}
+.ep-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:none}
+.ep-tabs::-webkit-scrollbar{display:none}
+.ep-tab{flex:none;width:36px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:17px;line-height:1;opacity:.55;transition:opacity .12s,background .12s}
+.ep-tab:hover{opacity:1;background:var(--surface-2)}
+.ep-tab[aria-selected="true"]{opacity:1;background:var(--accent-soft)}
+.ep--search .ep-tabs{display:none}
+.ep-grid{height:min(40vh,290px);overflow-y:auto;overscroll-behavior:contain;margin:0 -4px;padding:0 4px;position:relative}
+.ep-sec + .ep-sec{margin-top:6px}
+.ep-sec h4{position:sticky;top:0;z-index:1;background:var(--surface);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:6px 2px 5px;margin:0}
+.ep--search .ep-sec h4{display:none}
+.ep-cells{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:2px}
+.ep-cell{height:40px;border-radius:9px;display:grid;place-items:center;font-size:23px;line-height:1;transition:background .1s,transform .1s}
+.ep-cell:hover{background:var(--surface-2)}
+.ep-cell:active{transform:scale(.9)}
+.ep-cell[aria-pressed="true"]{background:var(--accent-soft);box-shadow:inset 0 0 0 1.5px var(--accent)}
+.ep-cell:focus-visible,.ep-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.ep-use{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:var(--r-md);background:var(--surface-2);font-size:13px;font-weight:600;margin-bottom:6px}
+.ep-use span{font-size:24px;line-height:1}
+.ep-empty{font-size:12.5px;color:var(--muted);padding:14px 4px;line-height:1.55}
+
+/* ---------- landing: cleaner create + join ---------- */
+.add--tap{cursor:text}
+.codebox{
+  flex:1 1 220px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  text-transform:uppercase;letter-spacing:.32em;font-size:16px;font-weight:600;
+}
+.codebox::placeholder{letter-spacing:.06em;font-family:var(--f-body);text-transform:none;font-weight:400}
+.hint{margin-top:9px;font-size:12px;color:var(--muted)}
+.hint:empty{display:none}
+/* emoji + name + Create always share one row: the name field gives way first */
+.add .row--one{flex-wrap:nowrap}
+.add .row--one .input{flex:1 1 0;min-width:0}
+.hint--bad{color:var(--e3)}
 </style>
 
 </head>
@@ -892,6 +942,149 @@ const store = {
   get(k, d){ try{ const v = localStorage.getItem(LS+"."+k); return v ? JSON.parse(v) : d; }catch{ return d; } },
   set(k, v){ try{ localStorage.setItem(LS+"."+k, JSON.stringify(v)); }catch{} },
 };
+
+/* ============================================================================
+   CREW EMOJI
+   A hand-picked set, not the full Unicode list: ~330 that suit a crew, each
+   with search words, so the picker is fast to scan and needs no library.
+   Anything outside the set can still be pasted into the search box (or typed
+   with the OS picker: Ctrl+Cmd+Space on a Mac, Win+. on Windows).
+   Format per category: [tab icon, label, "emoji words|emoji words|..."]
+   ========================================================================== */
+const EMOJI_SETS = [
+  ["🎮","Games","🎮 controller gaming video console|🕹️ joystick arcade retro|👾 alien invader pixel retro|🎲 dice board tabletop random|♟️ chess strategy|🃏 cards joker|🀄 mahjong tile|🎯 target dart aim|🧩 puzzle jigsaw|🎰 slots casino luck|🏆 trophy win champion|🥇 gold medal first|⚔️ swords battle fight rpg|🗡️ dagger blade|🛡️ shield defence tank|🏹 bow arrow archer|🪓 axe viking chop|🔫 blaster pistol|💣 bomb explode|🧨 dynamite firecracker|🪄 wand magic wizard|🔮 crystal ball magic|🧙 wizard mage|🧝 elf|🧛 vampire|🧟 zombie undead horde|🧌 troll|🐉 dragon|🤖 robot bot|👻 ghost spooky|💀 skull death|☠️ skull crossbones pirate|🏴‍☠️ pirate flag|🚀 rocket space launch|🛸 ufo alien|🌌 galaxy space stars|🪐 planet saturn space|⛏️ pickaxe mine craft|🏰 castle fortress|🗺️ map explore adventure|🧭 compass explore|🏕️ camping survival|🔥 fire hot lit|⚡ lightning energy zap|💥 boom explosion|🌋 volcano|🧪 potion science|💎 gem diamond loot|🪙 coin gold loot|👑 crown king queen|🎧 headphones audio|🖥️ computer pc desktop|⌨️ keyboard pc|🖱️ mouse pc|📺 tv screen|🎬 film movie|🍿 popcorn movie night"],
+  ["😀","Faces","😀 grin happy smile|😂 laugh tears lol|🤣 rofl laugh|😎 cool sunglasses|🤓 nerd geek|🥳 party celebrate|😈 devil evil mischief|🤠 cowboy|🥸 disguise|🤡 clown|😴 sleep tired|🥱 yawn tired|😵‍💫 dizzy|🤯 mind blown|😤 huff determined|😭 cry sob|😱 scream scared|🫠 melt|🙃 upside down|😏 smirk|🤔 thinking|🫡 salute|🤝 handshake team|👊 fist bump|✌️ peace|🤘 rock metal|👀 eyes looking|🧠 brain smart|🫶 heart hands love|💪 strong flex muscle|🙌 hooray"],
+  ["🦀","Animals","🦀 crab crabs|🦞 lobster|🦐 shrimp prawn|🐙 octopus|🦑 squid|🐟 fish|🐠 tropical fish|🐡 blowfish puffer|🦈 shark|🐳 whale|🐬 dolphin|🦭 seal|🐢 turtle|🐸 frog|🦎 lizard gecko|🐍 snake|🦖 dinosaur trex|🦕 dinosaur sauropod|🐶 dog puppy|🐕 dog|🐱 cat kitty|🐈‍⬛ black cat|🦊 fox|🐺 wolf|🐻 bear|🐼 panda|🐨 koala australia|🦘 kangaroo roo australia|🐧 penguin|🦉 owl night|🦅 eagle|🦆 duck|🦜 parrot|🐓 rooster chicken|🦩 flamingo|🐝 bee|🦋 butterfly|🐌 snail slow|🐛 bug caterpillar|🕷️ spider|🦂 scorpion|🐒 monkey|🦍 gorilla|🐯 tiger|🦁 lion|🐮 cow|🐷 pig|🐑 sheep|🐐 goat|🦙 llama alpaca|🦥 sloth lazy|🦦 otter|🦔 hedgehog|🐇 rabbit bunny|🐿️ squirrel|🦄 unicorn|🐲 dragon face"],
+  ["🍕","Food","🍕 pizza|🍔 burger|🌭 hot dog|🌮 taco|🌯 burrito wrap|🍟 fries chips|🍗 chicken drumstick|🍖 meat bone|🥩 steak|🍣 sushi|🍜 ramen noodles|🍝 pasta spaghetti|🍛 curry|🥟 dumpling|🍱 bento|🍙 onigiri rice ball|🥐 croissant|🥯 bagel|🧇 waffle|🥞 pancakes|🧀 cheese|🥓 bacon|🍳 egg cooking|🥑 avocado|🌶️ chilli spicy hot|🍄 mushroom|🥕 carrot|🍉 watermelon|🍓 strawberry|🍌 banana|🍑 peach|🍒 cherry|🍋 lemon|🍩 donut doughnut|🍪 cookie biscuit|🎂 cake birthday|🧁 cupcake|🍫 chocolate|🍬 candy lolly|🍭 lollipop|🍦 ice cream|☕ coffee|🍵 tea matcha|🧋 bubble tea boba|🍺 beer|🍻 cheers beers|🍷 wine|🍸 cocktail|🥤 soft drink cup|🧃 juice box"],
+  ["🌿","Nature","🌿 herb leaf|🌱 seedling sprout|🌲 pine tree forest|🌳 tree|🌴 palm tree|🌵 cactus desert|🍀 clover lucky|🍁 maple leaf autumn|🍂 leaves fall|🌸 cherry blossom sakura|🌻 sunflower|🌹 rose|🌷 tulip|🌊 wave ocean sea|🏝️ island|🏔️ mountain snow|⛰️ mountain|🗻 fuji mountain|❄️ snowflake cold ice|☃️ snowman|🌙 moon night|🌕 full moon|⭐ star|🌟 glowing star|✨ sparkles|☀️ sun|🌈 rainbow|⛈️ storm|🌪️ tornado|🌑 new moon dark|🌍 earth world globe"],
+  ["⚽","Activity","⚽ soccer football|🏀 basketball|🏈 american football|⚾ baseball|🎾 tennis|🏐 volleyball|🏉 rugby|🏏 cricket|🏓 ping pong|🏸 badminton|🥊 boxing|🥋 martial arts|⛳ golf|🎳 bowling|🛹 skateboard|🏂 snowboard|⛷️ ski|🏄 surf|🏊 swim|🚴 cycling bike|🏃 run running|🧗 climb|🎣 fishing|🎤 karaoke mic sing|🎸 guitar music|🥁 drums|🎹 piano keys|🎨 art paint|🎭 theatre drama|🎪 circus|🎉 party popper|🎊 confetti|🎈 balloon|🎁 gift present|🪅 pinata"],
+  ["✈️","Travel","✈️ plane travel|🚗 car|🏎️ racing car race|🚂 train|🚢 ship boat|⛵ sailboat|🛶 canoe|🚁 helicopter|🏍️ motorbike|🗼 tokyo tower|⛩️ shrine torii japan|🏯 japanese castle|🎡 ferris wheel|🎢 rollercoaster|🏠 house home|🏚️ haunted house|🌃 night city|🌆 city dusk|🗽 statue|🏟️ stadium|🚧 construction"],
+  ["💡","Objects","💡 idea bulb|🔦 torch flashlight|🕯️ candle|📦 box package|🎒 backpack|🧳 luggage|🔑 key|🗝️ old key|🔒 lock|🧰 toolbox|🔧 wrench|🔨 hammer|⚙️ gear cog settings|🧲 magnet|🪤 trap|📚 books|📖 book read|✏️ pencil|📌 pin|📎 paperclip|⏰ alarm clock time|⌛ hourglass|📅 calendar|📷 camera|📱 phone|💾 floppy save|🔋 battery|🪫 low battery|🛋️ couch sofa|🛏️ bed|🧸 teddy bear|🪀 yoyo|🪁 kite|🎀 ribbon bow|🧦 socks|🧢 cap hat|🎩 top hat|👓 glasses|🧤 gloves"],
+  ["❤️","Symbols","❤️ heart red love|🧡 orange heart|💛 yellow heart|💚 green heart|💙 blue heart|💜 purple heart|🖤 black heart|🤍 white heart|💖 sparkling heart|💔 broken heart|💯 hundred|✅ check done tick|❌ cross no|❗ exclamation|❓ question|⚠️ warning|🚫 no forbidden|♻️ recycle|🔴 red circle|🟠 orange circle|🟡 yellow circle|🟢 green circle|🔵 blue circle|🟣 purple circle|⚫ black circle|⚪ white circle|🔺 triangle|🔷 diamond|🆗 ok|🆒 cool|🆕 new|🔝 top|🎵 music note|💤 zzz sleep|💬 speech chat|🗯️ angry speech|♾️ infinity|☯️ yin yang|🏳️‍🌈 rainbow flag pride|🇦🇺 australia flag|🇳🇿 new zealand flag|🇯🇵 japan flag|🏁 chequered flag race finish"],
+];
+// parse once: [{icon,label,items:[{e,k}]}]
+const EMOJI = EMOJI_SETS.map(([icon, label, raw]) => ({
+  icon, label,
+  items: raw.split("|").map(s => { const i = s.indexOf(" "); return { e: s.slice(0,i), k: (s.slice(i+1)+" "+label).toLowerCase() }; }),
+}));
+const DEFAULT_EMOJI = "🎮";
+const EMOJI_RX = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
+
+/* ---------- emoji picker ----------
+   Rendered once as HTML, then searched and scrolled purely in the DOM.
+   Re-rendering the app on every keystroke is what used to wipe the Steam
+   search box, so nothing here calls render() until an emoji is chosen. */
+function recentEmoji(){ return store.get("recentEmoji", []).slice(0, 16); }
+function rememberEmoji(e){ store.set("recentEmoji", [e, ...recentEmoji().filter(x => x !== e)].slice(0, 16)); }
+
+function emojiPicker(current){
+  const recent = recentEmoji();
+  const cell = (e, k) => `<button type="button" class="ep-cell" data-emoji="${esc(e)}" data-k="${esc(k)}"
+      aria-label="${esc(k.split(" ")[0])}" aria-pressed="${e === current}">${e}</button>`;
+  const sections = [
+    ...(recent.length ? [{ icon:"🕘", label:"Recent", id:"recent", items: recent.map(e => ({ e, k:"" })) }] : []),
+    ...EMOJI.map((c, i) => ({ ...c, id:"c"+i })),
+  ];
+  return `<div class="ep" id="ep">
+    <div class="searchwrap ep-search">
+      <svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input class="input" id="epq" placeholder="Search, or paste any emoji" autocomplete="off" aria-label="Search emoji">
+    </div>
+    <div class="ep-tabs" role="tablist">${sections.map((s, i) =>
+      `<button type="button" class="ep-tab" role="tab" data-jump="${s.id}" aria-selected="${i===0}" title="${esc(s.label)}">${s.icon}</button>`).join("")}</div>
+    <div class="ep-grid" id="epgrid">
+      <div class="ep-custom" id="epcustom" hidden></div>
+      ${sections.map(s => `<section class="ep-sec" data-sec="${s.id}"${s.id==="recent" ? ' data-recent' : ''}>
+        <h4>${esc(s.label)}</h4>
+        <div class="ep-cells">${s.items.map(it => cell(it.e, it.k)).join("")}</div>
+      </section>`).join("")}
+      <p class="ep-empty" id="epempty" hidden>Nothing for that. Paste any emoji in the box above, or open your keyboard's emoji picker (Ctrl+Cmd+Space on a Mac).</p>
+    </div>
+  </div>`;
+}
+
+function wireEmojiPicker(onPick){
+  const root = document.getElementById("ep"); if(!root) return;
+  const q = document.getElementById("epq"), grid = document.getElementById("epgrid");
+  const custom = document.getElementById("epcustom"), empty = document.getElementById("epempty");
+  const tabs = [...root.querySelectorAll(".ep-tab")];
+
+  const pick = e => { rememberEmoji(e); onPick(e); };
+  grid.addEventListener("click", ev => {
+    const b = ev.target.closest("[data-emoji]"); if(!b) return;
+    root.querySelectorAll('.ep-cell[aria-pressed="true"]').forEach(x => x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    pick(b.dataset.emoji);
+  });
+
+  // tabs jump to their section; scrolling marks the section you are in
+  tabs.forEach(t => t.onclick = () => {
+    const sec = grid.querySelector(`[data-sec="${t.dataset.jump}"]`);
+    if(sec) grid.scrollTo({ top: sec.offsetTop - grid.offsetTop, behavior: "smooth" });
+  });
+  const mark = () => {
+    const y = grid.scrollTop + 8; let cur = tabs[0] && tabs[0].dataset.jump;
+    grid.querySelectorAll(".ep-sec").forEach(s => { if(s.offsetTop - grid.offsetTop <= y) cur = s.dataset.sec; });
+    tabs.forEach(t => t.setAttribute("aria-selected", String(t.dataset.jump === cur)));
+  };
+  grid.addEventListener("scroll", mark, { passive:true });
+
+  // search: every word must start a keyword, so "blue h" finds the blue heart
+  const filter = () => {
+    const v = q.value.trim(), words = v.toLowerCase().split(/\s+/).filter(Boolean);
+    const searching = words.length > 0;
+    root.classList.toggle("ep--search", searching);
+    let shown = 0; const seen = new Set();
+    grid.querySelectorAll(".ep-cell").forEach(c => {
+      const keys = c.dataset.k.split(" ");
+      let ok = !searching || (c.dataset.k && words.every(w => keys.some(k => k.startsWith(w))));
+      if(searching && ok){ if(seen.has(c.dataset.emoji)) ok = false; else seen.add(c.dataset.emoji); }
+      c.hidden = !ok; if(ok) shown++;
+    });
+    grid.querySelectorAll(".ep-sec").forEach(s => {
+      s.hidden = searching && (s.hasAttribute("data-recent") || !s.querySelector(".ep-cell:not([hidden])"));
+    });
+    // a pasted emoji outside the set is offered as-is
+    const pasted = EMOJI_RX.test(v) && v.length <= 16 ? v : "";
+    custom.hidden = !pasted;
+    custom.innerHTML = pasted ? `<button type="button" class="ep-use" data-emoji="${esc(pasted)}"><span>${esc(pasted)}</span>Use this one</button>` : "";
+    empty.hidden = !searching || shown > 0 || !!pasted;
+  };
+  q.addEventListener("input", filter);
+  q.addEventListener("keydown", e => {
+    if(e.key !== "Enter") return;
+    e.preventDefault();
+    // first thing actually on screen: skips cells inside hidden sections
+    const first = [...grid.querySelectorAll("[data-emoji]")].find(b => !b.closest("[hidden]"));
+    if(first) first.click();
+  });
+}
+
+/* the tab icon and title follow whichever crew you are looking at */
+let iconShown = "";
+function setTabIdentity(emoji, title){
+  const e = emoji || DEFAULT_EMOJI;
+  if(document.title !== title) document.title = title;
+  if(e === iconShown) return;
+  iconShown = e;
+  let link = document.querySelector('link[rel="icon"]');
+  if(!link){ link = document.createElement("link"); link.rel = "icon"; document.head.appendChild(link); }
+  link.href = "data:image/svg+xml," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">${e}</text></svg>`);
+}
+
+/* a crew's tile in the lists: its emoji on a soft square */
+function crewTile(g){ return `<span class="ctile" aria-hidden="true">${esc(g.emoji || DEFAULT_EMOJI)}</span>`; }
+
+/* anything a mate might paste: a bare code, a code with spaces, or the whole link */
+function parseCode(raw){
+  const s = String(raw || "").trim();
+  const m = s.match(/#\/g\/([A-Za-z0-9]+)/);
+  return (m ? m[1] : s).replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+}
+
+/* the crew being started on the landing page: survives re-renders */
+let newCrew = { name:"", emoji: DEFAULT_EMOJI };
 
 let deviceId = store.get("device", null);
 if (!deviceId) {
@@ -1476,8 +1669,8 @@ async function refresh(){
     // The saved group list only learns a name at join time, so a group renamed
     // later would keep its old name in the switcher forever. Correct it here.
     const saved = myGroups.find(g => g.code === code);
-    if(saved && next.group && saved.name !== next.group.name){
-      saved.name = next.group.name;
+    if(saved && next.group && (saved.name !== next.group.name || saved.emoji !== next.group.emoji)){
+      saved.name = next.group.name; saved.emoji = next.group.emoji;
       store.set("groups", myGroups);
     }
 
@@ -1724,10 +1917,21 @@ async function setBreak(on){
 async function reopenRound(){ await rpc("reopen_round", {p_code:code, p_device:deviceId}); sheet=null; refresh(); }
 
 /* ---------- groups ---------- */
-async function createGroup(name, person){
-  const newCode = await rpc("create_group", {p_name:name, p_device:deviceId, p_person:person||myName||"Host"});
+async function saveCrew(draft){
+  if(needName(() => saveCrew(draft))) return;
+  await rpc("update_group", {p_code:code, p_device:deviceId, p_name:draft.name, p_emoji:draft.emoji});
+  const saved = myGroups.find(g => g.code === code);
+  if(saved){ saved.name = draft.name; saved.emoji = draft.emoji; store.set("groups", myGroups); }
+  sheet = null;
+  await refresh();
+  render();
+}
+async function createGroup(name, person, emoji){
+  const e = emoji || DEFAULT_EMOJI;
+  const newCode = await rpc("create_group", {p_name:name, p_device:deviceId, p_person:person||myName||"Host", p_emoji:e});
   if(person){ myName = person; store.set("name", person); }
-  myGroups = [...myGroups.filter(g=>g.code!==newCode), {code:newCode, name}];
+  newCrew = { name:"", emoji: DEFAULT_EMOJI };
+  myGroups = [...myGroups.filter(g=>g.code!==newCode), {code:newCode, name, emoji:e}];
   store.set("groups", myGroups);
   for(const appid of SEED){
     // Two independent steps on purpose. Enrichment only supplies the name,
@@ -1746,10 +1950,10 @@ async function createGroup(name, person){
   location.hash = "#/g/" + newCode;
 }
 async function joinByCode(c){
-  const clean = String(c||"").trim().toUpperCase();
+  const clean = parseCode(c);
   if(!clean) return;
   const st = await rpc("get_state", {p_code: clean});       // throws if the code is wrong
-  myGroups = [...myGroups.filter(g=>g.code!==clean), {code:clean, name:st.group.name}];
+  myGroups = [...myGroups.filter(g=>g.code!==clean), {code:clean, name:st.group.name, emoji:st.group.emoji}];
   store.set("groups", myGroups);
   myMemberId = null; S = null;
   location.hash = "#/g/" + clean;
@@ -1812,11 +2016,12 @@ function render(){
   if(!SDK_OK) return renderNoSDK();
   if(!CONFIGURED) return renderSetup();
   const m = location.hash.match(/^#\/g\/([A-Za-z0-9]+)/);
-  if(!m){ code=""; return renderLanding(); }
+  if(!m){ code=""; setTabIdentity(DEFAULT_EMOJI, "Game Night"); return renderLanding(); }
   const wasCode = code;
   code = m[1].toUpperCase();
   if(code !== wasCode) loadF();
   if(!S || S.group.code !== code) return renderLoading();
+  setTabIdentity(S.group.emoji, S.group.name);
   renderGroup();
 }
 
@@ -1857,40 +2062,81 @@ function renderLanding(){
         <div class="sechead"><div><h2>Your crews</h2></div></div>
         <div class="mygroups">${myGroups.map(g => `
           <button class="mygroup" data-open="${esc(g.code)}">
-            <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 58% 30%)">${esc(monogram(g.name))}</span>
+            ${crewTile(g)}
             <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span>
           </button>`).join("")}</div>` : ""}
 
-      <div class="sechead"><div><h2>Start a crew</h2><p>You get a link to send round.</p></div></div>
-      <div class="add"><div class="row">
-        <input class="input" id="newname" placeholder="Group name, e.g. Brisbane crew" maxlength="40">
-        <button class="btn" id="createbtn">Create</button>
-      </div></div>
+      <div class="sechead"><div><h2>Start a crew</h2><p>Pick an emoji and a name. You get a link to send round.</p></div></div>
+      <div class="add add--tap" data-focus="newname"><div class="row row--one">
+        <button type="button" class="ebtn" id="newemoji" aria-label="Choose an emoji for the crew" title="Choose an emoji">${esc(newCrew.emoji)}</button>
+        <input class="input" id="newname" placeholder="Crew name" maxlength="40" value="${esc(newCrew.name)}" autocomplete="off">
+        <button class="btn" id="createbtn"${newCrew.name.trim() ? "" : " disabled"}>Create</button>
+      </div><p class="hint" id="createhint"></p></div>
 
-      <div class="sechead"><div><h2>Got a code?</h2><p>Paste whatever a mate sent you.</p></div></div>
-      <div class="add"><div class="row">
-        <input class="input" id="joincode" placeholder="7 characters" maxlength="7" autocapitalize="characters">
-        <button class="btn btn--ghost" id="joinbtn">Join</button>
-      </div></div>
+      <div class="sechead"><div><h2>Got a code?</h2><p>Type the 7 characters, or paste the whole link.</p></div></div>
+      <div class="add add--tap" data-focus="joincode"><div class="row row--one">
+        <input class="input codebox" id="joincode" placeholder="e.g. X9MWCDM" maxlength="7" inputmode="text"
+               autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-describedby="joinhint">
+        <button class="btn btn--ghost" id="joinbtn" disabled>Join</button>
+      </div><p class="hint" id="joinhint" aria-live="polite"></p></div>
       <p class="footer">Data lives in your own Supabase project. Cover art and stats come from Steam.</p>
     </div>
     ${sheet ? renderSheet(null) : ""}`;
 
   wireCommon(null);
-  const create = document.getElementById("createbtn");
+
+  // the whole card is the target, not just the field inside its padding
+  app.querySelectorAll("[data-focus]").forEach(card => card.addEventListener("click", e => {
+    if(e.target.closest("button,input")) return;
+    const f = document.getElementById(card.dataset.focus); if(f) f.focus();
+  }));
+
+  // ---- start a crew
+  const nameIn = document.getElementById("newname"), create = document.getElementById("createbtn");
+  const createHint = document.getElementById("createhint");
+  nameIn.addEventListener("input", () => { newCrew.name = nameIn.value; create.disabled = !nameIn.value.trim(); createHint.textContent = ""; });
+  nameIn.addEventListener("keydown", e => { if(e.key === "Enter" && !create.disabled) create.click(); });
+  document.getElementById("newemoji").onclick = () => { newCrew.name = nameIn.value; sheet = {kind:"emoji"}; render(); };
   create.onclick = async () => {
-    const name = document.getElementById("newname").value.trim();
+    const name = nameIn.value.trim();
     if(!name) return;
+    newCrew.name = name;
     if(!myName){ sheet = {kind:"name", step:"enter", typed:"", then:"create", groupName:name}; return render(); }
     create.disabled = true; create.textContent = "Setting up…";
-    try{ await createGroup(name, myName); }
-    catch(err){ create.disabled=false; create.textContent="Create"; alert(err.message); }
+    try{ await createGroup(name, myName, newCrew.emoji); }
+    catch(err){ create.disabled=false; create.textContent="Create"; createHint.className = "hint hint--bad"; createHint.textContent = err.message; }
   };
-  document.getElementById("joinbtn").onclick = async () => {
-    const c = document.getElementById("joincode").value.trim();
-    if(!c) return;
-    try{ await joinByCode(c); }catch(err){ alert(err.message); }
+
+  // ---- join: capped at 7, uppercased as you type, a pasted link is unpacked
+  const codeIn = document.getElementById("joincode"), join = document.getElementById("joinbtn");
+  const joinHint = document.getElementById("joinhint");
+  const say = (text, bad) => { joinHint.textContent = text; joinHint.className = "hint" + (bad ? " hint--bad" : ""); };
+  const sync = () => {
+    const v = parseCode(codeIn.value).slice(0, 7);
+    if(codeIn.value !== v) codeIn.value = v;
+    join.disabled = v.length !== 7;
+    say(v.length && v.length < 7 ? (7 - v.length) + " to go" : "", false);
   };
+  const go = async () => {
+    const v = parseCode(codeIn.value);
+    if(v.length !== 7){ say("Codes are 7 characters. That's " + v.length + ".", true); return; }
+    join.disabled = true; say("Looking for it…", false);
+    try{ await joinByCode(v); }
+    catch(err){
+      join.disabled = false;
+      say(/no group/i.test(err.message) ? "No crew with " + v + ". Check it against what was sent." : err.message, true);
+    }
+  };
+  codeIn.addEventListener("input", sync);
+  // maxlength would chop a pasted link to "https:/", so read the paste ourselves
+  codeIn.addEventListener("paste", e => {
+    const t = (e.clipboardData || window.clipboardData).getData("text");
+    e.preventDefault();
+    codeIn.value = parseCode(t).slice(0, 7); sync();
+    if(codeIn.value.length === 7) go();          // a whole code pasted: just go
+  });
+  codeIn.addEventListener("keydown", e => { if(e.key === "Enter") go(); });
+  join.onclick = go;
   app.querySelectorAll("[data-open]").forEach(b => {
     b.onclick = () => { S=null; myMemberId=null; location.hash = "#/g/"+b.dataset.open; };
   });
@@ -1921,7 +2167,7 @@ function renderGroup(){
   const restoreFocus = keepFocus();
   app.innerHTML = `
     <header class="top"><div class="wrap inner">
-      <div class="brand"><h1 class="gn">${esc(g.name)}</h1><span class="code">${esc(g.code)}</span></div>
+      <div class="brand"><button class="gemoji" id="crewbtn" aria-label="Edit crew name and emoji" title="Edit crew">${esc(g.emoji || DEFAULT_EMOJI)}</button><h1 class="gn">${esc(g.name)}</h1><span class="code">${esc(g.code)}</span></div>
       ${d.meMember ? `<button class="mepill" id="mebtn" title="That's you">
         <span class="dot" style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(d.meMember.name)} 58% 30%)">${esc(d.meMember.name[0].toUpperCase())}</span>
         <span class="nm">${esc(d.meMember.name)}</span></button>` : ""}
@@ -2409,9 +2655,27 @@ function renderSheet(d){
       ${addMsg ? `<p class="msg msg--${addMsg.kind==="ok"?"ok":"bad"}">${esc(addMsg.text)}</p>` : ""}`);
   }
 
+  if(sheet.kind === "crew"){
+    return shell(`<h3>Edit crew</h3>
+      <p>Changes it for everyone in the crew. The emoji shows on the browser tab too.</p>
+      <div class="crewedit">
+        <span class="ebtn ebtn--lg" id="crewpreview" aria-hidden="true">${esc(sheet.emoji)}</span>
+        <input class="input" id="crewname" maxlength="40" aria-label="Crew name" value="${esc(sheet.name)}" autocomplete="off">
+      </div>
+      ${emojiPicker(sheet.emoji)}
+      <p class="hint hint--bad" id="crewmsg" hidden></p>
+      <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="crewsave">Save</button></div>`);
+  }
+
+  if(sheet.kind === "emoji"){
+    return shell(`<h3>Pick an emoji</h3>
+      <p>It's the crew's icon, on the tab and in your list.</p>
+      ${emojiPicker(newCrew.emoji)}`);
+  }
+
   if(sheet.kind === "menu"){
     return shell(`
-      <h3>${esc(S.group.name)}</h3>
+      <h3>${esc(S.group.emoji || DEFAULT_EMOJI)} ${esc(S.group.name)}</h3>
       <span class="eyebrow">Who's in</span>
       <div class="crew">${d.members.length ? d.members.map(mm => {
         const voted = (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
@@ -2421,6 +2685,7 @@ function renderSheet(d){
       }).join("") : `<span class="empty">Just you so far.</span>`}</div>
       <div class="menu">
         <button class="menuitem" id="sharemenu"><b>Send to the chat</b><span>Copy the link, an update, or a reminder</span></button>
+        <button class="menuitem" id="editcrew"><b>Edit crew</b><span>Name and emoji</span></button>
         ${S.group.locked_appid
           ? `<button class="menuitem" id="reopenbtn"><b>Changed our minds</b><span>Reopen the vote</span></button>`
           : S.group.paused_at ? ""
@@ -2549,7 +2814,7 @@ function renderSheet(d){
   if(sheet.kind === "switch"){
     return shell(`<h3>Your crews</h3>
       <div class="mygroups">${myGroups.map(g => `<button class="mygroup" data-open="${esc(g.code)}">
-        <span class="dot" style="width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(g.code)} 58% 30%)">${esc(monogram(g.name))}</span>
+        ${crewTile(g)}
         <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span></button>`).join("")}</div>
       <div class="row"><button class="btn btn--ghost" id="tolanding">Start or join another</button></div>`);
   }
@@ -2610,6 +2875,30 @@ function wireCommon(d){
     trapFocus(sc);
   }
 
+  // --- crew emoji: the landing picker sets the new crew's emoji and closes
+  if(sheet && sheet.kind === "emoji"){
+    wireEmojiPicker(e => { newCrew.emoji = e; sheet = null; render(); });
+    const q = document.getElementById("epq"); if(q && matchMedia("(pointer:fine)").matches) q.focus();
+  }
+  // --- edit crew: picking only updates the preview; Save commits both fields
+  if(sheet && sheet.kind === "crew"){
+    const prev = document.getElementById("crewpreview"), nm = document.getElementById("crewname");
+    const msg = document.getElementById("crewmsg"), save = document.getElementById("crewsave");
+    wireEmojiPicker(e => { sheet.emoji = e; prev.textContent = e; });
+    nm.addEventListener("input", () => { sheet.name = nm.value; msg.hidden = true; });
+    nm.addEventListener("keydown", e => { if(e.key === "Enter") save.click(); });
+    save.onclick = async () => {
+      const draft = { name: nm.value.trim(), emoji: sheet.emoji };
+      if(!draft.name){ msg.textContent = "Give it a name."; msg.hidden = false; nm.focus(); return; }
+      save.disabled = true; save.textContent = "Saving…";
+      try{ await saveCrew(draft); }
+      catch(err){ save.disabled = false; save.textContent = "Save"; msg.textContent = err.message; msg.hidden = false; }
+    };
+  }
+  const openCrew = () => { sheet = { kind:"crew", name: S.group.name, emoji: S.group.emoji || DEFAULT_EMOJI }; render(); };
+  const cb = document.getElementById("crewbtn"); if(cb) cb.onclick = openCrew;
+  const ec = document.getElementById("editcrew"); if(ec) ec.onclick = openCrew;
+
   // --- name entry, step one
   const ni = document.getElementById("nameinput");
   if(ni){
@@ -2623,7 +2912,7 @@ function wireCommon(d){
       if(then === "create"){
         myName = v; store.set("name", v);
         btn.textContent = "Setting up…";
-        try{ await createGroup(groupName, v); }
+        try{ await createGroup(groupName, v, newCrew.emoji); }
         catch(e){ btn.disabled=false; btn.textContent="That's me"; alert(e.message); }
         return;
       }

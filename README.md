@@ -24,6 +24,25 @@ There are three kinds of link and they do different jobs.
 
 The seven-character code is the group. Anyone with it can vote, add and call rounds, so treat it like a Discord invite rather than a password. **Send to the chat** in the app has a **Copy the link** button so nobody has to build it by hand.
 
+The join box on the landing page takes either the seven characters or the whole link pasted in (the code gets pulled out of it), uppercases as you type, and says what's wrong inline rather than in a browser alert.
+
+### Who can get in
+
+| Question | Answer |
+| --- | --- |
+| Can a stranger find a crew? | Not by browsing. There's no list of crews anywhere, and codes are 7 characters from a 30-letter alphabet (no 0/O, 1/I/L): about 22 billion combinations. Guessing one is not a realistic attack |
+| So what's the actual risk? | The link leaking, e.g. someone screenshots the group chat. Then they can do what any member can: vote, add games, bench them, call a round |
+| What can't they do? | Delete anything. Nothing in the app destroys data: benching is reversible, rounds reopen, play history can be edited but not wiped. There's no admin to take over |
+| What protects the database itself? | Row level security with zero policies, so the public key can read one table (`games`, Steam data) and nothing else. Every write goes through a function that checks the group code, and editing the crew checks you're a member of it |
+
+### Crew name and emoji
+
+Each crew has an emoji. It's the browser tab icon while you're looking at that crew, the tile in your crews list and the button in front of the crew name in the header. Tap that button (or **⋯ → Edit crew**) to change the name or emoji. Anyone in the crew can, same as anyone can bench a game.
+
+The picker is about 330 hand-picked emoji in nine tabs (games, faces, animals, food, nature, activity, travel, objects, symbols) with search words on each, plus your recent picks at the top. Anything outside the set can be pasted into the search box, or typed with the OS emoji picker (Ctrl+Cmd+Space on a Mac, Win+. on Windows).
+
+Your crews list is saved per browser, not per account. There are no accounts. A browser that has never opened a crew link has an empty list; open the link or type the code and it's added.
+
 ---
 
 ## Setup
@@ -46,7 +65,7 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates eight tables, locks them all behind row level security with no policies, and exposes nineteen functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates eight tables, locks them all behind row level security with no policies, and exposes twenty functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
@@ -411,7 +430,7 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Eight tables, row level security, nineteen RPCs |
+| `supabase/schema.sql` | Eight tables, row level security, twenty RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
 | `supabase/functions/enrich/index.ts` | Steam search, fetch, validation, facet classification |
 | `data/curated.json` | 76 verified games with caps, energy, setup and mod caveats, mirrored as `CURATED` inside index.html |
