@@ -40,7 +40,7 @@ const dayName = (iso: string) =>
 /** Steam hosts a header for every app; games added by hand (negative appids) have none. */
 const headerFor = (appid: number) =>
   appid > 0 ? `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg` : undefined;
-/** "Soli and Helen", "A, B and C" */
+/** "Sam and Kat", "A, B and C" */
 const listNames = (xs: string[]) => xs.length < 2 ? xs.join("") : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1];
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 

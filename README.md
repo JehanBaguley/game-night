@@ -4,13 +4,12 @@ Pick what we play next. One shelf, one vote, as many friend groups as you need.
 
 Live on GitHub Pages, data in a free Supabase project. No accounts for anyone who votes, just a link.
 
-## This one
+## What it runs on
 
 | | |
 | --- | --- |
-| App | https://jehanbaguley.github.io/game-night/ |
-| Source | https://github.com/JehanBaguley/game-night |
-| Backend | Supabase project `itlxniumucgrbiljvnge` (Sydney), edge functions `enrich`, `card` and `discord` |
+| App | GitHub Pages, e.g. `https://your-name.github.io/game-night/` |
+| Backend | A free Supabase project, with edge functions `enrich`, `prices`, `card` and `discord` |
 
 ### How the links work
 
@@ -18,8 +17,8 @@ There are three kinds of link and they do different jobs.
 
 | Link | Looks like | Use it for |
 | --- | --- | --- |
-| **Group link** | `…/game-night/#/g/X9MWCDM` | The one to send round. Opens straight onto that crew's shelf. First visit asks your name once, then that device is you |
-| **Card link** | `https://itlxniumucgrbiljvnge.supabase.co/functions/v1/card?g=X9MWCDM` | Meant to unfurl with the group name, the current leader and its cover art, then bounce people to the group link. **Caveat:** Supabase serves HTML from edge functions on its own domain as plain text, so Discord likely shows no preview. For Discord, use the scoreboard instead (below) |
+| **Group link** | `…/game-night/#/g/ABC1234` | The one to send round. Opens straight onto that crew's shelf. First visit asks your name once, then that device is you |
+| **Card link** | `https://YOUR_PROJECT_REF.supabase.co/functions/v1/card?g=ABC1234` | Meant to unfurl with the group name, the current leader and its cover art, then bounce people to the group link. **Caveat:** Supabase serves HTML from edge functions on its own domain as plain text, so Discord likely shows no preview. For Discord, use the scoreboard instead (below) |
 | **Bare link** | `…/game-night/` | The landing page. Start a crew, or type in a code. Not the one to share: a mate who lands here without a code will start a new crew by accident, which is exactly what happened on day one |
 
 The seven-character code is the group. Anyone with it can vote, add and call rounds, so treat it like a Discord invite rather than a password. **Send to the chat** in the app has a **Copy the link** button so nobody has to build it by hand.
@@ -176,7 +175,7 @@ Picking the game and picking the nights are two separate decisions. A game like 
 | Locked | The line goes solid. **Add to calendar** downloads a calendar file with the game, the crew and the link. **Change night** unlocks it |
 | The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 sessions so far"). Either answer clears the slate for the next one |
 
-**The crew's number** lives in **⋯ → Night rules** (also one tap from the day picker, which shows the current rule): "A night works when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. You can also set a number bigger than the crew is today (up to 12): a crew of one can say "3 free", and it counts as everyone until the others join. Crabs only plays when everyone's free; a bigger crew might go at 80%.
+**The crew's number** lives in **⋯ → Night rules** (also one tap from the day picker, which shows the current rule): "A night works when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. You can also set a number bigger than the crew is today (up to 12): a crew of one can say "3 free", and it counts as everyone until the others join. A small crew might only play when everyone's free; a bigger one might go at 80%.
 
 On a phone it's the line on the status card. On desktop it's also a **Next sesh** card at the top of the right-hand rail, with ten little bars per game so you can see the shape of the fortnight at a glance.
 
@@ -219,7 +218,7 @@ On desktop it's a rail; on a phone the same panels sit under the shelf. Order: W
 | **Next sesh** | While something's being played: ten little bars per game for the nights ahead |
 | **Ready to play** | Games the whole crew already owns, most voted first. **Tick what you own** opens a checklist of the shelf; each tap saves. Cards say "✓ everyone owns it" or "3 to buy", and details says who owns it |
 | **On sale now** | Shelf games discounted on Steam right now, biggest cut first, with price, was-price and how many still need to buy. Cards get a green −50% badge. Prices are AUD, refreshed by the `prices` function when a crew opens, at most every four hours |
-| **Our record** | Games finished, sessions played, bangers, a hall of fame, and the last few things that happened ("Soli and Jehan voted", "Jehan added 3 games", "Finished Valheim · ★ Banger"), pieced together from timestamps the crew already has |
+| **Our record** | Games finished, sessions played, bangers, a hall of fame, and the last few things that happened ("Sam and Alex voted", "Alex added 3 games", "Finished Valheim · ★ Banger"), pieced together from timestamps the crew already has |
 | **Who's in** | The crew, who's here now, who's voted |
 
 **Spin for it:** on a dead heat the status card gets a 🎡 button. It spins a wheel of the tied games, lands on one, and **Lock in** calls the round for that game rather than whichever happened to be first.
@@ -308,7 +307,7 @@ For a while this section was about tracking who *owns* each game, with a tappabl
 
 The pitch was that it answers "who can host this". That was wrong. Most co-op games need **everyone** to own a copy, not one host, so a single owner name never actually told you whether the night could go ahead. Tracking it honestly would mean ten people ticking a box on seventy-odd games, which nobody was ever going to do, and a half-filled ownership list is worse than none because it looks authoritative.
 
-What replaced it costs nothing: the card says **Added by Soli**. It's set once, automatically, never goes stale, and it points at the person who can actually tell you how the game plays. If you want to know whether everyone's got it, ask in the chat, which is where that conversation was always going to happen.
+What replaced it costs nothing: the card says **Added by Sam**. It's set once, automatically, never goes stale, and it points at the person who can actually tell you how the game plays. If you want to know whether everyone's got it, ask in the chat, which is where that conversation was always going to happen.
 
 ### Facets, not genres
 
@@ -492,9 +491,9 @@ Three things fall out of that:
 | --- | --- |
 | You come back on the same device | `whoami` recognises you before the page renders. Never asked again |
 | You open the link on a second device | You type a name, and if it looks like someone already here you are offered them |
-| Someone types `soli` when `Soli` exists | Same offer. Tap it and your picks carry across |
+| Someone types `sam` when `Sam` exists | Same offer. Tap it and your picks carry across |
 
-The matcher normalises case, accents and punctuation, then scores four ways: exact match, one name being a prefix of the other (`Soli` / `Soli L`), a shared first token (`Soli L` / `Soli B`), and an edit distance of one or two (`Soli` / `Solli`). Anything scoring 60 or above is offered, with enough context to recognise yourself: how many picks they have, when they were last here, how many devices.
+The matcher normalises case, accents and punctuation, then scores four ways: exact match, one name being a prefix of the other (`Sam` / `Sam L`), a shared first token (`Sam L` / `Sam B`), and an edit distance of one or two (`Sam` / `Samm`). Anything scoring 60 or above is offered, with enough context to recognise yourself: how many picks they have, when they were last here, how many devices.
 
 Claiming is additive, not a takeover. The original device keeps working, and a person with more than one device linked shows a small count in the crew list, which is the only visible signal that it happened.
 

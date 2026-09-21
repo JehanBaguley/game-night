@@ -299,7 +299,7 @@ begin
 end; $$;
 
 -- Link this device to a person who is ALREADY in the group. This is what runs
--- when someone says "yes, that Soli is me" from a second device.
+-- when someone says "yes, that Sam is me" from a second device.
 -- Additive: the original device keeps working, so this is a link, not a takeover.
 create or replace function claim_member(p_code text, p_device uuid, p_member uuid)
 returns uuid language plpgsql security definer set search_path = public as $$

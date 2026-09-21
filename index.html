@@ -1388,7 +1388,7 @@ const dayLong = iso => dayDate(iso).toLocaleDateString("en-AU", { weekday: "long
 const dayShort = iso => daysFromToday(iso) === 0 ? "Today" : dayDate(iso).toLocaleDateString("en-AU", { weekday: "short" });
 
 const nameOf = (d, id) => (d.members.find(m => m.member_id === id) || {}).label || "Someone";
-/** "Jehan", "Jehan and Kat", "Jehan, Kat and Tim" */
+/** "Alex", "Alex and Kat", "Alex, Kat and Tim" */
 function listNames(names){
   if(names.length <= 1) return names.join("");
   return names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
@@ -1563,7 +1563,7 @@ function feedOf(d){
     (adds[k] = adds[k] || []).push(s); });
   Object.entries(adds).forEach(([k, list]) => { const by = k.split("|")[0], last = list.map(s => s.added_at).sort().pop();
     ev.push({ at: last, text: list.length > 1 ? `${by} added ${list.length} games` : `${by} added ${nm(list[0].appid)}` }); });
-  // votes the same way: "Helen, Soli and Jehan voted" per day
+  // votes the same way: "Kat, Sam and Alex voted" per day
   const votes = {};
   (S.ballots||[]).forEach(b => { if(!(b.picks||[]).length || !b.updated_at) return; (votes[b.updated_at.slice(0, 10)] = votes[b.updated_at.slice(0, 10)] || []).push(b); });
   Object.values(votes).forEach(list => { list.sort((x, y) => x.updated_at < y.updated_at ? 1 : -1);
@@ -2146,7 +2146,7 @@ let myName   = store.get("name", "");
 let myGroups = store.get("groups", []);
 let myMemberId = null;   // resolved per group by whoami()
 
-/* ---------- name matching: Soli vs soli vs Soli L ---------- */
+/* ---------- name matching: Sam vs sam vs Sam L ---------- */
 function normName(s){
   return String(s||"").toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g,"")   // strip accents
@@ -2175,10 +2175,10 @@ function nameMatches(input, members){
     const mn = normName(m.name);
     const mfirst = mn.split(" ")[0];
     let score = 0;
-    if (mn === n) score = 100;                                     // Soli / soli / SOLI
-    else if (mn.startsWith(n + " ") || n.startsWith(mn + " ")) score = 88;  // Soli / Soli L
-    else if (mfirst === first && first.length >= 3) score = 74;     // Soli L / Soli B
-    else if (Math.max(mn.length, n.length) >= 4 && lev(mn, n) <= 2) score = 68; // Soli / Solli
+    if (mn === n) score = 100;                                     // Sam / sam / SAM
+    else if (mn.startsWith(n + " ") || n.startsWith(mn + " ")) score = 88;  // Sam / Sam L
+    else if (mfirst === first && first.length >= 3) score = 74;     // Sam L / Sam B
+    else if (Math.max(mn.length, n.length) >= 4 && lev(mn, n) <= 2) score = 68; // Sam / Samm
     return { m, score };
   }).filter(x => x.score >= 60)
     .sort((a,b) => b.score - a.score)
@@ -3247,7 +3247,7 @@ function renderLanding(){
 
       <div class="sechead"><div><h2>Got a code?</h2><p>Type the 7 characters, or paste the whole link.</p></div></div>
       <div class="add add--tap" data-focus="joincode"><div class="row row--one">
-        <input class="input codebox" id="joincode" placeholder="e.g. X9MWCDM" maxlength="7" inputmode="text"
+        <input class="input codebox" id="joincode" placeholder="e.g. K7QM2XD" maxlength="7" inputmode="text"
                autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-describedby="joinhint">
         <button class="btn" id="joinbtn" disabled>Join</button>
       </div><p class="hint" id="joinhint" aria-live="polite"></p></div>
