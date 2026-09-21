@@ -1391,3 +1391,11 @@ begin
   update members set last_seen = now() where group_code = p_code and member_id = p_member;
   return p_member;
 end; $$;
+
+-- which of these crew codes still exist; lets a browser drop crews that were
+-- deleted or given a new code. Only answers for codes the caller already has.
+create or replace function live_codes(p_codes text[])
+returns text[] language sql security definer set search_path = public stable as $$
+  select coalesce(array_agg(code), '{}') from groups where code = any(p_codes[1:50]);
+$$;
+grant execute on function live_codes(text[]) to anon;

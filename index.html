@@ -27,7 +27,7 @@
    ========================================================================== */
 :root{
   --ground:#F7F6FB; --surface:#FFFFFF; --surface-2:#F1EFF8; --surface-3:#E6E3F1;
-  --ink:#131320; --ink-2:#3E3D52; --muted:#6B6A80;
+  --ink:#131320; --ink-2:#3E3D52; --muted:#6B6A80; --muted-2:#5C5B71;
   --line:rgba(40,30,90,.09); --line-strong:rgba(40,30,90,.18);
   --edge:rgba(255,255,255,0);        /* top bevel: dark theme only */
   --card-line:rgba(40,30,90,.09);    /* card hairline: light theme only */
@@ -68,7 +68,7 @@
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --ground:#0B0B10; --surface:#15151C; --surface-2:#1E1E27; --surface-3:#282833;
-    --ink:#F4F3FA; --ink-2:#C6C6D2; --muted:#9A9AA8;
+    --ink:#F4F3FA; --ink-2:#C6C6D2; --muted:#9A9AA8; --muted-2:#A6A6B4;
     --line:rgba(196,181,253,.10); --line-strong:rgba(196,181,253,.20);
     --edge:rgba(255,255,255,.06); --card-line:transparent;
     --ring:rgba(255,255,255,.035); --sheen:linear-gradient(180deg, rgba(255,255,255,.06), transparent 42%);
@@ -90,7 +90,7 @@
 }
 :root[data-theme="dark"]{
   --ground:#0B0B10; --surface:#15151C; --surface-2:#1E1E27; --surface-3:#282833;
-  --ink:#F4F3FA; --ink-2:#C6C6D2; --muted:#9A9AA8;
+  --ink:#F4F3FA; --ink-2:#C6C6D2; --muted:#9A9AA8; --muted-2:#A6A6B4;
   --line:rgba(196,181,253,.10); --line-strong:rgba(196,181,253,.20);
   --edge:rgba(255,255,255,.06); --card-line:transparent;
   --ring:rgba(255,255,255,.035); --sheen:linear-gradient(180deg, rgba(255,255,255,.06), transparent 42%);
@@ -221,6 +221,8 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   position:relative;margin-top:20px;background:var(--surface);border-radius:var(--r-lg);
   padding:14px 16px;display:flex;align-items:center;gap:12px;overflow:hidden;
   box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift);
+  /* a faint wash of the crew colour so the strip reads as the page's headline */
+  background-image:linear-gradient(90deg, color-mix(in oklab, var(--accent) 13%, transparent), transparent 65%);
 }
 .status .st-main{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;line-height:1.3}
 .status .st-k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;flex:none}
@@ -230,11 +232,14 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .status .st-lead--none{color:var(--muted)}
 .status .st-sub{font-size:12px;color:var(--muted);flex:1 0 100%}
 .status .st-acts{display:flex;gap:6px;align-items:center;flex:none}
-.status .st-track{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--surface-3)}
+.status .st-track{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--surface-3)}
 .status .st-track i{display:block;height:100%;background:var(--grad);transition:width .5s cubic-bezier(.2,.7,.3,1)}
 .status--ready{box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift), 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent)}
 .status--playing{box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift), 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent), 0 0 42px -12px color-mix(in oklab, var(--accent) 45%, transparent)}
 .status--paused .st-lead, .status--paused .st-k{color:var(--muted)}
+.status--paused{background-image:none}
+/* the tint costs a little contrast, so the small grey text steps a notch darker */
+.status:not(.status--paused) .st-k, .status:not(.status--paused) .st-sub{color:var(--muted-2)}
 @media (max-width:480px){
   .status{flex-wrap:wrap}
   .status .st-acts{margin-left:auto}
@@ -921,7 +926,9 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .shelf0-steps li{counter-increment:st;font-size:12px;line-height:1.45;color:var(--muted)}
 .shelf0-steps li::before{content:counter(st);display:grid;place-items:center;width:22px;height:22px;margin:0 auto 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text);font-size:11px;font-weight:700}
 .shelf0-steps b{display:block;color:var(--ink);font-weight:650}
-.footer{margin-top:40px;padding:16px 0 0;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.footer{margin-top:40px;padding:16px 0 0;border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 16px;justify-content:space-between}
+.footer a{color:var(--ink-2);text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line-strong)}
+.footer a:hover{color:var(--ink)}
 
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
 
@@ -2218,6 +2225,8 @@ if (!deviceId) {
 }
 let myName   = store.get("name", "");
 let myGroups = store.get("groups", []);
+// another tab changed the crew list: pick it up instead of writing the old one back
+window.addEventListener("storage", e => { if(e.key && e.key.endsWith(".groups")){ myGroups = store.get("groups", []); if(!code) render(); } });
 let myMemberId = null;   // resolved per group by whoami()
 
 /* ---------- name matching: Sam vs sam vs Sam L ---------- */
@@ -3343,7 +3352,7 @@ function renderLanding(){
         <button class="btn" id="joinbtn" disabled>Join</button>
       </div><p class="hint" id="joinhint" aria-live="polite"></p></div>
       <button class="linkbtn pairlink" id="pairopen">Using it somewhere else already? Link this device</button>
-      <p class="footer">Your crews live in your own database, no accounts anywhere. Cover art and stats come from Steam.</p>
+      <p class="footer"><span>No accounts, nothing to install. Cover art and stats come from Steam.</span><span class="credit">Made by Jehan · <a href="https://github.com/JehanBaguley/game-night" target="_blank" rel="noopener">GitHub</a></span></p>
     </div>
     ${sheet ? renderSheet(null) : ""}`;
 
@@ -4365,6 +4374,13 @@ async function syncMyCrews(){
     list.forEach(c => { const had = myGroups.find(g => g.code === c.code);
       if(!had || had.name !== c.name || had.emoji !== c.emoji){ changed = true;
         myGroups = [...myGroups.filter(g => g.code !== c.code), { code: c.code, name: c.name, emoji: c.emoji }]; } });
+    // crews deleted or given a new code drop off this browser's list
+    const unknown = myGroups.map(g => g.code).filter(c => !list.some(x => x.code === c));
+    if(unknown.length){
+      const live = await rpc("live_codes", { p_codes: unknown }).catch(() => null);
+      if(Array.isArray(live)){ const gone = unknown.filter(c => !live.includes(c));
+        if(gone.length){ changed = true; crewMoved = crewMoved || !code; myGroups = myGroups.filter(g => !gone.includes(g.code)); } }
+    }
     if(!myName && list[0]){ myName = list[0].me; store.set("name", myName); }
     if(changed){ store.set("groups", myGroups); if(!code && !/^#\/admin/.test(location.hash)) render(); }
     if(crewMoved){ crewMoved = false; const h = document.getElementById("joinhint");
