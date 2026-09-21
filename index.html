@@ -1473,6 +1473,14 @@ async function refresh(){
     S = next;
     const after = derive();
 
+    // The saved group list only learns a name at join time, so a group renamed
+    // later would keep its old name in the switcher forever. Correct it here.
+    const saved = myGroups.find(g => g.code === code);
+    if(saved && next.group && saved.name !== next.group.name){
+      saved.name = next.group.name;
+      store.set("groups", myGroups);
+    }
+
     // Nothing came back different, so leave the DOM alone. This is what stops
     // the covers flashing every ten seconds, and it keeps your scroll position
     // and your place in a text field.
