@@ -1051,6 +1051,11 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 .wlabel{position:absolute;font-size:12px;font-weight:750;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);white-space:nowrap;max-width:44%;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .wheelptr{position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:18px solid var(--ink);z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
 @media (max-width:520px){ .spinlbl{display:none} }
+.snapwrap{position:relative;border-radius:var(--r-md);overflow:hidden;background:#2B2D31;min-height:120px;display:grid;place-items:center}
+.snapwrap img{display:block;width:100%;height:auto;opacity:0;transition:opacity .2s}
+.snapwrap.ready img{opacity:1}
+.snapwrap.ready .snapwait{display:none}
+.snapwait{position:absolute;font-size:12px;color:#949BA4}
 .sharepre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--f-mono);font-size:11.5px;background:var(--surface-2);border-radius:var(--r-md);padding:11px;max-height:200px;overflow:auto}
 .dcrow b{color:var(--ink)}
 .spinres{text-align:center;font-size:15px;min-height:22px;margin-top:4px}
@@ -1464,6 +1469,21 @@ function saleOf(d, appid){
   return p && !p.is_free && p.discount > 0 ? p : null;
 }
 
+/** Who's in: the crew, who's here now, who's voted. First in the rail. */
+function whoPanel(d){
+  return `<section class="panel whopanel">
+            <h3>Who's in</h3>
+            <div class="crew">${d.members.length ? d.members.map(mm => {
+              const voted = mm.member_id === myMemberId || (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
+              return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
+                ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
+                <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
+              </span>`;
+            }).join("") : `<span class="empty">Just you so far.</span>`}</div>
+            <button class="btn btn--ghost btn--sm railshare" id="railshare">Send to the chat</button>
+          </section>`;
+}
+
 /** Ready to play: every game the whole crew owns, best supported first. */
 function ownsPanel(d){
   if(!(S.shelf||[]).length) return "";
@@ -1613,6 +1633,170 @@ async function refreshPrices(){
     const body = await res.json().catch(() => ({}));
     if(body.refreshed) await refresh();
   }catch(err){ console.warn("prices", err && err.message); }
+}
+
+/* ============================================================================
+   SNAPSHOT: the Discord scoreboard, drawn as a picture
+   Group DMs, Messenger and WhatsApp can't host a live scoreboard, but they all
+   take an image. This draws the same card the discord function posts, onto a
+   canvas, so it can be copied, shared or saved and pasted anywhere.
+   ========================================================================== */
+
+/** The scoreboard's content, the same rules as supabase/functions/discord. Bold is **marked**. */
+function snapshotData(d){
+  const g = S.group, gname = a => (d.gamesById[a] || {}).name || "something";
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const fields = []; let desc = "", cover = null;
+  if(g.paused_at){
+    desc = "⏸ **On a break.** Picks still count, chuck them in whenever.";
+  } else if(g.locked_appid){
+    const n = (S.sessions || []).filter(x => x.appid === g.locked_appid).length;
+    desc = `▶ Playing **${gname(g.locked_appid)}**` + (n ? ` · ${plural(n, "session")} so far` : "");
+    cover = g.locked_appid;
+    const main = inPlay(d).find(ip => !ip.side);
+    if(main){
+      const x = seshFor(d, main), t = g.sesh_time || "8pm";
+      let v;
+      if(x.lock && !x.past) v = `✅ **${dayLong(x.lock.day)}, ${t}** · locked in`;
+      else if(x.pencil) v = `✏️ **${dayLong(x.pencil)}** pencilled in · ${x.byDay[x.pencil].length} of ${x.total} free`;
+      else {
+        const b = x.best && x.byDay[x.best].length;
+        const waiting = x.players.filter(id => !x.answered.has(id)).map(id => nameOf(d, id));
+        v = `📅 ${x.answered.size} of ${x.total} have picked their nights` + (b ? ` · best so far **${dayLabel(x.best)}** (${x.need - b} short)` : "")
+          + (waiting.length ? `\nWaiting on ${listNames(waiting)}` : "");
+      }
+      fields.push({ name: "Next sesh", value: v });
+    }
+    inPlay(d).filter(ip => ip.side).forEach(ip => fields.push({ name: `On the side: ${gname(ip.appid)}`,
+      value: ip.players.length ? listNames(ip.players.map(id => nameOf(d, id))) : "nobody in yet" }));
+  } else {
+    const total = d.members.length, need = Math.min(g.quorum || total, total);
+    desc = `**Round ${g.round_no}** · ${d.votedCount} of ${total} voted` + (d.votedCount >= need && d.ranked.length ? " · enough to call it" : "");
+    const medals = ["🥇", "🥈", "🥉"];
+    fields.push({ name: "Top picks", value: d.ranked.length
+      ? d.ranked.slice(0, 3).map((r, i) => `${medals[i]} **${gname(r.appid)}** · ${plural(r.n, "vote")}`).join("\n")
+      : "Nobody's picked yet. Get in first." });
+    const voted = new Set((S.ballots || []).filter(b => (b.picks || []).length).map(b => b.member_id));
+    const waiting = d.members.filter(m => !voted.has(m.member_id)).map(m => m.label);
+    if(waiting.length && total > 1) fields.push({ name: "Still to vote", value: listNames(waiting) });
+    if(d.ranked.length) cover = d.ranked[0].appid;
+  }
+  return { title: `${g.emoji || DEFAULT_EMOJI} ${g.name}`, desc, fields, cover,
+           colour: getComputedStyle(document.documentElement).getPropertyValue("--grad-a").trim() || "#6D5AE6" };
+}
+
+/** Draw text with **bold** runs, wrapped to a width. Returns the y under the last line. */
+function drawRich(ctx, text, x, y, maxW, size, lineH, ink, boldInk){
+  const face = w => `${w} ${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", sans-serif`;
+  text.split("\n").forEach(par => {
+    // words tagged bold or not, keeping the spaces with the word before them
+    const words = [];
+    par.split("**").forEach((seg, i) => seg.split(/(?<= )/).forEach(w => w && words.push({ w, b: i % 2 === 1 })));
+    let cx = x;
+    words.forEach(({ w, b }) => {
+      ctx.font = face(b ? 700 : 400);
+      const wd = ctx.measureText(w).width;
+      if(cx + wd > x + maxW && cx > x){ cx = x; y += lineH; }
+      ctx.fillStyle = b ? boldInk : ink;
+      ctx.fillText(cx === x ? w.trimStart() : w, cx, y);
+      cx += wd;
+    });
+    y += lineH;
+  });
+  return y;
+}
+
+function loadImage(src){
+  return new Promise(res => {
+    const img = new Image(); img.crossOrigin = "anonymous";   // Steam's CDN allows it, so the canvas stays exportable
+    const t = setTimeout(() => res(null), 5000);
+    img.onload = () => { clearTimeout(t); res(img); };
+    img.onerror = () => { clearTimeout(t); res(null); };
+    img.src = src;
+  });
+}
+
+let snapCache = { key: "", blob: null, url: "" };
+/** Render the card to a PNG blob. Cached until what it says changes. */
+async function makeSnapshot(d){
+  const data = snapshotData(d);
+  const key = JSON.stringify(data);
+  if(snapCache.key === key && snapCache.blob) return snapCache;
+  const W = 720, PAD = 22, BAR = 6, inner = W - PAD * 2 - BAR, SCALE = 2;
+  const g = data.cover ? d.gamesById[data.cover] || {} : null;
+  const img = g ? await loadImage(g.header || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${data.cover}/header.jpg`) : null;
+  // measure pass on a scratch canvas, then draw for real at that height
+  const draw = (ctx, measureOnly) => {
+    let y = PAD + 26;
+    const x = PAD + BAR;
+    ctx.textBaseline = "alphabetic";
+    y = drawRich(ctx, `**${data.title}**`, x, y, inner, 22, 30, "#F2F3F5", "#F2F3F5") + 2;
+    y = drawRich(ctx, data.desc, x, y, inner, 16, 23, "#DBDEE1", "#FFFFFF") + 6;
+    data.fields.forEach(f => {
+      y = drawRich(ctx, `**${f.name}**`, x, y, inner, 15, 21, "#FFFFFF", "#FFFFFF");
+      y = drawRich(ctx, f.value, x, y, inner, 15, 22, "#DBDEE1", "#FFFFFF") + 8;
+    });
+    if(img){
+      // Steam headers are 460x215; anything odd is cropped to that shape rather than stretched
+      const h = Math.round(inner * 215 / 460);
+      if(!measureOnly){
+        const iw = img.naturalWidth, ih = img.naturalHeight, want = inner / h;
+        const sw = iw / ih > want ? ih * want : iw, sh = iw / ih > want ? ih : iw / want;
+        ctx.save(); roundRect(ctx, x, y - 8, inner, h, 8); ctx.clip();
+        ctx.drawImage(img, (iw - sw) / 2, (ih - sh) / 2, sw, sh, x, y - 8, inner, h); ctx.restore();
+      }
+      y += h + 10;
+    }
+    const when = new Date().toLocaleString("en-AU", { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+    y = drawRich(ctx, `Game Night · ${location.host}${location.pathname.replace(/\/(index\.html)?$/, "")} · ${when}`, x, y + 4, inner, 12.5, 18, "#949BA4", "#949BA4");
+    return y - 8 + PAD;
+  };
+  const scratch = document.createElement("canvas").getContext("2d");
+  const H = Math.ceil(draw(scratch, true));
+  const cv = document.createElement("canvas");
+  cv.width = W * SCALE; cv.height = H * SCALE;
+  const ctx = cv.getContext("2d"); ctx.scale(SCALE, SCALE);
+  ctx.fillStyle = "#2B2D31"; roundRect(ctx, 0, 0, W, H, 12); ctx.fill();          // Discord's embed surface
+  ctx.fillStyle = data.colour; ctx.save(); roundRect(ctx, 0, 0, W, H, 12); ctx.clip(); ctx.fillRect(0, 0, BAR, H); ctx.restore();
+  draw(ctx, false);
+  const blob = await new Promise(res => cv.toBlob(res, "image/png"));
+  if(snapCache.url) URL.revokeObjectURL(snapCache.url);
+  snapCache = { key, blob, url: blob ? URL.createObjectURL(blob) : "" };
+  return snapCache;
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+/** Fill the preview and wire copy / share / save for the snapshot mode. */
+function wireSnapshot(d){
+  const img = document.getElementById("snapimg");
+  if(!img) return;
+  const file = () => new File([snapCache.blob], `${(S.group.name || "game-night").replace(/[^\w-]+/g, "-").toLowerCase()}.png`, { type: "image/png" });
+  makeSnapshot(d).then(s => {
+    if(!s.url || !document.getElementById("snapimg")) return;
+    img.src = s.url; img.closest(".snapwrap").classList.add("ready");
+    const sv = document.getElementById("snapsave"); if(sv){ sv.href = s.url; sv.download = file().name; }
+  }).catch(err => console.warn("snapshot", err && err.message));
+  const cp = document.getElementById("snapcopy");
+  if(cp) cp.onclick = async () => {
+    try{
+      // Safari wants the promise handed over inside the click, so pass the blob as a promise
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": makeSnapshot(d).then(s => s.blob) })]);
+      cp.textContent = "Copied, now paste it";
+      setTimeout(() => { if(cp.isConnected) cp.textContent = "Copy image"; }, 2200);
+    }catch{ cp.textContent = "Can't copy here, use Save"; }
+  };
+  const sh = document.getElementById("snapshare");
+  if(sh) sh.onclick = async () => {
+    await makeSnapshot(d);
+    const link = shareBody(d, "link"), f = file();
+    try{
+      if(navigator.canShare && navigator.canShare({ files: [f] })) await navigator.share({ files: [f], text: link });
+      else await navigator.share({ title: S.group.name, url: link });
+    }catch{}
+  };
 }
 
 /** Desktop rail: every game in play, ten little bars each. Hidden on a phone,
@@ -2866,7 +3050,25 @@ function keepFocus(){
   };
 }
 
+/* Every tap re-renders the page, sheet included, which used to throw anything
+   scrolled inside a sheet (a long checklist, the emoji grid, details) back to
+   the top. So: note where each scrolled box inside the open sheet was, render,
+   and put them back if the same sheet is still open. */
 function render(){
+  const kind = sheet && sheet.kind, saved = [];
+  if(kind){
+    const boxes = [...document.querySelectorAll(".sheetwrap, .sheetwrap *")];
+    boxes.forEach(el => { if(el.scrollTop > 0) saved.push({ key: scrollKey(el), n: boxes.filter(b => scrollKey(b) === scrollKey(el)).indexOf(el), top: el.scrollTop }); });
+  }
+  renderNow();
+  if(kind && sheet && sheet.kind === kind && saved.length){
+    const boxes = [...document.querySelectorAll(".sheetwrap, .sheetwrap *")];
+    saved.forEach(({ key, n, top }) => { const el = boxes.filter(b => scrollKey(b) === key)[n]; if(el) el.scrollTop = top; });
+  }
+}
+const scrollKey = el => el.id ? "#" + el.id : el.tagName + "." + el.className;
+
+function renderNow(){
   // Nothing behind a sheet should scroll. Without this the shelf drifts around
   // under your thumb while you are trying to use the sheet on top of it.
   document.body.classList.toggle("locked", !!sheet);
@@ -3114,21 +3316,11 @@ function renderGroup(){
         </main>
 
         <aside class="rail">
+          ${whoPanel(d)}
           ${seshPanel(d)}
           ${ownsPanel(d)}
           ${salePanel(d)}
           ${recordPanel(d)}
-          <section class="panel">
-            <h3>Who's in</h3>
-            <div class="crew">${d.members.length ? d.members.map(mm => {
-              const voted = mm.member_id === myMemberId || (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
-              return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
-                ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
-                <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
-              </span>`;
-            }).join("") : `<span class="empty">Just you so far.</span>`}</div>
-            <button class="btn btn--ghost btn--sm railshare" id="railshare">Send to the chat</button>
-          </section>
         </aside>
       </div>
     </div>
@@ -3716,23 +3908,31 @@ function renderSheet(d){
   if(sheet.kind === "share"){
     // one place for everything that goes to a chat: the live Discord scoreboard up top,
     // then a one-off message for anywhere else (WhatsApp, Messenger, iMessage, Slack…)
-    const mode = sheet.mode || "state";
+    const mode = sheet.mode || "snap";
     const canSesh = inPlay(d).length > 0;
-    const body = shareBody(d, mode);
+    const body = mode === "snap" ? "" : shareBody(d, mode);
     const canNative = !!navigator.share;
     return shell(`<h3>Send to the chat</h3>
       <button class="menuitem dcrow" id="discordrow"><b>${S.group.discord ? "✓ Discord scoreboard is on" : "Live Discord scoreboard"}</b>
         <span>${S.group.discord ? "One message in your channel that keeps itself up to date · manage" : "One message in your channel that updates itself · set up"}</span></button>
       <span class="eyebrow">Or send a one-off</span>
       <div class="fset fset--seg">
+        <button class="chip" data-sharemode="snap" aria-pressed="${mode === "snap"}">Snapshot</button>
         <button class="chip" data-sharemode="link" aria-pressed="${mode === "link"}">Link</button>
         <button class="chip" data-sharemode="state" aria-pressed="${mode === "state"}">Update</button>
         <button class="chip" data-sharemode="nudge" aria-pressed="${mode === "nudge"}">Reminder</button>
         ${canSesh ? `<button class="chip" data-sharemode="sesh" aria-pressed="${mode === "sesh"}">When's next</button>` : ""}
       </div>
+      ${mode === "snap" ? `<p class="fhint">The scoreboard as a picture, for anywhere a live one can't go: Discord DMs, Messenger, WhatsApp. It's a snapshot, so it won't update itself.</p>
+      <div class="snapwrap"><img id="snapimg" alt="Snapshot of ${esc(S.group.name)}'s scoreboard"><span class="snapwait">Drawing it…</span></div>
+      <div class="row">
+        ${navigator.share ? `<button class="btn" id="snapshare">Share…</button>` : ""}
+        ${window.ClipboardItem && navigator.clipboard && navigator.clipboard.write ? `<button class="btn${navigator.share ? " btn--ghost" : ""}" id="snapcopy">Copy image</button>` : ""}
+        <a class="btn btn--ghost" id="snapsave" href="#" download>Save</a>
+      </div>` : `
       <p class="fhint">${mode === "link" ? "Just the link. Anyone with it can join the crew." : mode === "sesh" ? "Where the next night is at, and who still owes theirs." : mode === "nudge" ? "Names whoever hasn't voted yet." : "The leaderboard, plus the link."}</p>
       <pre class="sharepre">${esc(body)}</pre>
-      <div class="row">${canNative ? `<button class="btn btn--ghost" id="nativeshare">Share…</button>` : ""}<button class="btn" id="copyshare">Copy it</button></div>`);
+      <div class="row">${canNative ? `<button class="btn btn--ghost" id="nativeshare">Share…</button>` : ""}<button class="btn" id="copyshare">Copy it</button></div>`}`);
   }
 
   if(sheet.kind === "filters"){
@@ -4289,6 +4489,7 @@ function wireGroup(d, filtered){
   });
   const cshare = document.getElementById("copyshare");
   if(cshare) cshare.onclick = () => copy(shareBody(d, sheet.mode || "state"), cshare);
+  if(sheet && sheet.kind === "share" && (sheet.mode || "snap") === "snap") wireSnapshot(d);
   // phones: the OS share sheet goes straight to WhatsApp, Messenger, iMessage and friends
   const ns = document.getElementById("nativeshare");
   if(ns) ns.onclick = async () => { const m = sheet.mode || "state", link = shareBody(d, "link");

@@ -205,13 +205,14 @@ Everything that goes to a group chat lives in one sheet, **⋯ → Send to the c
 | Option | Where it works | How |
 | --- | --- | --- |
 | **Live Discord scoreboard** | Discord | One message that edits itself (below). The only one that updates on its own |
+| **Snapshot** (the default) | Anywhere that takes a picture: Discord DMs and group DMs, Messenger, WhatsApp, iMessage | The Discord scoreboard drawn as a PNG in the browser: same card, crew colour, top picks or next sesh, the leader's cover. **Copy image** and paste, **Share…** on a phone (the link goes with it), or **Save**. It doesn't update itself |
 | **Link / Update / Reminder / When's next** | Anywhere: WhatsApp, Messenger, iMessage, Slack, Teams | A one-off message, previewed. **Copy it**, or on a phone **Share…** opens the system share sheet straight into those apps |
 
 WhatsApp and Messenger have no webhooks for group chats, so they can't have a live scoreboard; a one-off message is as good as it gets there. Slack, Teams and Google Chat do have incoming webhooks and could get their own scoreboard later.
 
 ### The right-hand side
 
-On desktop it's a rail; on a phone the same panels sit under the shelf.
+On desktop it's a rail; on a phone the same panels sit under the shelf. Order: Who's in, Next sesh (while playing), Ready to play, On sale now, Our record.
 
 | Panel | What it shows |
 | --- | --- |
