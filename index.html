@@ -1051,6 +1051,8 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 .wlabel{position:absolute;font-size:12px;font-weight:750;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);white-space:nowrap;max-width:44%;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
 .wheelptr{position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:18px solid var(--ink);z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
 @media (max-width:520px){ .spinlbl{display:none} }
+/* a sheet's scroll stays in the sheet: no rubber-banding the page behind it */
+.sheet,.sheetbody,.ownlist,.sharepre{overscroll-behavior:contain}
 .snapwrap{position:relative;border-radius:var(--r-md);overflow:hidden;background:#2B2D31;min-height:120px;display:grid;place-items:center}
 .snapwrap img{display:block;width:100%;height:auto;opacity:0;transition:opacity .2s}
 .snapwrap.ready img{opacity:1}
@@ -1631,7 +1633,7 @@ async function refreshPrices(){
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + CONFIG.SUPABASE_ANON_KEY, "apikey": CONFIG.SUPABASE_ANON_KEY },
       body: JSON.stringify({ code }) });
     const body = await res.json().catch(() => ({}));
-    if(body.refreshed) await refresh();
+    if(body.refreshed) await refresh({ quiet: true });
   }catch(err){ console.warn("prices", err && err.message); }
 }
 
@@ -1956,7 +1958,9 @@ function soonText(t){
 function releaseOf(game){
   if(!game) return "out";
   if(game.coming_soon || soonText(game.released)) return "soon";
-  if([...(game.genres || []), ...(game.tags || [])].includes("Early Access")) return "early";
+  // Steam's own genre list drops "Early Access" the day a game hits 1.0; the
+  // player-voted tags keep it for years (Abiotic Factor), so only genres count
+  if((game.genres || []).includes("Early Access")) return "early";
   return "out";
 }
 
@@ -2698,7 +2702,7 @@ function needName(action){
   return true;
 }
 
-async function refresh(){
+async function refresh(opts = {}){
   if(!code) return;
   if(seshDirty) return;          // a free-nights save is in flight; don't let the server undo a tap
   try{
@@ -2723,7 +2727,12 @@ async function refresh(){
     // Nothing came back different, so leave the DOM alone. This is what stops
     // the covers flashing every ten seconds, and it keeps your scroll position
     // and your place in a text field.
-    if(unchanged && !sheet) return;
+    if(unchanged && (!sheet || opts.quiet)) return;
+    // Background polls never rebuild an open sheet: doing that mid-scroll is what
+    // made sheets jump and stutter. The new state is kept and shows on your next
+    // tap or when the sheet closes. The night picker is the exception, since
+    // watching the others tick their nights is the point of it.
+    if(opts.quiet && sheet && sheet.kind !== "sesh") return;
 
     if(before && after && after.ranked.length){
       const nl = after.ranked[0].appid;
@@ -4709,8 +4718,8 @@ applyTheme();
    replication to enable, which is one less setup step to get wrong.
    ========================================================================== */
 window.addEventListener("hashchange", () => { S=null; myMemberId=null; expanded.clear(); clearAll(); render(); });
-document.addEventListener("visibilitychange", () => { if(!document.hidden) refresh(); });
-window.addEventListener("focus", () => refresh());
+document.addEventListener("visibilitychange", () => { if(!document.hidden) refresh({ quiet: true }); });
+window.addEventListener("focus", () => refresh({ quiet: true }));
 /* The toolbar stays put. It used to slide away on scroll-down, which read as
    the page jumping around; a shadow when it is pinned is enough. */
 (() => {
@@ -4733,7 +4742,7 @@ window.addEventListener("focus", () => refresh());
   }, {passive:true});
 })();
 
-setInterval(() => { if(!document.hidden && code) refresh(); }, 10000);
+setInterval(() => { if(!document.hidden && code) refresh({ quiet: true }); }, 10000);
 setInterval(() => { if(!document.hidden && code) rpc("touch_group",{p_code:code,p_device:deviceId}).catch(()=>{}); }, 60000);
 
 render();
