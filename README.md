@@ -68,7 +68,7 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates sixteen tables, locks them all behind row level security with no policies, and exposes thirty-five functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates seventeen tables, locks them all behind row level security with no policies, and exposes thirty-seven functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
@@ -492,6 +492,11 @@ Three things fall out of that:
 | You come back on the same device | `whoami` recognises you before the page renders. Never asked again |
 | You open the link on a second device | You type a name, and if it looks like someone already here you are offered them |
 | Someone types `sam` when `Sam` exists | Same offer. Tap it and your picks carry across |
+| You start using a new phone or computer | **Link another device** (below) brings every crew across at once |
+
+**Opening a crew link and giving your name joins you to that crew** and adds it to **Your crews** on that device's landing page. That's per device, because there are no accounts.
+
+**Link another device.** On the device you already use, tap your name, then **Link another device**. It shows a six-character code (and a link to copy or share) that works once, for ten minutes. On the new device, open Game Night and tap **Using it somewhere else already? Link this device**, or just open the link. The new device becomes you in every crew the old one is in, and they all appear under Your crews. A crew the new device had already joined keeps whoever it already was there. `start_pairing` / `finish_pairing` do this server-side; the code is short-lived and single use, so it's safe to send to yourself in a chat.
 
 The matcher normalises case, accents and punctuation, then scores four ways: exact match, one name being a prefix of the other (`Sam` / `Sam L`), a shared first token (`Sam L` / `Sam B`), and an edit distance of one or two (`Sam` / `Samm`). Anything scoring 60 or above is offered, with enough context to recognise yourself: how many picks they have, when they were last here, how many devices.
 
@@ -534,7 +539,7 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Sixteen tables, row level security, thirty-five RPCs |
+| `supabase/schema.sql` | Seventeen tables, row level security, thirty-seven RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
 | `supabase/functions/prices/index.ts` | Refreshes Steam prices (AUD) for a crew's shelf, at most every four hours per game |
 | `supabase/functions/discord/index.ts` | Posts and edits the crew's live Discord scoreboard through their webhook |

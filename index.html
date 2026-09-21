@@ -790,6 +790,12 @@ td.r{text-align:right;white-space:nowrap}
 /* ---------- sheets ---------- */
 .sheetwrap{position:fixed;inset:0;z-index:60;background:rgba(10,12,15,.62);display:grid;place-items:end center;overscroll-behavior:contain}
 @media (min-width:640px){ .sheetwrap{place-items:center;padding:20px} }
+/* opening: the scrim fades, the sheet rises (phone) or settles (desktop) */
+.sheetwrap.enter{animation:scrimin .2s ease-out}
+.sheetwrap.enter .sheet{animation:sheetup .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes scrimin{from{background-color:rgba(10,12,15,0)}}
+@keyframes sheetup{from{transform:translateY(40px);opacity:.4}}
+@media (min-width:640px){ @keyframes sheetup{from{transform:translateY(8px) scale(.98);opacity:0}} }
 .sheet{
   background:var(--surface);width:100%;max-width:450px;
   border-radius:var(--r-lg) var(--r-lg) 0 0;padding:20px 18px calc(20px + var(--safe-b));
@@ -805,7 +811,8 @@ td.r{text-align:right;white-space:nowrap}
 @media (max-width:639px){
   .sheet:not(.sheet--tall){min-height:min(54dvh, 560px)}
   .sheet:not(.sheet--tall) > .row:last-child{margin-top:auto;padding-top:4px}
-  .sheet:not(.sheet--tall)::before{content:"";flex:none;align-self:center;width:38px;height:4px;border-radius:999px;background:var(--line-strong);margin:-8px 0 2px}
+  .sheet:not(.sheet--tall)::before{content:"";flex:none;align-self:center;width:40px;height:5px;border-radius:999px;background:var(--line-strong);margin:-10px 0 0;padding:0;box-shadow:0 0 0 12px transparent}
+  .sheet:not(.sheet--tall){touch-action:pan-y;will-change:transform}
 }
 
 /* The filter sheet is the one that needs real height, a scrolling middle and a
@@ -1082,6 +1089,8 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 tbody tr[data-row]{cursor:pointer}
 .rowname{display:flex;align-items:center;gap:8px;font-weight:700;text-align:left;color:var(--ink);min-width:0;width:100%}
 .rowname .chev{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:2.2;margin-left:auto}
+.paircode{font-size:30px;font-weight:800;letter-spacing:.14em;text-align:center;padding:12px;border-radius:var(--r-md);background:var(--surface);color:var(--ink)}
+.pairlink{margin-top:10px}
 .snapwrap{position:relative;border-radius:var(--r-md);overflow:hidden;background:#2B2D31;min-height:120px;display:grid;place-items:center}
 .snapwrap img{display:block;width:100%;height:auto;opacity:0;transition:opacity .2s}
 .snapwrap.ready img{opacity:1}
@@ -3172,11 +3181,15 @@ function render(){
     boxes.forEach(el => { if(el.scrollTop > 0) saved.push({ key: scrollKey(el), n: boxes.filter(b => scrollKey(b) === scrollKey(el)).indexOf(el), top: el.scrollTop }); });
   }
   renderNow();
+  // a sheet slides in when it first opens, not every time it re-renders
+  if(sheet && sheet.kind !== lastSheetKind){ const w = document.querySelector(".sheetwrap"); if(w) w.classList.add("enter"); }
+  lastSheetKind = sheet ? sheet.kind : null;
   if(kind && sheet && sheet.kind === kind && saved.length){
     const boxes = [...document.querySelectorAll(".sheetwrap, .sheetwrap *")];
     saved.forEach(({ key, n, top }) => { const el = boxes.filter(b => scrollKey(b) === key)[n]; if(el) el.scrollTop = top; });
   }
 }
+let lastSheetKind = null;
 const scrollKey = el => el.id ? "#" + el.id : el.tagName + "." + el.className;
 
 function renderNow(){
@@ -3251,11 +3264,13 @@ function renderLanding(){
                autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false" aria-describedby="joinhint">
         <button class="btn" id="joinbtn" disabled>Join</button>
       </div><p class="hint" id="joinhint" aria-live="polite"></p></div>
+      <button class="linkbtn pairlink" id="pairopen">Using it somewhere else already? Link this device</button>
       <p class="footer">Your crews live in your own database, no accounts anywhere. Cover art and stats come from Steam.</p>
     </div>
     ${sheet ? renderSheet(null) : ""}`;
 
   wireCommon(null);
+  wirePairing();
 
   // the whole card is the target, not just the field inside its padding
   app.querySelectorAll("[data-focus]").forEach(card => card.addEventListener("click", e => {
@@ -3918,6 +3933,14 @@ function renderSheet(d){
       <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="crewsave">Save</button></div>`);
   }
 
+  if(sheet.kind === "pair"){
+    return shell(`<h3>Link this device</h3>
+      <p>On the phone or computer you already use: tap your name up top, then <b>Link another device</b>. Type the six characters it shows.</p>
+      <input class="input codebox" id="pairin" maxlength="7" placeholder="e.g. K7Q M2X" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(sheet.code || "")}">
+      <p class="hint" id="pairmsg" aria-live="polite"></p>
+      <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="pairgo"${(sheet.code || "").length === 6 ? "" : " disabled"}>Link it</button></div>`);
+  }
+
   if(sheet.kind === "emoji"){
     return shell(`<h3>Pick an emoji</h3>
       <p>It's the crew's icon, on the tab and in your list.</p>
@@ -4108,7 +4131,15 @@ function renderSheet(d){
         <div class="rulesrow"><b>Linked on ${me.device_count} browsers</b></div>
         <p class="fhint">They all count as the same you. Swapped phones or used a borrowed laptop? Unlink the others and they'll ask who you are next time.</p>
         <button class="btn btn--ghost btn--sm btn--on2" id="unlinkothers" style="align-self:flex-start">Unlink the others</button>
-      </div>` : ""}`);
+      </div>` : ""}
+      <div class="rules">
+        <div class="rulesrow"><b>Your other phone or computer</b></div>
+        ${sheet.pair ? `<p class="fhint">On the other device, open this link, or open Game Night and tap <b>Using it somewhere else already?</b> and type the code. Works for the next ten minutes, once.</p>
+          <div class="paircode num" aria-label="Link code ${esc(sheet.pair.split("").join(" "))}">${esc(sheet.pair.slice(0, 3))} ${esc(sheet.pair.slice(3))}</div>
+          <div class="row"><button class="btn btn--ghost btn--sm btn--on2" id="paircopy">Copy the link</button>${navigator.share ? `<button class="btn btn--ghost btn--sm btn--on2" id="pairshare">Share…</button>` : ""}</div>`
+        : `<p class="fhint">Link it to you here and it picks up all your crews at once, as you. No need to open each crew's link again.</p>
+          <button class="btn btn--ghost btn--sm btn--on2" id="pairstart" style="align-self:flex-start">Link another device</button>`}
+      </div>`);
   }
 
   if(sheet.kind === "switch"){
@@ -4134,6 +4165,99 @@ function themeBtn(){
    it cannot close. Move focus in, keep Tab inside it, put focus back where it
    came from on the way out. */
 let focusReturn = null;
+/* Phone bottom sheets: drag the grabber (or the sheet, when it's scrolled to
+   the top) down to close. It follows your finger; let go past ~100px or with
+   a flick and it slides away, otherwise it springs back. */
+function wireSheetDrag(scrim){
+  const sh = scrim.querySelector(".sheet:not(.sheet--tall)");
+  if(!sh || !matchMedia("(max-width:639px)").matches) return;
+  let y0 = null, dy = 0, dragging = false, trail = [];   // trail: recent [time, dy] for flick speed
+  const fromTop = y => y - sh.getBoundingClientRect().top;
+  sh.addEventListener("touchstart", e => {
+    const y = e.touches[0].clientY;
+    const nearGrabber = fromTop(y) < 48;
+    const insideScroller = e.target.closest("input, textarea, select, .ownlist, .ep-grid, .sharepre, .dgrid");
+    y0 = nearGrabber || (sh.scrollTop <= 0 && !insideScroller) ? y : null;
+    dy = 0; dragging = false; trail = [];
+  }, { passive: true });
+  sh.addEventListener("touchmove", e => {
+    if(y0 === null) return;
+    dy = e.touches[0].clientY - y0;
+    const now = performance.now(); trail.push([now, dy]); while(trail.length > 2 && now - trail[0][0] > 120) trail.shift();
+    if(!dragging){ if(dy > 6) dragging = true; else if(dy < -6){ y0 = null; return; } else return; }
+    e.preventDefault();                                   // we own this gesture now, the page mustn't scroll
+    sh.style.transition = "none";
+    sh.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    scrim.style.backgroundColor = `rgba(10,12,15,${(0.62 * Math.max(0, 1 - dy / sh.offsetHeight)).toFixed(3)})`;
+  }, { passive: false });
+  const end = () => {
+    if(!dragging){ y0 = null; return; }
+    // speed over the last ~120ms, so a slow drag that ends in a flick still counts
+    const [ta, da] = trail[0] || [0, 0], [tb, db] = trail[trail.length - 1] || [1, 0];
+    const flick = dy > 24 && (db - da) / Math.max(1, tb - ta) > 0.5;
+    if(dy > 100 || flick){
+      sh.style.transition = "transform .18s ease-in";
+      sh.style.transform = "translateY(105%)";
+      scrim.style.transition = "background-color .18s"; scrim.style.backgroundColor = "rgba(10,12,15,0)";
+      setTimeout(closeSheet, 170);
+    } else {
+      sh.style.transition = "transform .22s cubic-bezier(.2,.8,.2,1)";
+      sh.style.transform = "";
+      scrim.style.backgroundColor = "";
+    }
+    y0 = null; dragging = false;
+  };
+  sh.addEventListener("touchend", end);
+  sh.addEventListener("touchcancel", end);
+}
+
+/* ---------- linking another device ---------- */
+async function finishPairing(raw){
+  const code6 = String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const crews = await rpc("finish_pairing", { p_pair: code6, p_device: deviceId });
+  (crews || []).forEach(c => { myGroups = [...myGroups.filter(g => g.code !== c.code), { code: c.code, name: c.name, emoji: c.emoji }]; });
+  store.set("groups", myGroups);
+  if(!myName && crews && crews[0]){ myName = crews[0].me; store.set("name", myName); }
+  return crews || [];
+}
+function wirePairing(){
+  const st = document.getElementById("pairstart");
+  if(st) st.onclick = async () => {
+    st.disabled = true; st.textContent = "Getting a code…";
+    try{ sheet.pair = await rpc("start_pairing", { p_device: deviceId }); render(); }
+    catch(err){ st.disabled = false; st.textContent = "Link another device"; console.warn(err.message); }
+  };
+  const link = () => location.origin + location.pathname + "#/pair/" + sheet.pair;
+  const pc = document.getElementById("paircopy"); if(pc) pc.onclick = () => copy(link(), pc);
+  const ps = document.getElementById("pairshare"); if(ps) ps.onclick = () => navigator.share({ title: "Link Game Night", url: link() }).catch(() => {});
+  const po = document.getElementById("pairopen"); if(po) po.onclick = () => { sheet = { kind: "pair" }; render(); };
+  const pin = document.getElementById("pairin"), go = document.getElementById("pairgo"), msg = document.getElementById("pairmsg");
+  if(pin){
+    pin.addEventListener("input", () => { const v = pin.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
+      sheet.code = v; go.disabled = v.length !== 6; msg.textContent = ""; msg.classList.remove("hint--bad"); });
+    pin.addEventListener("keydown", e => { if(e.key === "Enter" && !go.disabled) go.click(); });
+  }
+  if(go) go.onclick = async () => {
+    go.disabled = true; go.textContent = "Linking…";
+    try{
+      const crews = await finishPairing(sheet.code);
+      sheet = null; render();
+      const h = document.getElementById("joinhint");
+      if(h){ h.textContent = `Linked. ${crews.length} ${crews.length === 1 ? "crew" : "crews"} added above.`; h.classList.remove("hint--bad"); }
+    }catch(err){ go.disabled = false; go.textContent = "Link it"; msg.textContent = err.message; msg.classList.add("hint--bad"); }
+  };
+}
+/* opening a #/pair/CODE link does it straight away, then lands on your crews */
+async function pairFromHash(){
+  const m = location.hash.match(/^#\/pair\/([A-Za-z0-9]{6})/);
+  if(!m) return false;
+  history.replaceState(null, "", location.pathname);
+  try{ await finishPairing(m[1]); render(); const h = document.getElementById("joinhint"); if(h) h.textContent = "Linked. Your crews are above."; }
+  catch(err){ sheet = { kind: "pair", code: m[1].toUpperCase() }; render();
+    const g = document.getElementById("pairmsg"); if(g){ g.textContent = err.message; g.classList.add("hint--bad"); } }
+  return true;
+}
+
 function closeSheet(){
   sheet = null; pending = null; fDraft = null;
   render();
@@ -4173,6 +4297,7 @@ function wireCommon(d){
     sc.onclick = e => { if(e.target===sc){ closeSheet(); } };
     document.querySelectorAll("[data-dismiss]").forEach(b => b.onclick = () => { closeSheet(); });
     trapFocus(sc);
+    wireSheetDrag(sc);
   }
 
   // --- crew emoji: the landing picker sets the new crew's emoji and closes
@@ -4396,6 +4521,7 @@ function wireSeshBody(d){
 
 function wireGroup(d, filtered){
   wireCommon(d);
+  wirePairing();
 
   // toolbar
   const q = document.getElementById("q");
@@ -4858,7 +4984,7 @@ applyTheme();
    Ten seconds while the tab is visible, immediate on focus. No realtime
    replication to enable, which is one less setup step to get wrong.
    ========================================================================== */
-window.addEventListener("hashchange", () => { S=null; myMemberId=null; expanded.clear(); clearAll(); render(); });
+window.addEventListener("hashchange", () => { S=null; myMemberId=null; expanded.clear(); clearAll(); render(); pairFromHash(); });
 document.addEventListener("visibilitychange", () => { if(!document.hidden) refresh({ quiet: true }); });
 window.addEventListener("focus", () => refresh({ quiet: true }));
 /* The toolbar stays put. It used to slide away on scroll-down, which read as
@@ -4887,6 +5013,7 @@ setInterval(() => { if(!document.hidden && code) refresh({ quiet: true }); }, 10
 setInterval(() => { if(!document.hidden && code) rpc("touch_group",{p_code:code,p_device:deviceId}).catch(()=>{}); }, 60000);
 
 render();
+pairFromHash();
 </script>
 </body>
 </html>

@@ -1031,3 +1031,57 @@ begin
   if not found then raise exception 'that game is not one this crew added'; end if;
 end; $$;
 grant execute on function update_custom_game(text, uuid, int, text, text, text, boolean) to anon;
+
+-- ---------------------------------------------------------------------------
+-- LINK ANOTHER DEVICE
+-- There are no accounts, so "you" is a browser. To bring your phone and your
+-- laptop together, the device you're already on asks for a short code (valid
+-- ten minutes, one use). Typing it on the other device links it to you in
+-- every crew at once and hands back the list of crews.
+-- ---------------------------------------------------------------------------
+create table if not exists device_pairs (
+  code       text primary key,
+  device_id  uuid not null,
+  created_at timestamptz not null default now()
+);
+alter table device_pairs enable row level security;
+revoke all on device_pairs from anon, authenticated;
+
+create or replace function start_pairing(p_device uuid)
+returns text language plpgsql security definer set search_path = public as $$
+declare c text; tries int := 0;
+begin
+  if not exists (select 1 from member_devices where device_id = p_device) then
+    raise exception 'join a crew on this device first';
+  end if;
+  delete from device_pairs where device_id = p_device or created_at < now() - interval '10 minutes';
+  loop
+    c := left(make_code(), 6);
+    exit when not exists (select 1 from device_pairs where code = c);
+    tries := tries + 1; if tries > 20 then raise exception 'try again'; end if;
+  end loop;
+  insert into device_pairs(code, device_id) values (c, p_device);
+  return c;
+end; $$;
+grant execute on function start_pairing(uuid) to anon;
+
+create or replace function finish_pairing(p_pair text, p_device uuid)
+returns json language plpgsql security definer set search_path = public as $$
+declare src uuid; c text := upper(regexp_replace(coalesce(p_pair, ''), '[^A-Za-z0-9]', '', 'g'));
+begin
+  select device_id into src from device_pairs where code = c and created_at > now() - interval '10 minutes';
+  if src is null then raise exception 'that code has run out or was mistyped, get a fresh one'; end if;
+  if src = p_device then raise exception 'that code is for a different device'; end if;
+  delete from device_pairs where code = c;
+  -- same person in every crew the other device is in; a crew this device already
+  -- belongs to keeps whoever it already is there
+  insert into member_devices(group_code, device_id, member_id)
+  select group_code, p_device, member_id from member_devices where device_id = src
+  on conflict (group_code, device_id) do nothing;
+  return coalesce((
+    select json_agg(json_build_object('code', g.code, 'name', g.name, 'emoji', g.emoji, 'me', m.name) order by g.name)
+      from member_devices d join groups g on g.code = d.group_code
+      join members m on m.group_code = d.group_code and m.member_id = d.member_id
+     where d.device_id = p_device), '[]'::json);
+end; $$;
+grant execute on function finish_pairing(text, uuid) to anon;
