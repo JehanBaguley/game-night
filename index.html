@@ -547,6 +547,14 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   background:var(--surface-2);border-radius:999px;padding:2px 7px;
 }
 .grouphead::after{content:"";flex:1;height:1px;background:var(--line)}
+/* the whole heading is the toggle; the chevron turns down when the section is open */
+.gh-btn{display:inline-flex;align-items:center;gap:8px;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;padding:4px 6px 4px 2px;margin-left:-2px;border-radius:var(--r-sm)}
+.gh-btn:hover{color:var(--ink-2)}
+.gh-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.gh-chev{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transform:rotate(90deg);transition:transform .15s ease}
+.gh-btn[aria-expanded="false"] .gh-chev{transform:rotate(0deg)}
+.gh-btn span{font-size:10.5px;font-weight:700;letter-spacing:0;color:var(--muted);background:var(--surface-2);border-radius:999px;padding:2px 7px}
+@media (prefers-reduced-motion: reduce){ .gh-chev{transition:none} }
 
 .bdg--now{background:var(--accent);color:var(--accent-ink)}
 .bdg--played{background:rgba(10,12,15,.55);color:#fff;font-weight:500}
@@ -869,6 +877,8 @@ td.r{text-align:right;white-space:nowrap}
 .shelf0 h3{font-size:19px;font-weight:700;color:var(--ink)}
 .shelf0 p{font-size:13.5px;line-height:1.6;color:var(--ink-2);max-width:420px}
 .shelf0-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.steps{margin:2px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--ink-2);line-height:1.45}
+.steps b{color:var(--ink);font-weight:650}
 .shelf0-steps{
   list-style:none;margin:14px 0 0;padding:14px 0 0;border-top:1px solid var(--line);width:100%;max-width:460px;
   display:grid;grid-template-columns:repeat(3,1fr);gap:10px;counter-reset:st;
@@ -1076,6 +1086,7 @@ const CONFIGURED = CONFIG.SUPABASE_URL.startsWith("http") && CONFIG.SUPABASE_ANO
 const SDK_OK = typeof window.supabase !== "undefined" && !!window.supabase.createClient;
 const sb = (CONFIGURED && SDK_OK) ? window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY) : null;
 const FN_URL = CONFIG.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/enrich";
+const DISCORD_URL = CONFIG.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/discord";
 
 /* ============================================================================
    IDENTITY
@@ -1120,6 +1131,13 @@ const EMOJI_RX = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
    Rendered once as HTML, then searched and scrolled purely in the DOM.
    Re-rendering the app on every keystroke is what used to wipe the Steam
    search box, so nothing here calls render() until an emoji is chosen. */
+/** Shelf sections folded shut in this crew, by label. Per browser, like the filters. */
+function folded(){ return code ? store.get("fold." + code, []) : []; }
+function toggleFold(label){
+  const f = folded(), i = f.indexOf(label);
+  i < 0 ? f.push(label) : f.splice(i, 1);
+  store.set("fold." + code, f);
+}
 function recentEmoji(){ return store.get("recentEmoji", []).slice(0, 16); }
 function rememberEmoji(e){ store.set("recentEmoji", [e, ...recentEmoji().filter(x => x !== e)].slice(0, 16)); }
 
@@ -1833,7 +1851,34 @@ const BLURBS = {
 async function rpc(fn, args){
   const { data, error } = await sb.rpc(fn, args);
   if (error) throw new Error(error.message);
+  // anything that changes the crew nudges the Discord scoreboard, if the crew has one
+  if (DISCORD_WRITES.has(fn) && S && S.group && S.group.discord) queueDiscord(DISCORD_BIG.has(fn));
   return data;
+}
+
+/* ---------- Discord scoreboard ----------
+   The discord function edits one message in the crew's channel. Changes are
+   batched for a few seconds so a burst of taps is one edit, and big moments
+   (a round called, a night locked, a new round) post a fresh message instead,
+   which pings the channel and lands at the bottom. */
+const DISCORD_WRITES = new Set(["set_picks","add_game","bench_game","unbench_game","close_round","reopen_round","new_round",
+  "set_break","set_free","set_none","lock_sesh","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","update_group","rename_me"]);
+const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","start_side_game"]);
+let discordTimer = null, discordFresh = false;
+function queueDiscord(fresh){
+  discordFresh = discordFresh || fresh;
+  clearTimeout(discordTimer);
+  discordTimer = setTimeout(() => { const f = discordFresh; discordFresh = false; pingDiscord(f).catch(err => console.warn("discord", err.message)); }, 3000);
+}
+async function pingDiscord(fresh){
+  const res = await fetch(DISCORD_URL, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+CONFIG.SUPABASE_ANON_KEY, "apikey":CONFIG.SUPABASE_ANON_KEY },
+    body: JSON.stringify({ code, device: deviceId, fresh: !!fresh }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(body.error || "Discord didn't take it");
+  return body;
 }
 async function callEnrich(payload){
   const res = await fetch(FN_URL, {
@@ -2794,11 +2839,15 @@ function renderGroup(){
           ${filtered.length === pool.length ? "" : `<p class="resultline">${filtered.length} of ${pool.length} shown</p>`}
 
           ${filtered.length
-            ? sections(filtered, d).map(sec => `
-                ${sec.label ? `<h3 class="grouphead">${esc(sec.label)}<span>${sec.items.length}</span></h3>` : ""}
-                ${view === "cards"
+            ? sections(filtered, d).map(sec => {
+                // a labelled section folds away from its heading; the choice sticks per crew
+                const shut = !!sec.label && folded().includes(sec.label);
+                return `
+                ${sec.label ? `<h3 class="grouphead"><button class="gh-btn" data-fold="${esc(sec.label)}" aria-expanded="${!shut}">
+                  <svg class="gh-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>${esc(sec.label.replace(/^\u25B6\s*/, ""))}<span>${sec.items.length}</span></button></h3>` : ""}
+                ${shut ? "" : view === "cards"
                   ? `<div class="grid">${sec.items.map(s => card(s,d)).join("")}</div>`
-                  : listView(sec.items, d)}`).join("")
+                  : listView(sec.items, d)}`; }).join("")
             : !pool.length && !active.length && !F.q
             ? F.benched
               ? `<div class="empty"><b>The bench is empty</b>Benched games land here.</div>`
@@ -3303,6 +3352,23 @@ function renderSheet(d){
       ${emojiPicker(newCrew.emoji)}`);
   }
 
+  if(sheet.kind === "discord"){
+    const on = !!S.group.discord;
+    return shell(`<h3>Discord scoreboard</h3>
+      ${on ? `<p>It's on. One message in your channel keeps itself up to date: the top picks, who's still to vote, and the next night once you're playing. Big moments post a fresh one.</p>
+        <p class="hint" id="dcmsg" aria-live="polite"></p>
+        <div class="row"><button class="btn btn--ghost" id="dcoff">Turn it off</button><button class="btn" id="dcpost">Post a fresh one</button></div>`
+      : `<p>One message in your channel that updates itself as people vote and pick nights. Anyone taps the title to jump in.</p>
+        <ol class="steps">
+          <li>In Discord, hover the channel and tap the <b>cog</b></li>
+          <li><b>Integrations</b> → <b>Webhooks</b> → <b>New Webhook</b></li>
+          <li><b>Copy Webhook URL</b> and paste it here</li>
+        </ol>
+        <input class="input" id="dchook" placeholder="https://discord.com/api/webhooks/…" autocomplete="off" spellcheck="false" aria-label="Discord webhook link">
+        <p class="hint" id="dcmsg" aria-live="polite">Only this crew's scoreboard uses it. Nobody else sees the link.</p>
+        <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="dcgo" disabled>Connect</button></div>`}`);
+  }
+
   if(sheet.kind === "menu"){
     return shell(`
       <h3>${esc(S.group.emoji || DEFAULT_EMOJI)} ${esc(S.group.name)}</h3>
@@ -3316,6 +3382,7 @@ function renderSheet(d){
       <div class="menu">
         <button class="menuitem" id="sharemenu"><b>Send to the chat</b><span>Copy the link, an update, or a reminder</span></button>
         <button class="menuitem" id="editcrew"><b>Edit crew</b><span>Name and emoji</span></button>
+        <button class="menuitem" id="discordbtn"><b>Discord scoreboard</b><span>${S.group.discord ? "On · updates itself in your channel" : "A live scoreboard in your channel"}</span></button>
         <button class="menuitem" id="seshrulesbtn"><b>Night rules</b><span>How many make a night, and the usual start</span></button>
         ${S.group.locked_appid
           ? `<button class="menuitem" id="reopenbtn"><b>Changed our minds</b><span>Reopen the vote</span></button>`
@@ -3536,6 +3603,9 @@ function wireCommon(d){
   const openCrew = () => { sheet = { kind:"crew", name: S.group.name, emoji: S.group.emoji || DEFAULT_EMOJI }; render(); };
   const cb = document.getElementById("crewbtn"); if(cb) cb.onclick = openCrew;
   const ec = document.getElementById("editcrew"); if(ec) ec.onclick = openCrew;
+  const dcb = document.getElementById("discordbtn"); if(dcb) dcb.onclick = () => { sheet = { kind:"discord" }; render(); };
+  app.querySelectorAll("[data-fold]").forEach(b => b.onclick = () => { toggleFold(b.dataset.fold); render(); });
+  if(sheet && sheet.kind === "discord") wireDiscord();
 
   // --- name entry, step one
   const ni = document.getElementById("nameinput");
@@ -3649,6 +3719,37 @@ function wireSesh(d){
       }
     };
   }
+}
+
+function wireDiscord(){
+  const msg = document.getElementById("dcmsg");
+  const say = (t, bad) => { if(msg){ msg.textContent = t; msg.classList.toggle("hint--bad", !!bad); } };
+  const hookIn = document.getElementById("dchook"), go = document.getElementById("dcgo");
+  const looksRight = v => /^https:\/\/(ptb\.|canary\.)?discord(app)?\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(v.trim());
+  if(hookIn) hookIn.addEventListener("input", () => { go.disabled = !looksRight(hookIn.value);
+    if(hookIn.value.trim() && !looksRight(hookIn.value)) say("That doesn't look like a webhook link yet. It starts with https://discord.com/api/webhooks/", true);
+    else say("Only this crew's scoreboard uses it. Nobody else sees the link."); });
+  if(go) go.onclick = async () => {
+    go.disabled = true; go.textContent = "Connecting…";
+    try{
+      await rpc("set_discord", { p_code: code, p_device: deviceId, p_hook: hookIn.value.trim() });
+      await pingDiscord(true);
+      await refresh(); render(); say("Posted. Have a look in the channel.");
+    }catch(err){ go.disabled = false; go.textContent = "Connect"; say(err.message, true); }
+  };
+  const post = document.getElementById("dcpost");
+  if(post) post.onclick = async () => {
+    post.disabled = true;
+    try{ await pingDiscord(true); say("Posted a fresh one."); }
+    catch(err){ say(err.message, true); if(/gone/.test(err.message)){ await refresh(); render(); } }
+    post.disabled = false;
+  };
+  const off = document.getElementById("dcoff");
+  if(off) off.onclick = async () => {
+    off.disabled = true;
+    try{ await rpc("set_discord", { p_code: code, p_device: deviceId, p_hook: null }); await refresh(); render(); }
+    catch(err){ off.disabled = false; say(err.message, true); }
+  };
 }
 
 function wireSeshBody(d){

@@ -10,7 +10,7 @@ Live on GitHub Pages, data in a free Supabase project. No accounts for anyone wh
 | --- | --- |
 | App | https://jehanbaguley.github.io/game-night/ |
 | Source | https://github.com/JehanBaguley/game-night |
-| Backend | Supabase project `itlxniumucgrbiljvnge` (Sydney), edge functions `enrich` and `card` |
+| Backend | Supabase project `itlxniumucgrbiljvnge` (Sydney), edge functions `enrich`, `card` and `discord` |
 
 ### How the links work
 
@@ -19,7 +19,7 @@ There are three kinds of link and they do different jobs.
 | Link | Looks like | Use it for |
 | --- | --- | --- |
 | **Group link** | `…/game-night/#/g/X9MWCDM` | The one to send round. Opens straight onto that crew's shelf. First visit asks your name once, then that device is you |
-| **Card link** | `https://itlxniumucgrbiljvnge.supabase.co/functions/v1/card?g=X9MWCDM` | Paste this in Discord, Slack, iMessage or WhatsApp when you want a preview. It unfurls with the group name, the current leader and its cover art, then bounces people to the group link |
+| **Card link** | `https://itlxniumucgrbiljvnge.supabase.co/functions/v1/card?g=X9MWCDM` | Meant to unfurl with the group name, the current leader and its cover art, then bounce people to the group link. **Caveat:** Supabase serves HTML from edge functions on its own domain as plain text, so Discord likely shows no preview. For Discord, use the scoreboard instead (below) |
 | **Bare link** | `…/game-night/` | The landing page. Start a crew, or type in a code. Not the one to share: a mate who lands here without a code will start a new crew by accident, which is exactly what happened on day one |
 
 The seven-character code is the group. Anyone with it can vote, add and call rounds, so treat it like a Discord invite rather than a password. **Send to the chat** in the app has a **Copy the link** button so nobody has to build it by hand.
@@ -69,11 +69,11 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates fourteen tables, locks them all behind row level security with no policies, and exposes thirty-one functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates fourteen tables, locks them all behind row level security with no policies, and exposes thirty-two functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
-Two of them. `enrich` is the only place Steam data can be fetched, because Steam sends no CORS headers and a browser can never call it directly. `card` is what makes a pasted link unfurl in Discord.
+Three of them. `enrich` is the only place Steam data can be fetched, because Steam sends no CORS headers and a browser can never call it directly. `card` serves link-preview tags. `discord` keeps the crew's Discord scoreboard up to date.
 
 ```bash
 npm install -g supabase
@@ -81,11 +81,12 @@ supabase login
 supabase link --project-ref YOUR_PROJECT_REF     # the abcdefgh bit from your URL
 supabase functions deploy enrich --no-verify-jwt
 supabase functions deploy card   --no-verify-jwt
+supabase functions deploy discord --no-verify-jwt
 ```
 
-`--no-verify-jwt` matters on both: they're called with the anon key, not a logged-in user token.
+`--no-verify-jwt` matters on all three: they're called with the anon key, not a logged-in user token.
 
-`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically. `card` needs one more, but you won't know its value until step 5.
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically. `card` and `discord` need one more, but you won't know its value until step 5.
 
 ### 4. Paste your config
 
@@ -181,6 +182,24 @@ On a phone it's the line on the status card. On desktop it's also a **Next sesh*
 Taps save 600ms after the last one, so picking four nights is one request, and the background refresh stands down while a save is in flight so the server can't briefly undo a tap.
 
 **Reminders:** there are no accounts, so there are no push notifications. **Send to the chat → When's next** writes it up for Discord instead: which night has how many, what's pencilled or locked, and who still owes their nights. The Discord preview from the card link carries it too: "· next sesh Fri 26 Sept, 8pm" once locked, the pencilled night before that, otherwise how many have picked their nights.
+
+### Discord scoreboard
+
+A link preview can't update itself or carry buttons, so instead the crew gets one message in their channel that keeps itself current.
+
+| Step | What happens |
+| --- | --- |
+| Set up (once) | **⋯ → Discord scoreboard**. In Discord: channel cog → Integrations → Webhooks → New Webhook → Copy Webhook URL. Paste, **Connect**, and the first scoreboard posts straight away |
+| While voting | Round number, how many have voted, the top three with medals, who's still to vote, the leader's cover art |
+| While playing | What's on, sessions so far, where the next night is at (locked, pencilled, or who still owes their nights) and any side games |
+| Small changes | A vote, a night ticked, a game added: the same message is edited, batched over three seconds so a flurry of taps is one edit. Nothing changed, nothing sent |
+| Big moments | A round called, a new round, a night locked, a side game started: a fresh message posts (so the channel lights up) and the old one is marked as old |
+
+The title links to the crew, so it's one tap from Discord to voting. The webhook link lives in the database and only the `discord` function reads it; `get_state` only says whether one is set. If someone deletes the webhook in Discord, the next update notices and switches the scoreboard off. Voting from inside Discord (buttons, a `/gamenight` command) would need a proper Discord bot, and this is the base it would build on.
+
+### Folding sections
+
+With the shelf split into sections (**In the running**, **Nobody's picked it yet**, …), click a heading to fold it shut and again to open it. It's remembered per crew in that browser, like your filters.
 
 ### Side games
 
@@ -469,8 +488,9 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Fourteen tables, row level security, thirty-one RPCs |
+| `supabase/schema.sql` | Fourteen tables, row level security, thirty-two RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
+| `supabase/functions/discord/index.ts` | Posts and edits the crew's live Discord scoreboard through their webhook |
 | `supabase/functions/enrich/index.ts` | Steam search, fetch, validation, facet classification |
 | `data/curated.json` | 76 verified games with caps, energy, setup and mod caveats, mirrored as `CURATED` inside index.html |
 | `.github/workflows/keepalive.yml` | Weekly ping and stale-data refresh |

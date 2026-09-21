@@ -351,7 +351,8 @@ begin
        'round_no', g.round_no, 'round_started_at', g.round_started_at,
        'locked_appid', g.locked_appid, 'paused_at', g.paused_at,
        'emoji', g.emoji, 'sesh_need', g.sesh_need, 'sesh_time', g.sesh_time,
-       'tint_h', g.tint_h, 'tint_s', g.tint_s, 'tint_emoji', g.tint_emoji),
+       'tint_h', g.tint_h, 'tint_s', g.tint_s, 'tint_emoji', g.tint_emoji,
+       'discord', g.discord_hook is not null),
     'members', coalesce((
        select json_agg(json_build_object(
          'member_id', m.member_id, 'name', m.name,
@@ -894,3 +895,27 @@ begin
    where code = p_code and emoji = p_emoji;
 end; $$;
 grant execute on function set_tint(text, uuid, text, int, int) to anon;
+
+-- ---------------------------------------------------------------------------
+-- DISCORD SCOREBOARD
+-- A crew can paste a channel webhook. The discord edge function posts one
+-- scoreboard message there and edits it as things change, with a fresh post
+-- for big moments. The webhook link is a secret: it never leaves the database
+-- except to that function, and get_state only says whether one is set.
+-- ---------------------------------------------------------------------------
+alter table groups add column if not exists discord_hook text;
+alter table groups add column if not exists discord_msg  text;   -- id of the live scoreboard message
+alter table groups add column if not exists discord_sig  text;   -- what it last said, so unchanged edits are skipped
+
+create or replace function set_discord(p_code text, p_device uuid, p_hook text)
+returns boolean language plpgsql security definer set search_path = public as $$
+declare h text := nullif(trim(coalesce(p_hook, '')), '');
+begin
+  perform assert_member(p_code, p_device);
+  if h is not null and h !~ '^https://(ptb\.|canary\.)?discord(app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+$' then
+    raise exception 'That doesn''t look like a Discord webhook link';
+  end if;
+  update groups set discord_hook = h, discord_msg = null, discord_sig = null where code = p_code;
+  return h is not null;
+end; $$;
+grant execute on function set_discord(text, uuid, text) to anon;
