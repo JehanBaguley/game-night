@@ -123,13 +123,13 @@ Supabase pauses free projects after roughly a week of inactivity. Your cadence i
 
 The workflow in `.github/workflows/keepalive.yml` then runs weekly and also refreshes any Steam data older than 30 days.
 
-### 7. Seed both groups
+### 7. Start your crews
 
-Open the site, create a group, name yourself. It loads the 15 games from `SEED` automatically, which takes about 20 seconds.
+Open the site, pick an emoji and a name, and create the crew. It starts with an **empty shelf**, which says what to do: **Add a game** (search Steam by name or paste a store link) or **Send the link to the crew**. Anything in the curated list arrives with its player cap, energy and setup already filled in.
 
-**Vote before you send the link.** An empty vote is a dead vote: the first person to arrive and see zero picks decides it is not a real thing yet and closes the tab. Cast your three, then share.
+**Add a few and vote before you send the link.** An empty vote is a dead vote: the first person to arrive and see zero picks decides it is not a real thing yet and closes the tab. Chuck in a handful, cast your three, then share.
 
-Repeat for the second group. Same shelf, separate everything else.
+Each crew has its own shelf, members and history.
 
 ---
 
@@ -475,7 +475,7 @@ Both are covered in steps 3 and 5 of the setup above.
 
 ## Changing things
 
-**Different seed games.** Edit the `SEED` array in `index.html`, which is just a list of app IDs. To add facets for a game, add it to `CURATED` in the same file and to `data/curated.json` so the two stay in step.
+**Pre-filled facets for more games.** New crews start empty; nothing is seeded. To have a game arrive with its cap, energy and setup already set, add it to `CURATED` in `index.html` and to `data/curated.json` so the two stay in step.
 
 **Different quorum.** How many have to vote before *Call it* says it's enough. Ships at 5, which suits a group of about ten. `update groups set quorum = 3 where code = 'XXXXXXX';`
 

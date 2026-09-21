@@ -849,6 +849,23 @@ td.r{text-align:right;white-space:nowrap}
 
 .empty{font-size:13px;color:var(--muted);padding:26px 4px;text-align:center;line-height:1.6}
 .empty b{display:block;color:var(--ink);font-size:15px;font-weight:700;margin-bottom:4px}
+/* the empty shelf on a brand new crew: what to do, and the two buttons that do it */
+.shelf0{
+  margin-top:14px;padding:34px 20px 26px;border-radius:var(--r-lg);text-align:center;
+  background:var(--surface);box-shadow:inset 0 1px 0 var(--edge), var(--lift);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.shelf0-e{font-size:40px;line-height:1;margin-bottom:4px}
+.shelf0 h3{font-size:19px;font-weight:700;color:var(--ink)}
+.shelf0 p{font-size:13.5px;line-height:1.6;color:var(--ink-2);max-width:420px}
+.shelf0-acts{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.shelf0-steps{
+  list-style:none;margin:14px 0 0;padding:14px 0 0;border-top:1px solid var(--line);width:100%;max-width:460px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;counter-reset:st;
+}
+.shelf0-steps li{counter-increment:st;font-size:12px;line-height:1.45;color:var(--muted)}
+.shelf0-steps li::before{content:counter(st);display:grid;place-items:center;width:22px;height:22px;margin:0 auto 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text);font-size:11px;font-weight:700}
+.shelf0-steps b{display:block;color:var(--ink);font-weight:650}
 .footer{margin-top:40px;padding:16px 0 0;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 
 @media (prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
@@ -1629,9 +1646,6 @@ const BLURBS = {
   1599600:"Rogue-lite restaurant cooking panic",
 };
 
-// the 15 the shelf starts with
-const SEED = [251570,427410,1621690,1203620,1169040,1623730,413150,892970,
-              2686630,1604030,602960,553850,4001890,2644470,1599600];
 
 /* ============================================================================
    API
@@ -1741,6 +1755,7 @@ const ARRANGE = {
   energy: { label:"Energy",         sort:"votes",  dir:"desc", group:"energy" },
   shape:  { label:"Length",         sort:"votes",  dir:"desc", group:"shape"  },
   setup:  { label:"Setup",          sort:"votes",  dir:"desc", group:"setup"  },
+  release:{ label:"Release",        sort:"votes",  dir:"desc", group:"release"},
 };
 let arrange = store.get("arrange", "inplay");
 const A  = () => ARRANGE[arrange] || ARRANGE.inplay;
@@ -1992,6 +2007,7 @@ function groupShelf(list, d){
     if(groupBy === "energy"){ const e = energyOf(s, d); return e ? ENERGY[e] : "Not rated yet"; }
     if(groupBy === "shape")  return g.shape  ? SHAPE[g.shape]   : "Unsorted";
     if(groupBy === "setup")  return s.setup  ? SETUP[s.setup]   : "Unsorted";
+    if(groupBy === "release") return RELEASE[releaseOf(d.gamesById[s.appid])];
     if(groupBy === "played") return (d.playsBy[s.appid]||[]).length ? "Played before" : "Never played";
     return "";
   };
@@ -2006,6 +2022,7 @@ function groupShelf(list, d){
     energy: ["Chill","Normal","Heavy","Not rated yet"],
     shape:  ["Drop in","One sitting","Campaign","Long haul","Unsorted"],
     setup:  ["Just launch","Someone hosts","Dedicated server","Unsorted"],
+    release:["Released","Early access","Not out yet"],
     played: ["Never played","Played before"],
   }[A().group] || [];
   return [...buckets.entries()]
@@ -2320,19 +2337,8 @@ async function createGroup(name, person, emoji){
   newCrew = { name:"", emoji: DEFAULT_EMOJI };
   myGroups = [...myGroups.filter(g=>g.code!==newCode), {code:newCode, name, emoji:e}];
   store.set("groups", myGroups);
-  for(const appid of SEED){
-    // Two independent steps on purpose. Enrichment only supplies the name,
-    // blurb and cover; the facets are local. If Steam is slow or down, the
-    // shelf still gets built and the missing details fill in on a later view,
-    // instead of a new group opening completely empty.
-    try{ await callEnrich({action:"get", appid}); }catch{}
-    try{
-      const f = curatedFor(appid);
-      await rpc("add_game", {p_code:newCode, p_device:deviceId, p_appid:appid,
-                             p_energy:f.energy, p_crew_max:f.crew_max, p_setup:f.setup,
-                             p_crew_mod:f.crew_mod, p_crew_note:f.crew_note});
-    }catch(err){ console.warn("seed failed for", appid, err && err.message); }
-  }
+  // A new crew starts with an empty shelf. It used to be seeded with our own
+  // fifteen, which made sense for one friend group and none for anyone else.
   myMemberId = null;
   location.hash = "#/g/" + newCode;
 }
@@ -2571,7 +2577,7 @@ function renderGroup(){
       <div class="cols">
         <main>
           <h2 class="sr">The shelf</h2>
-          <div class="shelfbar">
+          <div class="shelfbar"${(S.shelf||[]).length ? "" : ' style="display:none"'}>
           <div class="toolbar">
             <label class="searchwrap">
               <span class="sr">Search the shelf</span>
@@ -2612,10 +2618,22 @@ function renderGroup(){
                   ? `<div class="grid">${sec.items.map(s => card(s,d)).join("")}</div>`
                   : listView(sec.items, d)}`).join("")
             : !pool.length && !active.length && !F.q
-            ? `<div class="empty"><b>${F.benched ? "The bench is empty" : "Nothing on the shelf yet"}</b>
-                 ${F.benched ? "Benched games land here." : "Paste a Steam link or search by name, and it is up for a vote."}
-                 ${F.benched ? "" : `<br><button class="btn" id="addfirst" style="margin-top:12px">Add the first game</button>`}
-               </div>`
+            ? F.benched
+              ? `<div class="empty"><b>The bench is empty</b>Benched games land here.</div>`
+              : `<div class="shelf0">
+                  <span class="shelf0-e" aria-hidden="true">${esc(g.emoji || DEFAULT_EMOJI)}</span>
+                  <h3>The shelf's empty</h3>
+                  <p>Chuck in the games you're keen on. Search Steam by name or paste a store link, and each one is up for a vote straight away.</p>
+                  <div class="shelf0-acts">
+                    <button class="btn" id="addfirst">Add a game</button>
+                    <button class="btn btn--ghost" id="sharefirst">Send the link to the crew</button>
+                  </div>
+                  <ol class="shelf0-steps">
+                    <li><b>Add</b> anything you'd play together</li>
+                    <li><b>Pick</b> up to three each</li>
+                    <li><b>Call it</b> when enough of you are in</li>
+                  </ol>
+                </div>`
             : `<div class="empty"><b>Nothing survived that</b>
                  ${F.crew ? "Nothing here seats "+F.crew+" of you." : F.q ? "Nothing on the shelf called that." : "That is a lot of filters."}
                  <br><button class="clearall" id="clearall2">Clear the lot</button>
@@ -3536,6 +3554,7 @@ function wireGroup(d, filtered){
   // adding opens a sheet, so the Steam search never competes with the shelf search
   const openAdd = () => { sheet = {kind:"add"}; render(); const box = document.getElementById("addq"); if(box) box.focus(); };
   ["addbtn","addfirst"].forEach(id => { const b = document.getElementById(id); if(b) b.onclick = openAdd; });
+  const sf = document.getElementById("sharefirst"); if(sf) sf.onclick = () => { sheet = { kind:"share" }; render(); };
   const mb2 = document.getElementById("morebtn"); if(mb2) mb2.onclick = () => { sheet = {kind:"menu"}; render(); };
   const sm2 = document.getElementById("sharemenu"); if(sm2) sm2.onclick = () => { sheet = {kind:"share"}; render(); };
   const cl = document.getElementById("copylink"); if(cl) cl.onclick = () => copy(location.origin + location.pathname + "#/g/" + code, cl);
