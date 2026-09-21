@@ -1108,15 +1108,17 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 .dmore{margin-top:-6px}
 /* list view: the whole row opens details */
 tbody tr[data-row]{cursor:pointer}
-.rowname{display:flex;align-items:center;gap:8px;font-weight:700;text-align:left;color:var(--ink);min-width:0;width:100%}
+.rowname{display:inline-flex;align-items:center;gap:6px;font-weight:700;text-align:left;color:var(--ink);min-width:0;max-width:100%}
 .rowname .rn{min-width:0;overflow-wrap:anywhere}
 .rowname .chev{flex:none;width:13px;height:13px;stroke:var(--muted);fill:none;stroke-width:2.4;margin-left:-2px;transition:transform .15s,stroke .15s}
 .rowname:hover .chev,.rowname:focus-visible .chev{transform:translateX(2px);stroke:var(--ink)}
 .rowname:hover .rn{text-decoration:underline;text-underline-offset:3px;text-decoration-color:var(--line-strong)}
-.lthumb{width:46px;height:22px;border-radius:5px;flex:none;object-fit:cover;background:var(--tile, var(--surface-3));display:block}
+.gcell{display:flex;align-items:center;gap:12px}
+.gtext{min-width:0;flex:1}
+.lthumb{width:64px;height:30px;border-radius:6px;flex:none;object-fit:cover;background:var(--tile, var(--surface-3));display:block}
 .lthumb--tile{background:var(--tile, var(--surface-3))}
-td.g .sub{padding-left:54px}
-@media (max-width:480px){ .lthumb{width:34px;height:16px} td.g .sub{padding-left:42px} td.g{min-width:0} }
+td.g .sub{padding-left:0}
+@media (max-width:480px){ .lthumb{width:40px;height:19px} .gcell{gap:9px} td.g{min-width:0} }
 .paircode{font-size:30px;font-weight:800;letter-spacing:.14em;text-align:center;padding:12px;border-radius:var(--r-md);background:var(--surface);color:var(--ink)}
 .pairlink{margin-top:10px}
 .mygroup--here{background:var(--accent-soft)}
@@ -3655,16 +3657,17 @@ function listView(list, d){
     <tbody>${list.map(s => {
       const g = d.gamesById[s.appid]||{}, n = d.counts[s.appid]||0, on = d.myPicks.includes(s.appid);
       return `<tr class="${on?"on":""}" data-row="${s.appid}">
-        <td class="g"><button class="rowname" data-facets="${s.appid}" aria-label="Details for ${esc(g.name||"")}">
+        <td class="g"><div class="gcell">
           ${s.appid > 0
             // Steam games show their header art; hand-added ones keep the colour tile
-            ? `<img class="lthumb" src="${esc(g.header || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${s.appid}/header.jpg`)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'lthumb lthumb--tile'}))" style="--tile:hsl(${hueOf(g.name||s.appid)} 40% 47%)">`
+            ? `<img class="lthumb" aria-hidden="true" src="${esc(g.header || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${s.appid}/header.jpg`)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'lthumb lthumb--tile'}))" style="--tile:hsl(${hueOf(g.name||s.appid)} 40% 47%)">`
             : `<span class="lthumb lthumb--tile" style="--tile:hsl(${hueOf(g.name||s.appid)} 40% 47%)"></span>`}
+          <div class="gtext"><button class="rowname" data-facets="${s.appid}" aria-label="Details for ${esc(g.name||"")}">
           <span class="rn">${esc(g.name||s.appid)}</span>${isCustom(g) ? `<span class="pill">${esc(PLATFORM[g.platform])}</span>` : ""}
           <svg class="chev" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           <div class="sub"><span class="narrow">${
             energyOf(s,d) ? esc(ENERGY[energyOf(s,d)])+" · " : ""}${s.crew_max ? "≤ "+s.crew_max+" · " : ""}</span>${
-            esc(SHAPE[g.shape]||"")}${doingOf(s,d)?" · "+esc(DOING[doingOf(s,d)]):""}</div></td>
+            esc(SHAPE[g.shape]||"")}${doingOf(s,d)?" · "+esc(DOING[doingOf(s,d)]):""}</div></div></div></td>
         <td class="opt2">${energyOf(s,d)?`<span class="pill pill--e${energyOf(s,d)}">${esc(ENERGY[energyOf(s,d)])}</span>`:`<span class="pill">—</span>`}</td>
         <td class="opt2"><button class="pill pill--set" data-facets="${s.appid}" title="${esc(s.crew_note||"")}">${
           s.crew_max ? "≤ "+s.crew_max : "Set"}${s.crew_mod ? " <span class=\"modhint\">+mod</span>" : ""}</button></td>
