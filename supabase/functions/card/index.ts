@@ -41,7 +41,7 @@ const dayName = (iso: string) =>
 
 /** Steam hosts a 460x215 header for every app, so there is no image to render. */
 const headerFor = (appid: number) =>
-  `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
+  appid > 0 ? `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg` : "";
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);

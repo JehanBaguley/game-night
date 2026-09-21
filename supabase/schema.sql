@@ -971,3 +971,63 @@ create table if not exists prices (
 );
 alter table prices enable row level security;
 revoke all on prices from anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- GAMES THAT AREN'T ON STEAM
+-- Browser games (skribbl.io), Epic (Fortnite), consoles. They live in the same
+-- games table under a negative appid, so votes, nights, owning and the
+-- scoreboard all work unchanged. Each one belongs to the crew that made it.
+-- fetched_at is 'infinity' so the Steam refresh never tries to re-fetch them.
+-- ---------------------------------------------------------------------------
+alter table games add column if not exists platform     text;     -- null = Steam; browser | epic | xbox | playstation | switch | other
+alter table games add column if not exists play_url     text;     -- where to play it or buy it
+alter table games add column if not exists is_free      boolean not null default false;
+alter table games add column if not exists custom_group text;     -- the crew that added it, for custom games only
+create sequence if not exists custom_game_seq;
+
+create or replace function add_custom_game(
+  p_code text, p_device uuid, p_name text, p_platform text, p_url text, p_free boolean,
+  p_crew_max int default null, p_energy int default null
+) returns int language plpgsql security definer set search_path = public as $$
+declare m uuid; nm text; a int; who text; u text := nullif(trim(coalesce(p_url, '')), '');
+begin
+  m := assert_member(p_code, p_device);
+  nm := trim(coalesce(p_name, ''));
+  if length(nm) < 1 or length(nm) > 60 then raise exception 'give it a name (up to 60 characters)'; end if;
+  if coalesce(p_platform, 'other') not in ('browser','epic','xbox','playstation','switch','other') then raise exception 'unknown platform'; end if;
+  if u is not null and u !~* '^https?://[^\s]+$' then raise exception 'that link needs to start with https://'; end if;
+  if p_crew_max is not null and (p_crew_max < 1 or p_crew_max > 200) then raise exception 'player cap looks wrong'; end if;
+  if p_energy is not null and (p_energy < 1 or p_energy > 3) then raise exception 'energy must be 1, 2 or 3'; end if;
+  if (select count(*) from shelf where group_code = p_code) >= 200 then
+    raise exception 'this group already has 200 games, retire some first';
+  end if;
+  -- the same name in the same crew is the same game: put it back rather than doubling up
+  select appid into a from games where custom_group = p_code and lower(name) = lower(nm) limit 1;
+  if a is null then
+    a := -nextval('custom_game_seq')::int;
+    insert into games(appid, name, platform, play_url, is_free, custom_group, coop, online_coop, fetched_at)
+    values (a, nm, coalesce(p_platform, 'other'), left(u, 300), coalesce(p_free, false), p_code, true, true, 'infinity');
+  end if;
+  select name into who from members where group_code = p_code and member_id = m;
+  insert into shelf(group_code, appid, added_by, added_name, benched, energy, crew_max)
+  values (p_code, a, m, who, false, p_energy, p_crew_max)
+  on conflict (group_code, appid) do update set benched = false;
+  return a;
+end; $$;
+grant execute on function add_custom_game(text, uuid, text, text, text, boolean, int, int) to anon;
+
+-- fix a custom game's name, link, platform or price later
+create or replace function update_custom_game(
+  p_code text, p_device uuid, p_appid int, p_name text, p_platform text, p_url text, p_free boolean
+) returns void language plpgsql security definer set search_path = public as $$
+declare nm text := trim(coalesce(p_name, '')); u text := nullif(trim(coalesce(p_url, '')), '');
+begin
+  perform assert_member(p_code, p_device);
+  if length(nm) < 1 or length(nm) > 60 then raise exception 'give it a name (up to 60 characters)'; end if;
+  if coalesce(p_platform, 'other') not in ('browser','epic','xbox','playstation','switch','other') then raise exception 'unknown platform'; end if;
+  if u is not null and u !~* '^https?://[^\s]+$' then raise exception 'that link needs to start with https://'; end if;
+  update games set name = nm, platform = coalesce(p_platform, 'other'), play_url = left(u, 300), is_free = coalesce(p_free, false)
+   where appid = p_appid and custom_group = p_code;
+  if not found then raise exception 'that game is not one this crew added'; end if;
+end; $$;
+grant execute on function update_custom_game(text, uuid, int, text, text, text, boolean) to anon;

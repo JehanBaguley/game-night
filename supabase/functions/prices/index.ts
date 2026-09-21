@@ -64,7 +64,8 @@ Deno.serve(async (req) => {
   if (!code) return reply({ error: "code please" }, 400);
 
   const { data: shelf } = await db.from("shelf").select("appid").eq("group_code", code);
-  const ids = [...new Set((shelf ?? []).map((r: { appid: number }) => r.appid))];
+  // games added by hand (negative appids) aren't on Steam, so there is no price to fetch
+  const ids = [...new Set((shelf ?? []).map((r: { appid: number }) => r.appid))].filter((a) => a > 0);
   if (!ids.length) return reply({ ok: true, refreshed: 0 });
 
   const { data: have } = await db.from("prices").select("appid, fetched_at").in("appid", ids);

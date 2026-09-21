@@ -798,6 +798,15 @@ td.r{text-align:right;white-space:nowrap}
 @media (min-width:640px){
   .sheet{border-radius:var(--r-lg);padding-bottom:20px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45)}
 }
+/* Phone bottom sheets start at a consistent height (a "medium detent", like
+   iOS) so short ones don't sit low and cramped at the bottom edge. Content
+   reads from the top, the action row sits at the foot, and a grabber says
+   it's a sheet. Tall content still grows to 88vh and scrolls. */
+@media (max-width:639px){
+  .sheet:not(.sheet--tall){min-height:min(54dvh, 560px)}
+  .sheet:not(.sheet--tall) > .row:last-child{margin-top:auto;padding-top:4px}
+  .sheet:not(.sheet--tall)::before{content:"";flex:none;align-self:center;width:38px;height:4px;border-radius:999px;background:var(--line-strong);margin:-8px 0 2px}
+}
 
 /* The filter sheet is the one that needs real height, a scrolling middle and a
    footer that stays put, because the Apply button is the whole point of it. */
@@ -1053,6 +1062,26 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 @media (max-width:520px){ .spinlbl{display:none} }
 /* a sheet's scroll stays in the sheet: no rubber-banding the page behind it */
 .sheet,.sheetbody,.ownlist,.sharepre{overscroll-behavior:contain}
+/* custom games: the add-your-own form and the editor in details */
+.cform{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.fldlbl{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:-4px}
+.row--cf{align-items:flex-end;gap:10px}
+.row--cf .chip{flex:none;min-height:42px}
+.fld--cap{flex:1}
+.cedit{border-radius:var(--r-md);background:var(--surface-2);padding:10px 12px}
+.cedit summary{cursor:pointer;font-size:12.5px;color:var(--ink-2);font-weight:600}
+.cedit[open] summary{margin-bottom:10px}
+.cedit .input{background:var(--surface)}
+.ownrow--free{opacity:.8}
+.ownrow--free .tick{background:var(--surface-3);color:var(--ink-2);box-shadow:none}
+/* long descriptions in details fold to four lines */
+.dlong{flex:none;max-height:96px;overflow:hidden;position:relative;-webkit-mask-image:linear-gradient(180deg,#000 60%,transparent);mask-image:linear-gradient(180deg,#000 60%,transparent)}
+.dlong.open{max-height:none;-webkit-mask-image:none;mask-image:none}
+.dmore{margin-top:-6px}
+/* list view: the whole row opens details */
+tbody tr[data-row]{cursor:pointer}
+.rowname{display:flex;align-items:center;gap:8px;font-weight:700;text-align:left;color:var(--ink);min-width:0;width:100%}
+.rowname .chev{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:2.2;margin-left:auto}
 .snapwrap{position:relative;border-radius:var(--r-md);overflow:hidden;background:#2B2D31;min-height:120px;display:grid;place-items:center}
 .snapwrap img{display:block;width:100%;height:auto;opacity:0;transition:opacity .2s}
 .snapwrap.ready img{opacity:1}
@@ -1456,7 +1485,11 @@ function renderSides(d){
    ========================================================================== */
 
 /** Who owns each shelf game, and what it costs on Steam right now. */
-function ownersOf(d, appid){ return d.ownsBy[appid] || new Set(); }
+function ownersOf(d, appid){
+  // a free game (skribbl.io, Fortnite) is one nobody needs to buy
+  if((d.gamesById[appid] || {}).is_free) return new Set(d.members.map(m => m.member_id));
+  return d.ownsBy[appid] || new Set();
+}
 function iOwn(d, appid){ return ownersOf(d, appid).has(myMemberId); }
 /** "everyone" / "2 to buy" for a game, or "" when nobody has said anything about it yet. */
 function ownLine(d, appid){
@@ -1569,6 +1602,8 @@ function ownsSheet(d){
   return `<h3>What do you own?</h3>
     <p>Tick every game you've already got. The rail works out what the whole crew can play tonight, and cards say how many still need to buy.</p>
     <div class="ownlist">${open.map(s => { const g = d.gamesById[s.appid] || {}, mine = iOwn(d, s.appid), p = d.prices[s.appid];
+      if(g.is_free) return `<div class="ownrow ownrow--free"><span class="ownimg" style="background:hsl(${hueOf(g.name || "")} 24% 36%)"></span>
+        <span class="nm">${esc(g.name || "")}</span><span class="pr">Free · everyone has it</span><span class="tick" aria-hidden="true">✓</span></div>`;
       return `<button class="ownrow" data-own="${s.appid}" aria-pressed="${mine}">
         ${g.header ? `<img src="${esc(g.header)}" alt="" loading="lazy">` : `<span class="ownimg"></span>`}
         <span class="nm">${esc(g.name || "")}</span>
@@ -1726,7 +1761,7 @@ async function makeSnapshot(d){
   if(snapCache.key === key && snapCache.blob) return snapCache;
   const W = 720, PAD = 22, BAR = 6, inner = W - PAD * 2 - BAR, SCALE = 2;
   const g = data.cover ? d.gamesById[data.cover] || {} : null;
-  const img = g ? await loadImage(g.header || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${data.cover}/header.jpg`) : null;
+  const img = g && (g.header || data.cover > 0) ? await loadImage(g.header || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${data.cover}/header.jpg`) : null;
   // measure pass on a scratch canvas, then draw for real at that height
   const draw = (ctx, measureOnly) => {
     let y = PAD + 26;
@@ -1947,6 +1982,11 @@ function needWords(need, total){
    fetched before the flag existed fall back to reading the date text.
    ========================================================================== */
 const RELEASE = { out: "Released", early: "Early access", soon: "Not out yet" };
+/* games that aren't on Steam: a negative appid, a platform, and a link */
+const PLATFORM = { browser: "Browser", epic: "Epic", xbox: "Xbox", playstation: "PlayStation", switch: "Switch", other: "Elsewhere" };
+const isCustom = g => !!(g && g.platform);
+/** "skribbl.io" -> "https://skribbl.io"; anything already a link is left alone */
+const asUrl = u => { u = String(u || "").trim(); return !u ? "" : /^https?:\/\//i.test(u) ? u : "https://" + u; };
 function soonText(t){
   if(!t) return false;
   if(/coming soon|to be announced|\btba\b|\btbd\b/i.test(t)) return true;
@@ -1956,7 +1996,7 @@ function soonText(t){
   return !!y && +y >= new Date().getFullYear();
 }
 function releaseOf(game){
-  if(!game) return "out";
+  if(!game || isCustom(game)) return "out";
   if(game.coming_soon || soonText(game.released)) return "soon";
   // Steam's own genre list drops "Early Access" the day a game hits 1.0; the
   // player-voted tags keep it for years (Abiotic Factor), so only genres count
@@ -2866,9 +2906,71 @@ async function runSearch(q){
   try{
     const { results } = await callEnrich({action:"search", q});
     addResults = results || [];
-    if(!addResults.length) addMsg = {kind:"bad", text:"Steam found nothing called that. Try fewer words, or paste the store link."};
+    if(!addResults.length) addMsg = {kind:"bad", text:"Steam found nothing called that. Try fewer words, paste the store link, or add it yourself below if it isn't on Steam."};
   }catch(err){ addResults = []; addMsg = {kind:"bad", text:err.message}; }
   finally{ addBusy = false; render(); }
+}
+
+/** Chips in the custom-game editor re-render the sheet; keep what's typed in its fields. */
+function keepCedit(){
+  const n = document.getElementById("cename"), u = document.getElementById("ceurl");
+  if(n){ sheet.cedit = true; sheet.cename = n.value; sheet.ceurl = u.value; }
+}
+/** The add-your-own form, for anything Steam doesn't have. */
+function customForm(){
+  const c = sheet.custom;
+  return `<div class="cform" id="cform">
+    <span class="eyebrow">Add it yourself</span>
+    <label class="fld"><span>Name</span><input class="input" id="cname" maxlength="60" placeholder="e.g. skribbl.io, Fortnite" value="${esc(c.name || "")}" autocomplete="off"></label>
+    <span class="fldlbl">Where you play it</span>
+    <div class="fset">${Object.keys(PLATFORM).map(k => `<button class="chip" data-cplat="${k}" aria-pressed="${c.plat === k}">${esc(PLATFORM[k])}</button>`).join("")}</div>
+    <label class="fld"><span>Link (optional)</span><input class="input" id="curl" maxlength="300" placeholder="e.g. skribbl.io or the store page" value="${esc(c.url || "")}" inputmode="url" autocapitalize="off" spellcheck="false"></label>
+    <div class="row row--cf">
+      <button class="chip" data-cfree aria-pressed="${!!c.free}">Free to play</button>
+      <label class="fld fld--cap"><span>Up to how many</span><input class="input" id="ccap" type="number" min="1" max="200" placeholder="?" value="${c.cap ?? ""}"></label>
+    </div>
+    <p class="hint hint--bad" id="cmsg" hidden></p>
+    <div class="row"><button class="btn btn--ghost" id="cback">Back to Steam search</button><button class="btn" id="cgo">Add it</button></div>
+  </div>`;
+}
+/** Read the form into sheet.custom so a re-render keeps what's typed. */
+function readCustom(){
+  const c = sheet && sheet.custom; if(!c) return;
+  const v = id => (document.getElementById(id) || {}).value;
+  if(v("cname") != null) c.name = v("cname");
+  if(v("curl") != null) c.url = v("curl");
+  if(v("ccap") != null) c.cap = v("ccap") ? Number(v("ccap")) : null;
+}
+function wireCustom(){
+  const open = document.getElementById("customopen");
+  if(open) open.onclick = () => {
+    // take a guess from whatever was typed: "skribbl.io" is a name and a link
+    const q = (document.getElementById("addq") || {}).value || addQ || "";
+    const looksLink = /\.[a-z]{2,}(\/|$)/i.test(q) && !/steampowered|steamcommunity/i.test(q);
+    sheet.custom = { name: looksLink ? q.replace(/^https?:\/\//i, "").replace(/\/.*$/, "").replace(/^www\./, "") : q, url: looksLink ? q : "",
+                     plat: looksLink ? "browser" : "other", free: looksLink, cap: null };
+    render(); setTimeout(() => { const n = document.getElementById("cname"); if(n) n.focus(); }, 30);
+  };
+  if(!sheet || !sheet.custom) return;
+  ["cname","curl","ccap"].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener("input", readCustom); });
+  document.querySelectorAll("[data-cplat]").forEach(b => b.onclick = () => { readCustom(); sheet.custom.plat = b.dataset.cplat;
+    if(b.dataset.cplat === "browser") sheet.custom.free = true; render(); });
+  const fr = document.querySelector("[data-cfree]"); if(fr) fr.onclick = () => { readCustom(); sheet.custom.free = !sheet.custom.free; render(); };
+  const back = document.getElementById("cback"); if(back) back.onclick = () => { sheet.custom = null; render(); };
+  const go = document.getElementById("cgo");
+  if(go) go.onclick = async () => {
+    readCustom();
+    const c = sheet.custom, say = t => { const m = document.getElementById("cmsg"); m.textContent = t; m.hidden = false; };
+    if(!c.name.trim()) return say("Give it a name first.");
+    if(needName(() => { sheet = { kind:"add", custom: c }; render(); })) return;
+    go.disabled = true; go.textContent = "Adding…";
+    try{
+      await rpc("add_custom_game", { p_code: code, p_device: deviceId, p_name: c.name.trim(), p_platform: c.plat || "other",
+        p_url: asUrl(c.url) || null, p_free: !!c.free, p_crew_max: c.cap || null, p_energy: null });
+      addMsg = { kind:"ok", text: c.name.trim() + " is up for a vote" };
+      sheet.custom = null; await refresh(); render();
+    }catch(err){ go.disabled = false; go.textContent = "Add it"; say(err.message); }
+  };
 }
 
 /** Fetch one exact game from a link or id and show it ready to add. */
@@ -3453,10 +3555,11 @@ function listView(list, d){
     </tr></thead>
     <tbody>${list.map(s => {
       const g = d.gamesById[s.appid]||{}, n = d.counts[s.appid]||0, on = d.myPicks.includes(s.appid);
-      return `<tr class="${on?"on":""}">
-        <td class="g"><div class="nm">
+      return `<tr class="${on?"on":""}" data-row="${s.appid}">
+        <td class="g"><button class="rowname" data-facets="${s.appid}" aria-label="Details for ${esc(g.name||"")}">
           <span class="swatch" style="--tile:hsl(${hueOf(g.name||s.appid)} 40% 47%)"></span>
-          <span>${esc(g.name||s.appid)}</span></div>
+          <span>${esc(g.name||s.appid)}</span>${isCustom(g) ? `<span class="pill">${esc(PLATFORM[g.platform])}</span>` : ""}
+          <svg class="chev" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button>
           <div class="sub"><span class="narrow">${
             energyOf(s,d) ? esc(ENERGY[energyOf(s,d)])+" · " : ""}${s.crew_max ? "≤ "+s.crew_max+" · " : ""}</span>${
             esc(SHAPE[g.shape]||"")}${doingOf(s,d)?" · "+esc(DOING[doingOf(s,d)]):""}</div></td>
@@ -3557,6 +3660,7 @@ function card(s, d){
           : (S.side||[]).some(x => x.appid === s.appid) ? `<span class="bdg bdg--side">on the side</span>`
           : cf === "mods" ? `<span class="bdg bdg--mods">needs a mod</span>`
           : cf === "unknown" && F.crew ? `<span class="bdg">cap unknown</span>`
+          : isCustom(game) ? `<span class="bdg">${esc(PLATFORM[game.platform] || "Elsewhere")}${game.is_free ? " · free" : ""}</span>`
           : releaseOf(game) === "soon" ? `<span class="bdg bdg--soon">not out yet</span>`
           : releaseOf(game) === "early" ? `<span class="bdg">early access</span>`
           : ""}
@@ -3666,7 +3770,10 @@ function renderSheet(d){
           ${releaseOf(game) !== "out" ? `<span class="pill pill--rel">${esc(RELEASE[releaseOf(game)])}${releaseOf(game) === "soon" && game.released ? " · " + esc(game.released) : ""}</span>` : ""}
           ${saleOf(d, sheet.appid) ? `<span class="pill pill--sale">−${saleOf(d, sheet.appid).discount}% · ${esc(saleOf(d, sheet.appid).final_fmt || "")}</span>` : d.prices[sheet.appid] && d.prices[sheet.appid].is_free ? `<span class="pill pill--sale">Free</span>` : ""}
           ${game.review_pct != null ? `<span class="pill pill--rev" title="${esc(game.review_desc||"")}">${game.review_pct}% on Steam · ${(game.review_count||0).toLocaleString()} reviews</span>` : ""}
-          <a class="pill pill--link" href="https://store.steampowered.com/app/${sheet.appid}/" target="_blank" rel="noopener">Steam ↗</a>
+          ${isCustom(game)
+            ? `<span class="pill">${esc(PLATFORM[game.platform] || "Elsewhere")}${game.is_free ? " · free" : ""}</span>${game.play_url
+              ? `<a class="pill pill--link" href="${esc(game.play_url)}" target="_blank" rel="noopener">${game.platform === "browser" ? "Play" : "Open"} ↗</a>` : ""}`
+            : `<a class="pill pill--link" href="https://store.steampowered.com/app/${sheet.appid}/" target="_blank" rel="noopener">Steam ↗</a>`}
           ${game.demo_appid ? `<a class="pill pill--link" href="https://store.steampowered.com/app/${game.demo_appid}/" target="_blank" rel="noopener">Try the demo ↗</a>` : ""}
         </div>
         ${s.added_name ? `<p class="addedby">Added by ${esc(s.added_name)}</p>` : ""}
@@ -3675,7 +3782,17 @@ function renderSheet(d){
           <span class="pnote">${(() => { const o = [...ownersOf(d, sheet.appid)].map(id => (d.members.find(m => m.member_id === id) || {}).label).filter(Boolean);
             return o.length ? "Owned by " + esc(listNames(o)) : "Nobody's said they own it yet"; })()}</span>
         </div>
-        ${desc ? `<div class="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>` : ""}
+        ${desc ? `<div class="dlong${sheet.more ? " open" : ""}" id="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>
+          <button class="linkbtn dmore" id="dmore" aria-expanded="${!!sheet.more}" aria-controls="dlong" hidden>${sheet.more ? "Show less" : "Read more"}</button>` : ""}
+        ${isCustom(game) && game.custom_group === S.group.code ? `
+        <details class="cedit"${sheet.cedit ? " open" : ""}><summary>Not on Steam · edit name, link or platform</summary>
+          <div class="cform">
+            <label class="fld"><span>Name</span><input class="input" id="cename" maxlength="60" value="${esc(sheet.cename ?? game.name ?? "")}"></label>
+            <label class="fld"><span>Link</span><input class="input" id="ceurl" maxlength="300" placeholder="e.g. skribbl.io" value="${esc(sheet.ceurl ?? game.play_url ?? "")}" inputmode="url" autocapitalize="off" spellcheck="false"></label>
+            <div class="fset">${Object.keys(PLATFORM).map(k => `<button class="chip" data-ceplat="${k}" aria-pressed="${(sheet.ceplat ?? game.platform) === k}">${esc(PLATFORM[k])}</button>`).join("")}
+              <button class="chip" data-cefree aria-pressed="${!!(sheet.cefree ?? game.is_free)}">Free to play</button></div>
+          </div>
+        </details>` : ""}
 
         <span class="eyebrow">What people reckon</span>
         ${takes.length ? `<div class="takes">${takes.map(t=>`<p class="take"><b>${esc(t.by)}</b>${esc(t.body)}</p>`).join("")}</div>` : ""}
@@ -3751,7 +3868,8 @@ function renderSheet(d){
               : `<button class="btn btn--ghost btn--sm" data-showcard="${r.appid}">Show it</button>`}
           </span>
         </div>`; }).join("")}</div>` : ""}
-      ${addMsg ? `<p class="msg msg--${addMsg.kind==="ok"?"ok":"bad"}">${esc(addMsg.text)}</p>` : ""}`);
+      ${addMsg ? `<p class="msg msg--${addMsg.kind==="ok"?"ok":"bad"}">${esc(addMsg.text)}</p>` : ""}
+      ${sheet.custom ? customForm() : `<button class="linkbtn" id="customopen">Not on Steam? Browser, Epic, console… add it yourself</button>`}`);
   }
 
   if(sheet.kind === "sesh"){
@@ -4412,6 +4530,23 @@ function wireGroup(d, filtered){
     addq.oninput = e => onAddInput(e.target.value);
     addq.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); submitAdd(); } };
   }
+  if(sheet && sheet.kind === "add") wireCustom();
+  // list view: tapping anywhere on a row that isn't a button opens its details
+  app.querySelectorAll("tr[data-row]").forEach(tr => tr.onclick = e => {
+    if(e.target.closest("button, a")) return;
+    const open = () => { sheet = { kind:"facets", appid: +tr.dataset.row, e:null, s:null }; render(); };
+    if(!needName(open)) open();
+  });
+  // details: read more / less, only when the description is actually long
+  const dl = document.getElementById("dlong"), dm = document.getElementById("dmore");
+  if(dl && dm){
+    if(dl.classList.contains("open") || dl.scrollHeight > dl.clientHeight + 4) dm.hidden = false;
+    dm.onclick = () => { sheet.more = !sheet.more; dl.classList.toggle("open", sheet.more); dm.textContent = sheet.more ? "Show less" : "Read more";
+      dm.setAttribute("aria-expanded", sheet.more); };
+  }
+  const ced = document.querySelector(".cedit"); if(ced) ced.addEventListener("toggle", () => { sheet.cedit = ced.open; });
+  document.querySelectorAll("[data-ceplat]").forEach(b => b.onclick = () => { sheet.ceplat = b.dataset.ceplat; keepCedit(); render(); });
+  const cfb = document.querySelector("[data-cefree]"); if(cfb) cfb.onclick = () => { sheet.cefree = !(sheet.cefree ?? (d.gamesById[sheet.appid] || {}).is_free); keepCedit(); render(); };
   const addgo = document.getElementById("addgo");
   if(addgo) addgo.onclick = submitAdd;
   document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => addGame(+b.dataset.add));
@@ -4479,7 +4614,13 @@ function wireGroup(d, filtered){
     // the take sits in the same sheet, so one Save covers it too
     const tk = document.getElementById("takeinput");
     const was = ((d.takesBy[a]||[]).find(t => t.mine) || {}).body || "";
+    const ce = document.getElementById("cename");
+    const g0 = d.gamesById[a] || {};
+    const cedit = ce && { name: ce.value.trim(), url: asUrl(document.getElementById("ceurl").value), plat: sheet.ceplat ?? g0.platform, free: !!(sheet.cefree ?? g0.is_free) };
     sheet = null;
+    if(cedit && (cedit.name !== g0.name || cedit.url !== (g0.play_url || "") || cedit.plat !== g0.platform || cedit.free !== !!g0.is_free))
+      rpc("update_custom_game", { p_code: code, p_device: deviceId, p_appid: a, p_name: cedit.name, p_platform: cedit.plat, p_url: cedit.url || null, p_free: cedit.free })
+        .then(() => refresh()).catch(err => { console.warn("update_custom_game", err.message); refresh(); });
     if(tk && tk.value.trim() !== was) saveTake(a, tk.value.trim());
     saveFacets(a, e, raw ? Number(raw) : null, s, rawMod ? Number(rawMod) : null, v);
   };

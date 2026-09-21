@@ -69,7 +69,7 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates sixteen tables, locks them all behind row level security with no policies, and exposes thirty-three functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates sixteen tables, locks them all behind row level security with no policies, and exposes thirty-five functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
@@ -239,9 +239,29 @@ For when a few of you want something else going alongside the main game, without
 
 A separate crew is still right for a different friend group. Side games are for the same crew splitting for a bit.
 
+### Games that aren't on Steam
+
+Browser games (skribbl.io), Epic (Fortnite), console games: **Add a game → Not on Steam? … add it yourself**. Type a web address like `skribbl.io` first and it fills the name and link and guesses Browser + free.
+
+| Field | Notes |
+| --- | --- |
+| Name | Up to 60 characters. The same name in the same crew puts the existing one back rather than doubling up |
+| Where you play it | Browser, Epic, Xbox, PlayStation, Switch, Elsewhere. Shows as a badge on the card |
+| Link | Optional. Details gets **Play ↗** (browser) or **Open ↗** instead of Steam ↗ |
+| Free to play | Free games count as everyone owns them, so they land in Ready to play straight away |
+| Up to how many | The player cap, same as Steam games |
+
+They're stored in the games table under a negative appid (`add_custom_game`), owned by the crew that added them, so voting, nights, side games, the Discord scoreboard and the snapshot all work unchanged. There's no Steam data, so no cover art (a coloured tile instead), reviews or sale price, and the weekly Steam refresh skips them. Fix a name, link or platform later from details (`update_custom_game`).
+
+### Details
+
+Tap a card's **⋯**, or in the list view tap anywhere on a row (each has a › chevron). Long Steam descriptions fold to four lines with **Read more / Show less**.
+
+On a phone, short bottom sheets open at about half the screen with a grabber, content from the top and actions at the foot; tall ones (details, filters) are full screen.
+
 ### Released, early access, not out yet
 
-Steam flags "coming soon" itself and lists Early Access as a genre, so every game is one of **Released**, **Early access** or **Not out yet**. Cards badge the last two in the corner, the details sheet says so next to the reviews (with the date text for unreleased ones, e.g. "Q2 2027"), and **Filters → Release** narrows to any of them. Games with a free demo get **Try the demo ↗** in details and a **Has a demo** filter.
+Steam flags "coming soon" itself and lists Early Access as a genre (only the genre counts: player-voted tags keep "Early Access" for years after 1.0), so every game is one of **Released**, **Early access** or **Not out yet**. Cards badge the last two in the corner, the details sheet says so next to the reviews (with the date text for unreleased ones, e.g. "Q2 2027"), and **Filters → Release** narrows to any of them. Games with a free demo get **Try the demo ↗** in details and a **Has a demo** filter.
 
 ### Game states
 
@@ -515,7 +535,7 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Sixteen tables, row level security, thirty-three RPCs |
+| `supabase/schema.sql` | Sixteen tables, row level security, thirty-five RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
 | `supabase/functions/prices/index.ts` | Refreshes Steam prices (AUD) for a crew's shelf, at most every four hours per game |
 | `supabase/functions/discord/index.ts` | Posts and edits the crew's live Discord scoreboard through their webhook |
