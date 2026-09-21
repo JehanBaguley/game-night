@@ -886,13 +886,17 @@ td.r{text-align:right;white-space:nowrap}
 
 .ep{display:flex;flex-direction:column;gap:8px}
 .ep-search{flex:none}
-.ep-tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;flex:none}
+.ep-tabs{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(30px,1fr);gap:2px;overflow-x:auto;scrollbar-width:none;flex:none}
 .ep-tabs::-webkit-scrollbar{display:none}
-.ep-tab{flex:none;width:36px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:17px;line-height:1;opacity:.55;transition:opacity .12s,background .12s}
+.ep-tab{width:100%;height:34px;border-radius:9px;display:grid;place-items:center;font-size:17px;line-height:1;opacity:.55;transition:opacity .12s,background .12s}
 .ep-tab:hover{opacity:1;background:var(--surface-2)}
 .ep-tab[aria-selected="true"]{opacity:1;background:var(--accent-soft)}
 .ep--search .ep-tabs{display:none}
-.ep-grid{height:min(40vh,290px);overflow-y:auto;overscroll-behavior:contain;margin:0 -4px;padding:0 4px;position:relative}
+.ep-grid{height:min(40vh,290px);overflow-y:auto;overscroll-behavior:contain;margin:0 -4px;padding:0 4px;position:relative;
+  scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;scrollbar-gutter:stable}
+.ep-grid::-webkit-scrollbar{width:8px}
+.ep-grid::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:8px}
+.ep-grid::-webkit-scrollbar-track{background:transparent}
 .ep-sec + .ep-sec{margin-top:6px}
 .ep-sec h4{position:sticky;top:0;z-index:1;background:var(--surface);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:6px 2px 5px;margin:0}
 .ep--search .ep-sec h4{display:none}
@@ -1128,14 +1132,24 @@ function wireEmojiPicker(onPick){
   });
 
   // tabs jump to their section; scrolling marks the section you are in
+  const select = id => tabs.forEach(t => t.setAttribute("aria-selected", String(t.dataset.jump === id)));
+  let jumping = 0;
   tabs.forEach(t => t.onclick = () => {
     const sec = grid.querySelector(`[data-sec="${t.dataset.jump}"]`);
-    if(sec) grid.scrollTo({ top: sec.offsetTop - grid.offsetTop, behavior: "smooth" });
+    if(!sec) return;
+    // the tapped tab lights straight away and holds while the smooth scroll passes other sections
+    select(t.dataset.jump); clearTimeout(jumping);
+    jumping = setTimeout(() => { jumping = 0; }, 700);
+    grid.scrollTo({ top: sec.offsetTop, behavior: "smooth" });
   });
   const mark = () => {
-    const y = grid.scrollTop + 8; let cur = tabs[0] && tabs[0].dataset.jump;
-    grid.querySelectorAll(".ep-sec").forEach(s => { if(s.offsetTop - grid.offsetTop <= y) cur = s.dataset.sec; });
-    tabs.forEach(t => t.setAttribute("aria-selected", String(t.dataset.jump === cur)));
+    if(jumping) return;
+    const secs = [...grid.querySelectorAll(".ep-sec")].filter(s => !s.hidden);
+    // scrolled to the bottom: the last section is the one on screen, even though it can't reach the top
+    if(grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 2 && secs.length) return select(secs[secs.length - 1].dataset.sec);
+    let cur = tabs[0] && tabs[0].dataset.jump;
+    secs.forEach(s => { if(s.offsetTop <= grid.scrollTop + 8) cur = s.dataset.sec; });
+    select(cur);
   };
   grid.addEventListener("scroll", mark, { passive:true });
 
@@ -1471,6 +1485,81 @@ function releaseOf(game){
   if(game.coming_soon || soonText(game.released)) return "soon";
   if([...(game.genres || []), ...(game.tags || [])].includes("Early Access")) return "early";
   return "out";
+}
+
+/* ============================================================================
+   CREW COLOUR
+   Each crew takes its accent from its emoji: 🦀 goes orange-red, 👾 purple,
+   🌿 green. The emoji is drawn on a small off-screen canvas and the strongest
+   colour in it wins. Only the hue and a clamped saturation carry across;
+   lightness is set per theme so buttons and text stay legible. Emoji with no
+   real colour (🎮, 💀) keep the default lavender.
+   ========================================================================== */
+const tintCache = {};
+function emojiColour(e){
+  if(e in tintCache) return tintCache[e];
+  let out = null;
+  try{
+    const N = 48, c = document.createElement("canvas"); c.width = c.height = N;
+    const x = c.getContext("2d", { willReadFrequently: true });
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.font = `${N * 0.8}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    x.fillText(e, N / 2, N / 2 + 2);
+    const px = x.getImageData(0, 0, N, N).data;
+    // 24 hue buckets, each weighted by how saturated and mid-toned its pixels are,
+    // so a black outline or a white highlight never decides the colour
+    const bins = Array.from({ length: 24 }, () => ({ w: 0, cx: 0, cy: 0, s: 0 }));
+    let opaque = 0, coloured = 0;
+    for(let i = 0; i < px.length; i += 4){
+      if(px[i + 3] < 160) continue;
+      opaque++;
+      const r = px[i] / 255, g = px[i + 1] / 255, b = px[i + 2] / 255;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dlt = mx - mn;
+      if(dlt < 0.001) continue;
+      const sat = dlt / (1 - Math.abs(2 * l - 1));
+      if(sat < 0.25 || l < 0.12 || l > 0.9) continue;
+      let h = mx === r ? ((g - b) / dlt) % 6 : mx === g ? (b - r) / dlt + 2 : (r - g) / dlt + 4;
+      h = (h * 60 + 360) % 360;
+      const w = sat * (1 - Math.abs(l - 0.5) * 1.3);
+      const bin = bins[Math.floor(h / 15)];
+      bin.w += w; bin.cx += Math.cos(h * Math.PI / 180) * w; bin.cy += Math.sin(h * Math.PI / 180) * w; bin.s += sat * w;
+      coloured += w;
+    }
+    if(opaque && coloured / opaque > 0.12){
+      // the winning bucket, helped by its neighbours so a gradient isn't split in two
+      let best = 0, score = -1;
+      bins.forEach((b, i) => { const sc = b.w + 0.5 * (bins[(i + 23) % 24].w + bins[(i + 1) % 24].w); if(sc > score){ score = sc; best = i; } });
+      const pick = [bins[(best + 23) % 24], bins[best], bins[(best + 1) % 24]];
+      const cx = pick.reduce((a, b) => a + b.cx, 0), cy = pick.reduce((a, b) => a + b.cy, 0);
+      const w = pick.reduce((a, b) => a + b.w, 0), s = pick.reduce((a, b) => a + b.s, 0) / w;
+      out = { h: (Math.atan2(cy, cx) * 180 / Math.PI + 360) % 360, s };
+    }
+  }catch(_){ out = null; }
+  return tintCache[e] = out;
+}
+
+let tintKey = "";
+/** Point the accent tokens at a crew's emoji colour, or back at the default. */
+function applyCrewColour(emoji){
+  const col = emoji ? emojiColour(emoji) : null;
+  const dark = isDark();
+  const key = col ? Math.round(col.h) + ":" + Math.round(col.s * 100) + (dark ? "d" : "l") : "none";
+  if(key === tintKey) return;
+  tintKey = key;
+  const root = document.documentElement.style;
+  const props = ["--accent", "--accent-soft", "--accent-text", "--accent-ink", "--grad-a", "--grad-b"];
+  if(!col){ props.forEach(p => root.removeProperty(p)); return; }
+  const h = Math.round(col.h), s = Math.round(Math.min(88, Math.max(48, col.s * 100)));
+  const h2 = (h + 24) % 360;                      // the gradient's second stop leans a touch warmer/cooler
+  const yellowish = h >= 38 && h <= 85;           // yellows go dark ink, white on yellow is unreadable
+  const v = dark
+    ? { accent: `hsl(${h} ${s}% 70%)`, soft: `hsl(${h} 32% 20%)`, text: `hsl(${h} ${s}% 76%)`,
+        ink: `hsl(${h} 45% 11%)`, a: `hsl(${h} ${s}% 70%)`, b: `hsl(${h2} ${s}% 74%)` }
+    : { accent: `hsl(${h} ${s}% ${yellowish ? 42 : 50}%)`, soft: `hsl(${h} 75% 94%)`, text: `hsl(${h} ${s}% ${yellowish ? 28 : 38}%)`,
+        ink: yellowish ? "#1d1a10" : "#ffffff", a: `hsl(${h} ${s}% ${yellowish ? 50 : 48}%)`, b: `hsl(${h2} ${s}% ${yellowish ? 46 : 44}%)` };
+  root.setProperty("--accent", v.accent);   root.setProperty("--accent-soft", v.soft);
+  root.setProperty("--accent-text", v.text); root.setProperty("--accent-ink", v.ink);
+  root.setProperty("--grad-a", v.a);        root.setProperty("--grad-b", v.b);
 }
 
 /* the crew being started on the landing page: survives re-renders */
@@ -2409,12 +2498,13 @@ function render(){
   if(!SDK_OK) return renderNoSDK();
   if(!CONFIGURED) return renderSetup();
   const m = location.hash.match(/^#\/g\/([A-Za-z0-9]+)/);
-  if(!m){ code=""; setTabIdentity(DEFAULT_EMOJI, "Game Night"); return renderLanding(); }
+  if(!m){ code=""; setTabIdentity(DEFAULT_EMOJI, "Game Night"); applyCrewColour(null); return renderLanding(); }
   const wasCode = code;
   code = m[1].toUpperCase();
   if(code !== wasCode) loadF();
   if(!S || S.group.code !== code) return renderLoading();
   setTabIdentity(S.group.emoji, S.group.name);
+  applyCrewColour(sheet && sheet.kind === "crew" ? sheet.emoji : S.group.emoji);
   renderGroup();
 }
 
@@ -3098,9 +3188,8 @@ function renderSheet(d){
       ${(() => { const total = (S.members||[]).length, w = needWords(sheet.need, total); return `
       <div class="rules">
         <span class="eyebrow">Next sesh</span>
-        <div class="rulesrow">Lock a night when
-          <span class="stepper"><button class="sbtn" data-need="-" aria-label="Fewer">−</button><span class="val num" id="needval">${esc(w.val)}</span><button class="sbtn" data-need="+" aria-label="More">+</button></span>
-          are free</div>
+        <div class="rulesrow">Lock a night in when this many are free</div>
+        <div class="rulesrow"><span class="stepper"><button class="sbtn" data-need="-" aria-label="Fewer">−</button><span class="val num" id="needval">${esc(w.val)}</span><button class="sbtn" data-need="+" aria-label="More">+</button></span></div>
         <p class="fhint" id="needhint">${esc(w.hint)}</p>
         <label class="rulesrow">Usual start <input class="input" id="seshtime" maxlength="12" value="${esc(sheet.time)}" placeholder="8pm" autocomplete="off"></label>
       </div>`; })()}
@@ -3327,7 +3416,7 @@ function wireCommon(d){
   if(sheet && sheet.kind === "crew"){
     const prev = document.getElementById("crewpreview"), nm = document.getElementById("crewname");
     const msg = document.getElementById("crewmsg"), save = document.getElementById("crewsave");
-    wireEmojiPicker(e => { sheet.emoji = e; prev.textContent = e; });
+    wireEmojiPicker(e => { sheet.emoji = e; prev.textContent = e; applyCrewColour(e); });
     // the rule stepper: null means everyone, so it keeps meaning "all of us" as the crew grows
     document.querySelectorAll("[data-need]").forEach(b => b.onclick = () => {
       const total = (S.members||[]).length, cur = sheet.need ?? total;
@@ -3780,6 +3869,7 @@ let theme = store.get("theme", null) ||
 const isDark = () => theme === "dark";
 function applyTheme(){
   document.documentElement.setAttribute("data-theme", theme);
+  document.documentElement.style.colorScheme = theme;   // native scrollbars match the app, not the OS
   store.set("theme", theme);
 }
 applyTheme();

@@ -41,6 +41,8 @@ Each crew has an emoji. It's the browser tab icon while you're looking at that c
 
 The picker is about 330 hand-picked emoji in nine tabs (games, faces, animals, food, nature, activity, travel, objects, symbols) with search words on each, plus your recent picks at the top. Anything outside the set can be pasted into the search box, or typed with the OS emoji picker (Ctrl+Cmd+Space on a Mac, Win+. on Windows).
 
+**Crew colour (trial).** The accent takes the emoji's main colour: 🦀 goes orange, 👾 purple, 🌿 green, 💙 blue. The emoji is drawn on a small off-screen canvas and the strongest colour wins; only its hue and a capped saturation carry over, with lightness fixed per theme so buttons stay readable (yellows get dark text). Emoji with no real colour, like 🎮 or 💀, keep the lavender. It's worked out on each device rather than saved, so an iPhone and a Windows PC can land a few degrees apart. Picking an emoji in Edit crew previews the colour before you save.
+
 Your crews list is saved per browser, not per account. There are no accounts. A browser that has never opened a crew link has an empty list; open the link or type the code and it's added.
 
 ---
