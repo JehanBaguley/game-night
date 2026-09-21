@@ -404,7 +404,13 @@ begin
          'players', coalesce((select json_agg(sp.member_id) from side_players sp
                                where sp.group_code = p_code and sp.appid = sg.appid), '[]'::json))
          order by sg.started_at)
-       from side_games sg where sg.group_code = p_code), '[]'::json)
+       from side_games sg where sg.group_code = p_code), '[]'::json),
+    'owns', coalesce((
+       select json_agg(json_build_object('appid', o.appid, 'member_id', o.member_id))
+       from owns o where o.group_code = p_code), '[]'::json),
+    'prices', coalesce((
+       select json_agg(to_json(pr)) from prices pr
+        where pr.appid in (select appid from shelf where group_code = p_code)), '[]'::json)
   ) into result;
   return result;
 end; $$;
@@ -919,3 +925,49 @@ begin
   return h is not null;
 end; $$;
 grant execute on function set_discord(text, uuid, text) to anon;
+
+-- ---------------------------------------------------------------------------
+-- WHO OWNS IT
+-- Co-op's usual blocker is buying the thing. Each member ticks the games they
+-- already own; the page works out what everyone could play tonight.
+-- ---------------------------------------------------------------------------
+create table if not exists owns (
+  group_code text not null references groups(code) on delete cascade,
+  appid      int  not null,
+  member_id  uuid not null,
+  primary key (group_code, appid, member_id)
+);
+alter table owns enable row level security;
+revoke all on owns from anon, authenticated;
+
+create or replace function set_owns(p_code text, p_device uuid, p_appids int[], p_own boolean)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if coalesce(array_length(p_appids, 1), 0) > 200 then raise exception 'too many at once'; end if;
+  if p_own then
+    insert into owns(group_code, appid, member_id)
+    select p_code, a, m from unnest(p_appids) a
+    on conflict do nothing;
+  else
+    delete from owns where group_code = p_code and member_id = m and appid = any(p_appids);
+  end if;
+end; $$;
+grant execute on function set_owns(text, uuid, int[], boolean) to anon;
+
+-- ---------------------------------------------------------------------------
+-- STEAM PRICES
+-- Filled by the prices edge function (Steam has no CORS), at most every few
+-- hours per game, in AUD. Shared across crews like the games table.
+-- ---------------------------------------------------------------------------
+create table if not exists prices (
+  appid       int primary key,
+  is_free     boolean not null default false,
+  discount    int  not null default 0,          -- percent off, 0 when full price
+  final_fmt   text,                             -- "$14.97", as Steam formats it
+  initial_fmt text,                             -- "$29.95"
+  fetched_at  timestamptz not null default now()
+);
+alter table prices enable row level security;
+revoke all on prices from anon, authenticated;

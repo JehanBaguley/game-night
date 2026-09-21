@@ -69,11 +69,11 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates fourteen tables, locks them all behind row level security with no policies, and exposes thirty-two functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates sixteen tables, locks them all behind row level security with no policies, and exposes thirty-three functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
-Three of them. `enrich` is the only place Steam data can be fetched, because Steam sends no CORS headers and a browser can never call it directly. `card` serves link-preview tags. `discord` keeps the crew's Discord scoreboard up to date.
+Four of them. `enrich` is the only place Steam data can be fetched, because Steam sends no CORS headers and a browser can never call it directly. `prices` does the same for Steam prices. `card` serves link-preview tags. `discord` keeps the crew's Discord scoreboard up to date.
 
 ```bash
 npm install -g supabase
@@ -82,9 +82,10 @@ supabase link --project-ref YOUR_PROJECT_REF     # the abcdefgh bit from your UR
 supabase functions deploy enrich --no-verify-jwt
 supabase functions deploy card   --no-verify-jwt
 supabase functions deploy discord --no-verify-jwt
+supabase functions deploy prices  --no-verify-jwt
 ```
 
-`--no-verify-jwt` matters on all three: they're called with the anon key, not a logged-in user token.
+`--no-verify-jwt` matters on all four: they're called with the anon key, not a logged-in user token.
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically. `card` and `discord` need one more, but you won't know its value until step 5.
 
@@ -189,13 +190,38 @@ A link preview can't update itself or carry buttons, so instead the crew gets on
 
 | Step | What happens |
 | --- | --- |
-| Set up (once) | **⋯ → Discord scoreboard**. In Discord: channel cog → Integrations → Webhooks → New Webhook → Copy Webhook URL. Paste, **Connect**, and the first scoreboard posts straight away |
+| Set up (once) | **⋯ → Send to the chat → Live Discord scoreboard**. In Discord: channel cog → Integrations → Webhooks → New Webhook → Copy Webhook URL. Paste, **Connect**, and the first scoreboard posts straight away |
 | While voting | Round number, how many have voted, the top three with medals, who's still to vote, the leader's cover art |
 | While playing | What's on, sessions so far, where the next night is at (locked, pencilled, or who still owes their nights) and any side games |
 | Small changes | A vote, a night ticked, a game added: the same message is edited, batched over three seconds so a flurry of taps is one edit. Nothing changed, nothing sent |
 | Big moments | A round called, a new round, a night locked, a side game started: a fresh message posts (so the channel lights up) and the old one is marked as old |
 
 The title links to the crew, so it's one tap from Discord to voting. The webhook link lives in the database and only the `discord` function reads it; `get_state` only says whether one is set. If someone deletes the webhook in Discord, the next update notices and switches the scoreboard off. Voting from inside Discord (buttons, a `/gamenight` command) would need a proper Discord bot, and this is the base it would build on.
+
+### Sending to the chat
+
+Everything that goes to a group chat lives in one sheet, **⋯ → Send to the chat** (also on the Who's in card and the empty shelf):
+
+| Option | Where it works | How |
+| --- | --- | --- |
+| **Live Discord scoreboard** | Discord | One message that edits itself (below). The only one that updates on its own |
+| **Link / Update / Reminder / When's next** | Anywhere: WhatsApp, Messenger, iMessage, Slack, Teams | A one-off message, previewed. **Copy it**, or on a phone **Share…** opens the system share sheet straight into those apps |
+
+WhatsApp and Messenger have no webhooks for group chats, so they can't have a live scoreboard; a one-off message is as good as it gets there. Slack, Teams and Google Chat do have incoming webhooks and could get their own scoreboard later.
+
+### The right-hand side
+
+On desktop it's a rail; on a phone the same panels sit under the shelf.
+
+| Panel | What it shows |
+| --- | --- |
+| **Next sesh** | While something's being played: ten little bars per game for the nights ahead |
+| **Ready to play** | Games the whole crew already owns, most voted first. **Tick what you own** opens a checklist of the shelf; each tap saves. Cards say "✓ everyone owns it" or "3 to buy", and details says who owns it |
+| **On sale now** | Shelf games discounted on Steam right now, biggest cut first, with price, was-price and how many still need to buy. Cards get a green −50% badge. Prices are AUD, refreshed by the `prices` function when a crew opens, at most every four hours |
+| **Our record** | Games finished, sessions played, bangers, a hall of fame, and the last few things that happened ("Soli and Jehan voted", "Jehan added 3 games", "Finished Valheim · ★ Banger"), pieced together from timestamps the crew already has |
+| **Who's in** | The crew, who's here now, who's voted |
+
+**Spin for it:** on a dead heat the status card gets a 🎡 button. It spins a wheel of the tied games, lands on one, and **Lock in** calls the round for that game rather than whichever happened to be first.
 
 ### Folding sections
 
@@ -488,8 +514,9 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Fourteen tables, row level security, thirty-two RPCs |
+| `supabase/schema.sql` | Sixteen tables, row level security, thirty-three RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
+| `supabase/functions/prices/index.ts` | Refreshes Steam prices (AUD) for a crew's shelf, at most every four hours per game |
 | `supabase/functions/discord/index.ts` | Posts and edits the crew's live Discord scoreboard through their webhook |
 | `supabase/functions/enrich/index.ts` | Steam search, fetch, validation, facet classification |
 | `data/curated.json` | 76 verified games with caps, energy, setup and mod caveats, mirrored as `CURATED` inside index.html |

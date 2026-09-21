@@ -31,6 +31,12 @@
   --line:rgba(40,30,90,.09); --line-strong:rgba(40,30,90,.18);
   --edge:rgba(255,255,255,0);        /* top bevel: dark theme only */
   --card-line:rgba(40,30,90,.09);    /* card hairline: light theme only */
+  /* parity between themes: every raised surface gets an edge and a faint top
+     sheen in both. Dark does it with a light bevel; light with a hairline, an
+     accent wash, and controls that sit white on the tinted page */
+  --ring:rgba(40,30,90,.08);
+  --sheen:linear-gradient(180deg, color-mix(in oklab, var(--accent) 5%, transparent), transparent 46%);
+  --control:#FFFFFF; --control-hover:#F4F2FB;
 
   --accent:#6D5AE6; --accent-ink:#FFFFFF; --accent-soft:#ECE9FE;
   --accent-text:#5B48D9;             /* accent as text on a tinted surface */
@@ -41,6 +47,7 @@
 
   /* energy ramp: cool / warm / hot, pastel ground with the deep step on top */
   --e1:#0E5A73; --e1-bg:#E2F1F6; --e1-ink:#FFFFFF;
+  --sale:#0B6B38; --sale-bg:#DDF3E5;
   --e2:#7A4408; --e2-bg:#F8EBDC; --e2-ink:#FFFFFF;
   --e3:#8A262A; --e3-bg:#FAE4E2; --e3-ink:#FFFFFF;
   --live:#5B48D9;
@@ -64,11 +71,14 @@
     --ink:#F4F3FA; --ink-2:#C6C6D2; --muted:#9A9AA8;
     --line:rgba(196,181,253,.10); --line-strong:rgba(196,181,253,.20);
     --edge:rgba(255,255,255,.06); --card-line:transparent;
+    --ring:rgba(255,255,255,.035); --sheen:linear-gradient(180deg, rgba(255,255,255,.06), transparent 42%);
+    --control:#1E1E27; --control-hover:#282833;
     --accent:#C4B5FD; --accent-ink:#1A1533; --accent-soft:#2A2450;
     --accent-text:#C4B5FD;
     --grad-a:#B8B4FF; --grad-b:#93C5FD;
     --lift:0 12px 32px -20px rgba(0,0,0,.6);
     --e1:#7FD6EC; --e1-bg:#10303C; --e1-ink:#0C2126;
+    --sale:#7BE3A6; --sale-bg:#123524;
     --e2:#F5C288; --e2-bg:#372A13; --e2-ink:#2B1F0C;
     --e3:#FFAAA3; --e3-bg:#37201E; --e3-ink:#2B1512;
     --live:#B8B4FF;
@@ -83,11 +93,14 @@
   --ink:#F4F3FA; --ink-2:#C6C6D2; --muted:#9A9AA8;
   --line:rgba(196,181,253,.10); --line-strong:rgba(196,181,253,.20);
   --edge:rgba(255,255,255,.06); --card-line:transparent;
+  --ring:rgba(255,255,255,.035); --sheen:linear-gradient(180deg, rgba(255,255,255,.06), transparent 42%);
+  --control:#1E1E27; --control-hover:#282833;
   --accent:#C4B5FD; --accent-ink:#1A1533; --accent-soft:#2A2450;
   --accent-text:#C4B5FD;
   --grad-a:#B8B4FF; --grad-b:#93C5FD;
   --lift:0 12px 32px -20px rgba(0,0,0,.6);
   --e1:#7FD6EC; --e1-bg:#10303C; --e1-ink:#0C2126;
+  --sale:#7BE3A6; --sale-bg:#123524;
   --e2:#F5C288; --e2-bg:#372A13; --e2-ink:#2B1F0C;
   --e3:#FFAAA3; --e3-bg:#37201E; --e3-ink:#2B1512;
   --live:#B8B4FF;
@@ -189,16 +202,16 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .brand .code{font-size:10.5px;color:var(--muted);letter-spacing:.09em;flex:none;font-weight:500}
 .iconbtn{
   min-width:38px;min-height:38px;display:grid;place-items:center;flex:none;
-  border-radius:var(--r-md);color:var(--ink-2);background:var(--surface-2);
+  border-radius:var(--r-md);color:var(--ink-2);background:var(--control);box-shadow:0 0 0 1px var(--ring);
   transition:background .12s,color .12s;
 }
-.iconbtn:hover{background:var(--surface-3);color:var(--ink)}
+.iconbtn:hover{background:var(--control-hover);color:var(--ink)}
 .iconbtn svg{width:16px;height:16px;stroke-width:2;fill:none;stroke:currentColor}
 .mepill{
   display:inline-flex;align-items:center;gap:7px;min-height:38px;padding:0 12px 0 4px;
-  border-radius:999px;background:var(--surface-2);font-size:12px;font-weight:500;flex:none;max-width:150px;
+  border-radius:999px;background:var(--control);box-shadow:0 0 0 1px var(--ring);font-size:12px;font-weight:500;flex:none;max-width:150px;
 }
-.mepill:hover{background:var(--surface-3)}
+.mepill:hover{background:var(--control-hover)}
 .mepill span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (max-width:520px){ .mepill span.nm{display:none} .mepill{padding:0 4px} .brand .code{display:none} }
 
@@ -207,7 +220,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .status{
   position:relative;margin-top:20px;background:var(--surface);border-radius:var(--r-lg);
   padding:14px 16px;display:flex;align-items:center;gap:12px;overflow:hidden;
-  box-shadow:inset 0 1px 0 var(--edge), var(--lift);
+  box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift);
 }
 .status .st-main{flex:1;min-width:0;display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;line-height:1.3}
 .status .st-k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700;flex:none}
@@ -218,8 +231,8 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .status .st-acts{display:flex;gap:6px;align-items:center;flex:none}
 .status .st-track{position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--surface-3)}
 .status .st-track i{display:block;height:100%;background:var(--grad);transition:width .5s cubic-bezier(.2,.7,.3,1)}
-.status--ready{box-shadow:inset 0 1px 0 var(--edge), var(--lift), 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent)}
-.status--playing{box-shadow:inset 0 1px 0 var(--edge), var(--lift), 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent), 0 0 42px -12px color-mix(in oklab, var(--accent) 45%, transparent)}
+.status--ready{box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift), 0 0 0 1px color-mix(in oklab, var(--accent) 35%, transparent)}
+.status--playing{box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift), 0 0 0 1px color-mix(in oklab, var(--accent) 50%, transparent), 0 0 42px -12px color-mix(in oklab, var(--accent) 45%, transparent)}
 .status--paused .st-lead, .status--paused .st-k{color:var(--muted)}
 @media (max-width:480px){
   .status{flex-wrap:wrap}
@@ -297,15 +310,15 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 }
 
 .searchwrap{position:relative;flex:1 1 180px;min-width:0}
-.searchwrap .input{padding-left:34px}
+.searchwrap .input{padding-left:34px;background:var(--control);box-shadow:0 0 0 1px var(--ring)}
 .searchwrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:2;pointer-events:none}
 .searchwrap .clear{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:32px;height:32px;display:grid;place-items:center;color:var(--muted);border-radius:var(--r-sm)}
 .tbtn{
   min-height:42px;display:inline-flex;align-items:center;gap:7px;padding:0 12px;flex:none;
-  border-radius:var(--r-md);background:var(--surface-2);font-size:13px;font-weight:500;color:var(--ink-2);
+  border-radius:var(--r-md);background:var(--control);box-shadow:0 0 0 1px var(--ring);font-size:13px;font-weight:500;color:var(--ink-2);
   transition:background .12s,color .12s;
 }
-.tbtn:hover{background:var(--surface-3);color:var(--ink)}
+.tbtn:hover{background:var(--control-hover);color:var(--ink)}
 .tbtn[aria-expanded="true"],.tbtn.on{background:var(--grad);color:var(--accent-ink);box-shadow:var(--glow)}
 .tbtn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
 .tbtn--icon{min-width:42px;padding:0;justify-content:center;font-size:17px}
@@ -320,7 +333,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;
 }
 .tbtn[aria-expanded="true"] .badge{background:var(--accent-ink);color:var(--accent)}
-.seg{display:flex;border-radius:var(--r-md);overflow:hidden;flex:none;background:var(--surface-2)}
+.seg{display:flex;border-radius:var(--r-md);overflow:hidden;flex:none;background:var(--control);box-shadow:0 0 0 1px var(--ring)}
 .seg button{min-width:42px;min-height:42px;display:grid;place-items:center;color:var(--muted)}
 .seg button[aria-pressed="true"]{background:var(--surface-3);color:var(--ink)}
 .seg svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2}
@@ -395,9 +408,9 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
      the bevel is transparent and a hairline steps in, because white on
      off-white needs an edge to exist at all. */
   box-shadow:0 0 0 1px var(--card-line), inset 0 1px 0 var(--edge), var(--lift);
-  background-image:linear-gradient(180deg, var(--edge), transparent 42%);
+  background-image:var(--sheen);
 }
-.card:hover{box-shadow:0 0 0 1px var(--line-strong), inset 0 1px 0 var(--edge), var(--lift)}
+.card:hover{box-shadow:0 0 0 1px var(--line-strong), inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift)}
 
 /* A conic gradient rotated behind a ring-shaped mask. The mask is what keeps
    it a 2px border rather than a wash over the whole card, and the @property
@@ -454,7 +467,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* the reel that runs while Pick at random is deciding */
 .reel{display:inline-block;min-width:1ch}
 .reel.spinning{opacity:.55;filter:blur(.3px)}
-.card.on{box-shadow:inset 0 1px 0 var(--edge), var(--lift), 0 0 30px -14px color-mix(in oklab, var(--accent) 55%, transparent)}
+.card.on{box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift), 0 0 30px -14px color-mix(in oklab, var(--accent) 55%, transparent)}
 .card .ring{display:none}
 .card.on .ring{
   display:block;position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;z-index:3;
@@ -586,7 +599,7 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 /* ==========================================================================
    LIST VIEW
    ========================================================================== */
-.tablewrap{margin-top:10px;overflow-x:auto;border-radius:var(--r-lg);background:var(--surface);box-shadow:inset 0 1px 0 var(--edge), var(--lift)}
+.tablewrap{margin-top:10px;overflow-x:auto;border-radius:var(--r-lg);background:var(--surface);box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift)}
 table{width:100%;border-collapse:collapse;min-width:600px;font-size:13px}
 /* A phone cannot hold seven columns. Dropping two was not enough: the rest
    still overflowed and the Pick button sat off the right edge behind a scroll
@@ -620,7 +633,7 @@ td.r{text-align:right;white-space:nowrap}
 /* ==========================================================================
    ADD
    ========================================================================== */
-.add{margin-top:10px;background:var(--surface);border-radius:var(--r-lg);padding:14px;box-shadow:inset 0 1px 0 var(--edge), var(--lift)}
+.add{margin-top:10px;background:var(--surface);border-radius:var(--r-lg);padding:14px;box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift)}
 .add .row{display:flex;gap:8px;flex-wrap:wrap}
 .addfield{position:relative;display:flex}
 .addfield .input{padding-right:52px}
@@ -661,7 +674,7 @@ td.r{text-align:right;white-space:nowrap}
   .cols .rail{position:sticky;top:66px;margin-top:18px}
 }
 .rail{display:flex;flex-direction:column;gap:12px;margin-top:28px}
-.panel{background:var(--surface);border-radius:var(--r-lg);padding:14px;box-shadow:inset 0 1px 0 var(--edge), var(--lift)}
+.panel{background:var(--surface);background-image:var(--sheen);border-radius:var(--r-lg);padding:14px;box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift)}
 .panel h3{font-size:12px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 
 .bar{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:7px 0;border-bottom:1px solid var(--line)}
@@ -870,7 +883,7 @@ td.r{text-align:right;white-space:nowrap}
 /* the empty shelf on a brand new crew: what to do, and the two buttons that do it */
 .shelf0{
   margin-top:14px;padding:34px 20px 26px;border-radius:var(--r-lg);text-align:center;
-  background:var(--surface);box-shadow:inset 0 1px 0 var(--edge), var(--lift);
+  background:var(--surface);box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift);
   display:flex;flex-direction:column;align-items:center;gap:10px;
 }
 .shelf0-e{font-size:40px;line-height:1;margin-bottom:4px}
@@ -982,7 +995,7 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 
 /* side games: slim strips under the status card */
 .sides{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-.side{background:var(--surface);border-radius:var(--r-lg);padding:11px 14px;display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 1px 0 var(--edge), var(--lift)}
+.side{background:var(--surface);background-image:var(--sheen);border-radius:var(--r-lg);padding:11px 14px;display:flex;flex-direction:column;gap:9px;box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift)}
 .side-top{display:flex;align-items:center;gap:10px;min-height:34px}
 .side-id{flex:1;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px}
 .side-acts{display:flex;gap:6px;flex:none}
@@ -994,6 +1007,54 @@ button.sesh--locked:hover{background:var(--grad);filter:brightness(1.05)}
 .iconbtn--sm{min-width:34px;min-height:34px}
 .st-acts .iconbtn{min-width:34px;min-height:34px}
 @media (pointer: coarse), (max-width:520px){ .iconbtn--sm,.st-acts .iconbtn{min-width:40px;min-height:40px} }
+
+
+/* ---------- rail extras: ready to play, on sale, our record ---------- */
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.plist li{display:flex;align-items:baseline;gap:8px;padding:7px 0;border-bottom:1px solid var(--line);min-width:0;flex-wrap:wrap}
+.plist li:last-child{border-bottom:none}
+.plink{font-size:13px;font-weight:600;color:var(--ink);text-align:left;min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:none}
+.plink:hover{color:var(--accent-text)}
+.pmeta{font-size:12px;color:var(--muted);flex:none}
+.pmeta b{color:var(--ink);font-weight:650}
+.pmeta s{opacity:.7}
+.pnote{font-size:12px;color:var(--muted);line-height:1.45;margin:6px 0 0}
+.pnote b{color:var(--ink-2);font-weight:650}
+.panel .btn--sm{margin-top:10px}
+.salechip{flex:none;font-size:10.5px;font-weight:800;padding:2px 6px;border-radius:999px;background:var(--sale-bg);color:var(--sale)}
+.bdg--sale{background:var(--sale-bg);color:var(--sale);text-transform:none;letter-spacing:0}
+.pill--sale{background:var(--sale-bg);color:var(--sale);font-weight:650}
+.own{color:var(--muted)}
+.own--all{color:var(--sale);font-weight:600}
+.ownbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ownbar .pnote{margin:0}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stats span{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:8px 10px;border-radius:var(--r-md);background:var(--surface-2);font-size:11.5px;color:var(--muted)}
+.stats b{font-size:18px;font-weight:700;color:var(--ink);line-height:1.1}
+.feed{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.feed li{display:flex;gap:8px;align-items:baseline;font-size:12.5px;color:var(--ink-2)}
+.feed li span{flex:1;min-width:0}
+.feed time{flex:none;font-size:11px;color:var(--muted)}
+/* the "what do you own" checklist */
+.ownlist{display:flex;flex-direction:column;gap:5px;max-height:min(52vh,460px);overflow-y:auto;margin:0 -4px;padding:0 4px}
+.ownrow{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px;border-radius:var(--r-md);background:var(--surface-2);text-align:left;min-height:46px;transition:background .12s}
+.ownrow:hover{background:var(--surface-3)}
+.ownrow img,.ownrow .ownimg{width:62px;height:29px;object-fit:cover;border-radius:var(--r-sm);flex:none;background:var(--surface-3)}
+.ownrow .nm{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ownrow .pr{flex:none;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.ownrow .tick{flex:none;width:22px;height:22px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:800;box-shadow:inset 0 0 0 1.5px var(--line-strong);color:var(--accent-ink)}
+.ownrow[aria-pressed="true"]{background:var(--accent-soft)}
+.ownrow[aria-pressed="true"] .tick{background:var(--grad);box-shadow:none}
+/* the tie-breaker wheel */
+.wheelwrap{position:relative;width:min(260px,70vw);aspect-ratio:1;margin:6px auto 0}
+.wheel{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 4px var(--surface), 0 0 0 5px var(--line-strong), var(--lift);overflow:hidden}
+.wlabel{position:absolute;font-size:12px;font-weight:750;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55);white-space:nowrap;max-width:44%;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.wheelptr{position:absolute;left:50%;top:-10px;transform:translateX(-50%);width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:18px solid var(--ink);z-index:2;filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+@media (max-width:520px){ .spinlbl{display:none} }
+.sharepre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--f-mono);font-size:11.5px;background:var(--surface-2);border-radius:var(--r-md);padding:11px;max-height:200px;overflow:auto}
+.dcrow b{color:var(--ink)}
+.spinres{text-align:center;font-size:15px;min-height:22px;margin-top:4px}
+.spinres b{color:var(--accent-text)}
 
 /* the day picker */
 .dgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
@@ -1381,6 +1442,177 @@ function renderSides(d){
       ${x.iAmIn || x.lock ? seshLine(x) : ""}
     </section>`;
   }).join("")}</div>`;
+}
+
+/* ============================================================================
+   RAIL EXTRAS: who owns it, on sale, our record, and the tie-breaker wheel
+   ========================================================================== */
+
+/** Who owns each shelf game, and what it costs on Steam right now. */
+function ownersOf(d, appid){ return d.ownsBy[appid] || new Set(); }
+function iOwn(d, appid){ return ownersOf(d, appid).has(myMemberId); }
+/** "everyone" / "2 to buy" for a game, or "" when nobody has said anything about it yet. */
+function ownLine(d, appid){
+  const o = ownersOf(d, appid), total = d.members.length;
+  if(!o.size || total < 2) return null;
+  if(o.size >= total) return { all: true, text: "everyone owns it" };
+  const need = d.members.filter(m => !o.has(m.member_id)).map(m => m.label);
+  return { all: false, text: `${need.length} to buy`, who: listNames(need) };
+}
+function saleOf(d, appid){
+  const p = d.prices[appid];
+  return p && !p.is_free && p.discount > 0 ? p : null;
+}
+
+/** Ready to play: every game the whole crew owns, best supported first. */
+function ownsPanel(d){
+  if(!(S.shelf||[]).length) return "";
+  const total = d.members.length;
+  const open = (S.shelf||[]).filter(s => !s.benched);
+  const mine = open.filter(s => iOwn(d, s.appid)).length;
+  const ready = total > 1 ? open.filter(s => ownersOf(d, s.appid).size >= total)
+    .sort((a, b) => (d.counts[b.appid]||0) - (d.counts[a.appid]||0)) : [];
+  return `<section class="panel ownpanel"><h3>Ready to play</h3>
+    ${ready.length
+      ? `<ul class="plist">${ready.slice(0, 5).map(s => `<li><button class="plink" data-facets="${s.appid}">${esc((d.gamesById[s.appid]||{}).name || "")}</button>
+          <span class="pmeta">${d.counts[s.appid] ? d.counts[s.appid] + (d.counts[s.appid] === 1 ? " vote" : " votes") : "everyone owns it"}</span></li>`).join("")}</ul>
+        ${ready.length > 5 ? `<p class="pnote">and ${ready.length - 5} more everyone owns</p>` : ""}`
+      : `<p class="pnote">${total < 2 ? "Once the crew's in, this lists what everyone already owns." : "Nothing the whole crew owns yet. Tick yours and it fills in."}</p>`}
+    <button class="btn btn--ghost btn--sm" id="ownsopen">${mine ? `You own ${mine} of ${open.length} · update` : "Tick what you own"}</button>
+  </section>`;
+}
+
+/** On sale: shelf games discounted on Steam right now, biggest cut first. */
+function salePanel(d){
+  const on = (S.shelf||[]).filter(s => !s.benched && saleOf(d, s.appid))
+    .sort((a, b) => saleOf(d, b.appid).discount - saleOf(d, a.appid).discount);
+  if(!on.length) return "";
+  return `<section class="panel salepanel"><h3>On sale now</h3>
+    <ul class="plist">${on.slice(0, 5).map(s => { const p = saleOf(d, s.appid), g = d.gamesById[s.appid] || {};
+      return `<li><a class="plink" href="https://store.steampowered.com/app/${s.appid}/" target="_blank" rel="noopener">${esc(g.name || "")}</a>
+        <span class="salechip">−${p.discount}%</span>
+        <span class="pmeta"><b>${esc(p.final_fmt || "")}</b>${p.initial_fmt ? ` <s>${esc(p.initial_fmt)}</s>` : ""}${
+          ownLine(d, s.appid) && !ownLine(d, s.appid).all ? ` · ${esc(ownLine(d, s.appid).text)}` : ""}</span></li>`; }).join("")}</ul>
+    <p class="pnote">Steam prices in AUD, checked every few hours.</p>
+  </section>`;
+}
+
+/** What's happened lately, pieced together from timestamps the crew already has. */
+function feedOf(d){
+  const nm = a => (d.gamesById[a] || {}).name || "a game";
+  const who = id => { const m = d.members.find(x => x.member_id === id); return m ? m.label : "Someone"; };
+  const ev = [];
+  // a burst of adds by one person on one day reads as one line, not ten
+  const adds = {};
+  (S.shelf||[]).forEach(s => { if(!s.added_at) return; const k = (s.added_name || "Someone") + "|" + s.added_at.slice(0, 10);
+    (adds[k] = adds[k] || []).push(s); });
+  Object.entries(adds).forEach(([k, list]) => { const by = k.split("|")[0], last = list.map(s => s.added_at).sort().pop();
+    ev.push({ at: last, text: list.length > 1 ? `${by} added ${list.length} games` : `${by} added ${nm(list[0].appid)}` }); });
+  // votes the same way: "Helen, Soli and Jehan voted" per day
+  const votes = {};
+  (S.ballots||[]).forEach(b => { if(!(b.picks||[]).length || !b.updated_at) return; (votes[b.updated_at.slice(0, 10)] = votes[b.updated_at.slice(0, 10)] || []).push(b); });
+  Object.values(votes).forEach(list => { list.sort((x, y) => x.updated_at < y.updated_at ? 1 : -1);
+    ev.push({ at: list[0].updated_at, text: `${listNames(list.map(b => who(b.member_id)))} voted` }); });
+  (S.plays||[]).forEach(p => {
+    ev.push({ at: p.started_at, text: `Round ${p.round_no} called: ${nm(p.appid)}` });
+    if(p.finished_at) ev.push({ at: p.finished_at, text: `Finished ${nm(p.appid)}${p.verdict ? ` · ${VERDICT_ICON[p.verdict]} ${VERDICT[p.verdict]}` : ""}` });
+  });
+  // sessions are a day, not a moment: count them as that evening
+  (S.sessions||[]).forEach(se => ev.push({ at: se.day + "T20:00:00", text: `Played ${nm(se.appid)} ${dayLabel(se.day)}` }));
+  const cutoff = Date.now() - 21 * 864e5;
+  return ev.filter(e => e.at && new Date(e.at).getTime() > cutoff && new Date(e.at).getTime() <= Date.now() + 6e4)
+    .sort((a, b) => a.at < b.at ? 1 : -1);
+}
+function recordPanel(d){
+  const done = (S.plays||[]).filter(p => p.finished_at);
+  const bangers = [...new Set(done.filter(p => p.verdict === "banger").map(p => p.appid))];
+  const sessions = (S.sessions||[]).length;
+  const feed = feedOf(d).slice(0, 5);
+  if(!done.length && !sessions && !feed.length) return "";
+  return `<section class="panel recpanel"><h3>Our record</h3>
+    <div class="stats">
+      <span><b class="num">${done.length}</b>finished</span>
+      <span><b class="num">${sessions}</b>${sessions === 1 ? "session" : "sessions"}</span>
+      <span><b class="num">${bangers.length}</b>${bangers.length === 1 ? "banger" : "bangers"}</span>
+    </div>
+    ${bangers.length ? `<p class="pnote"><b>${VERDICT_ICON.banger} Hall of fame:</b> ${esc(listNames(bangers.map(a => (d.gamesById[a]||{}).name || "?")))}</p>` : ""}
+    ${feed.length ? `<ul class="feed">${feed.map(e => `<li><span>${esc(e.text)}</span><time>${esc(ago(e.at))}</time></li>`).join("")}</ul>` : ""}
+  </section>`;
+}
+
+/** Everyone's price tag and ownership, one tap each. */
+function ownsSheet(d){
+  const open = (S.shelf||[]).filter(s => !s.benched)
+    .sort((a, b) => ((d.gamesById[a.appid]||{}).name || "").localeCompare((d.gamesById[b.appid]||{}).name || ""));
+  return `<h3>What do you own?</h3>
+    <p>Tick every game you've already got. The rail works out what the whole crew can play tonight, and cards say how many still need to buy.</p>
+    <div class="ownlist">${open.map(s => { const g = d.gamesById[s.appid] || {}, mine = iOwn(d, s.appid), p = d.prices[s.appid];
+      return `<button class="ownrow" data-own="${s.appid}" aria-pressed="${mine}">
+        ${g.header ? `<img src="${esc(g.header)}" alt="" loading="lazy">` : `<span class="ownimg"></span>`}
+        <span class="nm">${esc(g.name || "")}</span>
+        <span class="pr">${p ? p.is_free ? "Free" : `${saleOf(d, s.appid) ? `<span class="salechip">−${p.discount}%</span> ` : ""}${esc(p.final_fmt || "")}` : ""}</span>
+        <span class="tick" aria-hidden="true">${mine ? "✓" : ""}</span></button>`; }).join("")}</div>
+    <div class="row"><button class="btn" data-dismiss>Done</button></div>`;
+}
+
+/** The tie-breaker: a wheel of the tied games, spun locally. */
+const WHEEL_COLS = ["--grad-a", "--e1", "--grad-b", "--e2", "--e3", "--accent-text"];
+function spinSheet(d){
+  const top = d.ranked.length ? d.ranked[0].n : 0;
+  const ids = sheet.ids || d.ranked.filter(r => r.n === top).map(r => r.appid);
+  sheet.ids = ids;
+  const seg = 360 / ids.length;
+  const stops = ids.map((_, i) => `var(${WHEEL_COLS[i % WHEEL_COLS.length]}) ${i * seg}deg ${(i + 1) * seg}deg`).join(",");
+  const won = sheet.won != null ? d.gamesById[sheet.won] || {} : null;
+  return `<h3>Spin for it</h3>
+    <p>${ids.length} games on ${top} ${top === 1 ? "vote" : "votes"} each. Let the wheel pick.</p>
+    <div class="wheelwrap">
+      <span class="wheelptr" aria-hidden="true"></span>
+      <div class="wheel" id="wheel" style="background:conic-gradient(${stops});transform:rotate(${sheet.rot || 0}deg)">
+        ${ids.map((a, i) => { // each name sits on its slice's centre line, 30% in from the rim, reading outwards
+          const ang = i * seg + seg / 2, rad = (ang - 90) * Math.PI / 180;
+          const x = 50 + 30 * Math.cos(rad), y = 50 + 30 * Math.sin(rad);
+          const turn = ang > 180 ? ang + 90 : ang - 90;          // keep text the right way up-ish
+          return `<span class="wlabel" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;transform:translate(-50%,-50%) rotate(${turn.toFixed(0)}deg)">${esc(((d.gamesById[a]||{}).name || "?").slice(0, 18))}</span>`; }).join("")}
+      </div>
+    </div>
+    <p class="spinres" id="spinres" aria-live="polite">${won ? `It's <b>${esc(won.name || "")}</b>.` : "&nbsp;"}</p>
+    <div class="row">
+      <button class="btn btn--ghost" id="spingo">${won ? "Spin again" : "Spin"}</button>
+      ${won ? `<button class="btn" id="spinlock">Lock in ${esc(won.name || "")}</button>` : ""}
+    </div>`;
+}
+function wireSpin(d){
+  const go = document.getElementById("spingo"), wheel = document.getElementById("wheel");
+  if(go && wheel) go.onclick = () => {
+    const ids = sheet.ids, pick = Math.floor(Math.random() * ids.length), seg = 360 / ids.length;
+    // land the chosen segment under the pointer at the top, somewhere inside it, after a few full turns
+    const inside = seg * (0.2 + Math.random() * 0.6);
+    const base = Math.ceil((sheet.rot || 0) / 360) * 360;
+    const rot = base + 360 * 5 + (360 - (pick * seg + inside));
+    go.disabled = true;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    wheel.style.transition = still ? "none" : "transform 3.2s cubic-bezier(.12,.7,.15,1)";
+    wheel.style.transform = `rotate(${rot}deg)`;
+    setTimeout(() => { sheet.rot = rot; sheet.won = ids[pick]; render(); }, still ? 50 : 3300);
+  };
+  const lk = document.getElementById("spinlock");
+  if(lk) lk.onclick = () => { const a = sheet.won; sheet = { kind: "close", appid: a }; render(); };
+}
+
+/* ---------- prices: ask the edge function to refresh this shelf once per visit ---------- */
+const PRICES_URL = CONFIG.SUPABASE_URL.replace(/\/$/, "") + "/functions/v1/prices";
+const pricesAsked = new Set();
+async function refreshPrices(){
+  if(!code || pricesAsked.has(code) || !(S && (S.shelf||[]).length)) return;
+  pricesAsked.add(code);
+  try{
+    const res = await fetch(PRICES_URL, { method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + CONFIG.SUPABASE_ANON_KEY, "apikey": CONFIG.SUPABASE_ANON_KEY },
+      body: JSON.stringify({ code }) });
+    const body = await res.json().catch(() => ({}));
+    if(body.refreshed) await refresh();
+  }catch(err){ console.warn("prices", err && err.message); }
 }
 
 /** Desktop rail: every game in play, ten little bars each. Hidden on a phone,
@@ -2106,8 +2338,12 @@ function derive(){
   const ranked = Object.keys(counts).map(a => ({appid:+a, n:counts[a]}))
     .sort((x,y) => y.n-x.n || x.appid-y.appid);
 
+  const ownsBy = {}, prices = {};
+  (S.owns||[]).forEach(o => { (ownsBy[o.appid] = ownsBy[o.appid] || new Set()).add(o.member_id); });
+  (S.prices||[]).forEach(p => { prices[p.appid] = p; });
+
   return { gamesById, counts, takesBy, myPicks, meMember, playsBy, nowPlaying,
-           members, ranked, lastVoteAt,
+           members, ranked, lastVoteAt, ownsBy, prices,
            votedCount: voters.size, lookedCount: members.length,
            liveCount: members.filter(m => isLive(m.last_seen)).length };
 }
@@ -2600,6 +2836,11 @@ function nudgeText(d){
   if(!missing.length) return "that's everyone in 🎉 " + link;
   return missing.join(", ") + ": still waiting on your picks 👀\n" + link;
 }
+/** The text for each share mode; "link" is the bare crew link. */
+function shareBody(d, mode){
+  const link = location.origin + location.pathname + "#/g/" + code;
+  return mode === "link" ? link : mode === "sesh" ? seshShareText(d) : mode === "nudge" ? nudgeText(d) : summaryText(d);
+}
 async function copy(text, btn){
   try{
     await navigator.clipboard.writeText(text);
@@ -2874,6 +3115,9 @@ function renderGroup(){
 
         <aside class="rail">
           ${seshPanel(d)}
+          ${ownsPanel(d)}
+          ${salePanel(d)}
+          ${recordPanel(d)}
           <section class="panel">
             <h3>Who's in</h3>
             <div class="crew">${d.members.length ? d.members.map(mm => {
@@ -3077,6 +3321,7 @@ function renderStatus(d, g, call){
       <span class="st-sub">${sub}</span>
     </div>
     <div class="st-acts">
+      ${tied.length > 1 ? `<button class="btn btn--ghost btn--sm" id="spinbtn" title="Dead heat: let a wheel pick" aria-label="Spin for it">🎡<span class="spinlbl"> Spin for it</span></button>` : ""}
       ${d.ranked.length && !solo ? `<button class="btn btn--sm${call.ready ? "" : " btn--ghost"}${call.ready ? " btn--ready" : ""}" id="closebtn">Call it</button>` : ""}
       ${menu}
     </div>
@@ -3115,6 +3360,7 @@ function card(s, d){
           : releaseOf(game) === "early" ? `<span class="bdg">early access</span>`
           : ""}
         <span class="sp"></span>
+        ${saleOf(d, s.appid) && state !== "benched" ? `<span class="bdg bdg--sale" title="On sale on Steam: ${esc(saleOf(d, s.appid).final_fmt || "")}">−${saleOf(d, s.appid).discount}%</span>` : ""}
         ${state === "benched" ? `<span class="bdg bdg--backlog">benched</span>`
           : plays.length && !isNow ? `<span class="bdg bdg--played" title="Last played ${esc(ago(lastPlay.started_at))}">${
               plays.length > 1 ? "played ×"+plays.length : "played"}</span>` : ""}
@@ -3129,6 +3375,7 @@ function card(s, d){
         <button class="cap" data-facets="${s.appid}" title="${esc(s.crew_note||"Tap to set the player cap")}">${
           s.crew_max ? "Up to "+s.crew_max : "Cap?"}${s.crew_mod ? `<span class="modhint"> · ${s.crew_mod} modded</span>` : ""}</button>
         ${game.shape ? `<span>${esc(SHAPE[game.shape]||game.shape)}</span>` : ""}
+        ${(() => { const o = ownLine(d, s.appid); return o ? `<span class="own${o.all ? " own--all" : ""}"${o.who ? ` title="Still to buy: ${esc(o.who)}"` : ""}>${o.all ? "✓ " : ""}${esc(o.text)}</span>` : ""; })()}
         ${lastPlay && !isNow && lastPlay.verdict ? `<span class="v v-${lastPlay.verdict}">${VERDICT_ICON[lastPlay.verdict]} ${esc(VERDICT[lastPlay.verdict])}</span>` : ""}
       </div>
       ${takes.length ? `<p class="take"><b>${esc(takes[0].by)}</b>${esc(takes[0].body)}${takes.length > 1 ? ` <span class="takemore">+${takes.length-1}</span>` : ""}</p>` : ""}
@@ -3216,11 +3463,17 @@ function renderSheet(d){
       <div class="sheetbody">
         <div class="dl">
           ${releaseOf(game) !== "out" ? `<span class="pill pill--rel">${esc(RELEASE[releaseOf(game)])}${releaseOf(game) === "soon" && game.released ? " · " + esc(game.released) : ""}</span>` : ""}
+          ${saleOf(d, sheet.appid) ? `<span class="pill pill--sale">−${saleOf(d, sheet.appid).discount}% · ${esc(saleOf(d, sheet.appid).final_fmt || "")}</span>` : d.prices[sheet.appid] && d.prices[sheet.appid].is_free ? `<span class="pill pill--sale">Free</span>` : ""}
           ${game.review_pct != null ? `<span class="pill pill--rev" title="${esc(game.review_desc||"")}">${game.review_pct}% on Steam · ${(game.review_count||0).toLocaleString()} reviews</span>` : ""}
           <a class="pill pill--link" href="https://store.steampowered.com/app/${sheet.appid}/" target="_blank" rel="noopener">Steam ↗</a>
           ${game.demo_appid ? `<a class="pill pill--link" href="https://store.steampowered.com/app/${game.demo_appid}/" target="_blank" rel="noopener">Try the demo ↗</a>` : ""}
         </div>
         ${s.added_name ? `<p class="addedby">Added by ${esc(s.added_name)}</p>` : ""}
+        <div class="ownbar">
+          <button class="chip" data-ownone="${sheet.appid}" aria-pressed="${iOwn(d, sheet.appid)}">${iOwn(d, sheet.appid) ? "✓ I own it" : "I own it"}</button>
+          <span class="pnote">${(() => { const o = [...ownersOf(d, sheet.appid)].map(id => (d.members.find(m => m.member_id === id) || {}).label).filter(Boolean);
+            return o.length ? "Owned by " + esc(listNames(o)) : "Nobody's said they own it yet"; })()}</span>
+        </div>
         ${desc ? `<div class="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>` : ""}
 
         <span class="eyebrow">What people reckon</span>
@@ -3352,12 +3605,16 @@ function renderSheet(d){
       ${emojiPicker(newCrew.emoji)}`);
   }
 
+  if(sheet.kind === "owns") return shell(ownsSheet(d));
+  if(sheet.kind === "spin") return shell(spinSheet(d));
+
   if(sheet.kind === "discord"){
     const on = !!S.group.discord;
     return shell(`<h3>Discord scoreboard</h3>
       ${on ? `<p>It's on. One message in your channel keeps itself up to date: the top picks, who's still to vote, and the next night once you're playing. Big moments post a fresh one.</p>
         <p class="hint" id="dcmsg" aria-live="polite"></p>
-        <div class="row"><button class="btn btn--ghost" id="dcoff">Turn it off</button><button class="btn" id="dcpost">Post a fresh one</button></div>`
+        <div class="row"><button class="btn btn--ghost" id="dcoff">Turn it off</button><button class="btn" id="dcpost">Post a fresh one</button></div>
+        ${sheet.back ? `<button class="linkbtn" data-shareback>← Back to send to the chat</button>` : ""}`
       : `<p>One message in your channel that updates itself as people vote and pick nights. Anyone taps the title to jump in.</p>
         <ol class="steps">
           <li>In Discord, hover the channel and tap the <b>cog</b></li>
@@ -3366,7 +3623,7 @@ function renderSheet(d){
         </ol>
         <input class="input" id="dchook" placeholder="https://discord.com/api/webhooks/…" autocomplete="off" spellcheck="false" aria-label="Discord webhook link">
         <p class="hint" id="dcmsg" aria-live="polite">Only this crew's scoreboard uses it. Nobody else sees the link.</p>
-        <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="dcgo" disabled>Connect</button></div>`}`);
+        <div class="row"><button class="btn btn--ghost" ${sheet.back ? "data-shareback" : "data-dismiss"}>${sheet.back ? "Back" : "Cancel"}</button><button class="btn" id="dcgo" disabled>Connect</button></div>`}`);
   }
 
   if(sheet.kind === "menu"){
@@ -3380,10 +3637,15 @@ function renderSheet(d){
           <span class="dot" style="background:hsl(${hueOf(mm.name)} 45% 42%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}</span>`;
       }).join("") : `<span class="empty">Just you so far.</span>`}</div>
       <div class="menu">
-        <button class="menuitem" id="sharemenu"><b>Send to the chat</b><span>Copy the link, an update, or a reminder</span></button>
+        <button class="menuitem" id="sharemenu"><b>Send to the chat</b><span>${S.group.discord ? "Discord scoreboard's on · or copy an update" : "Link, update, reminder, or a live Discord scoreboard"}</span></button>
+      </div>
+      <span class="eyebrow">Crew settings</span>
+      <div class="menu">
         <button class="menuitem" id="editcrew"><b>Edit crew</b><span>Name and emoji</span></button>
-        <button class="menuitem" id="discordbtn"><b>Discord scoreboard</b><span>${S.group.discord ? "On · updates itself in your channel" : "A live scoreboard in your channel"}</span></button>
         <button class="menuitem" id="seshrulesbtn"><b>Night rules</b><span>How many make a night, and the usual start</span></button>
+      </div>
+      ${S.group.paused_at && !S.group.locked_appid ? "" : `<span class="eyebrow">This round</span>`}
+      <div class="menu">
         ${S.group.locked_appid
           ? `<button class="menuitem" id="reopenbtn"><b>Changed our minds</b><span>Reopen the vote</span></button>`
           : S.group.paused_at ? ""
@@ -3427,7 +3689,7 @@ function renderSheet(d){
           <button class="btn" id="newroundgo">Next round</button>
         </div>`);
     }
-    const top = d.ranked[0], game = d.gamesById[top.appid] || {};
+    const top = d.ranked[0], game = d.gamesById[sheet.appid || top.appid] || {};
     return shell(`<h3>Lock in ${esc(game.name||"the leader")}?</h3>
       <p>${d.votedCount} of ${d.lookedCount} have voted. Pins it up top so nobody can claim they missed it.</p>
       <div class="row"><button class="btn btn--ghost" data-dismiss>Not yet</button>
@@ -3452,19 +3714,25 @@ function renderSheet(d){
   }
 
   if(sheet.kind === "share"){
-    const nudging = sheet.mode === "nudge", seshing = sheet.mode === "sesh";
+    // one place for everything that goes to a chat: the live Discord scoreboard up top,
+    // then a one-off message for anywhere else (WhatsApp, Messenger, iMessage, Slack…)
+    const mode = sheet.mode || "state";
     const canSesh = inPlay(d).length > 0;
-    const body = seshing ? seshShareText(d) : nudging ? nudgeText(d) : summaryText(d);
+    const body = shareBody(d, mode);
+    const canNative = !!navigator.share;
     return shell(`<h3>Send to the chat</h3>
-      <div class="row"><button class="btn btn--ghost" id="copylink">Copy the link</button></div>
-      <div class="fset">
-        <button class="chip" data-sharemode="state" aria-pressed="${!nudging && !seshing}">Update</button>
-        <button class="chip" data-sharemode="nudge" aria-pressed="${nudging}">Reminder</button>
-        ${canSesh ? `<button class="chip" data-sharemode="sesh" aria-pressed="${seshing}">When's next</button>` : ""}
+      <button class="menuitem dcrow" id="discordrow"><b>${S.group.discord ? "✓ Discord scoreboard is on" : "Live Discord scoreboard"}</b>
+        <span>${S.group.discord ? "One message in your channel that keeps itself up to date · manage" : "One message in your channel that updates itself · set up"}</span></button>
+      <span class="eyebrow">Or send a one-off</span>
+      <div class="fset fset--seg">
+        <button class="chip" data-sharemode="link" aria-pressed="${mode === "link"}">Link</button>
+        <button class="chip" data-sharemode="state" aria-pressed="${mode === "state"}">Update</button>
+        <button class="chip" data-sharemode="nudge" aria-pressed="${mode === "nudge"}">Reminder</button>
+        ${canSesh ? `<button class="chip" data-sharemode="sesh" aria-pressed="${mode === "sesh"}">When's next</button>` : ""}
       </div>
-      <p>${seshing ? "Where the next night is at, and who still owes theirs." : nudging ? "Names whoever has not picked yet." : "The leaderboard, plus the link."}</p>
-      <pre style="margin:0;white-space:pre-wrap;font-family:var(--f-mono);font-size:11.5px;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px;max-height:200px;overflow:auto">${esc(body)}</pre>
-      <div class="row"><button class="btn" id="copyshare">Copy it</button></div>`);
+      <p class="fhint">${mode === "link" ? "Just the link. Anyone with it can join the crew." : mode === "sesh" ? "Where the next night is at, and who still owes theirs." : mode === "nudge" ? "Names whoever hasn't voted yet." : "The leaderboard, plus the link."}</p>
+      <pre class="sharepre">${esc(body)}</pre>
+      <div class="row">${canNative ? `<button class="btn btn--ghost" id="nativeshare">Share…</button>` : ""}<button class="btn" id="copyshare">Copy it</button></div>`);
   }
 
   if(sheet.kind === "filters"){
@@ -3605,7 +3873,21 @@ function wireCommon(d){
   const ec = document.getElementById("editcrew"); if(ec) ec.onclick = openCrew;
   const dcb = document.getElementById("discordbtn"); if(dcb) dcb.onclick = () => { sheet = { kind:"discord" }; render(); };
   app.querySelectorAll("[data-fold]").forEach(b => b.onclick = () => { toggleFold(b.dataset.fold); render(); });
+  const ob = document.getElementById("ownsopen"); if(ob) ob.onclick = () => { const open = () => { sheet = { kind:"owns" }; render(); }; if(!needName(open)) open(); };
+  const spb = document.getElementById("spinbtn"); if(spb) spb.onclick = () => { sheet = { kind:"spin" }; render(); };
+  if(sheet && sheet.kind === "spin") wireSpin(d);
+  // owning: optimistic, one request per tap
+  app.querySelectorAll("[data-own],[data-ownone]").forEach(b => b.onclick = async () => {
+    const a = +(b.dataset.own || b.dataset.ownone), own = b.getAttribute("aria-pressed") !== "true";
+    S.owns = (S.owns||[]).filter(o => !(o.appid === a && o.member_id === myMemberId));
+    if(own) S.owns.push({ appid: a, member_id: myMemberId });
+    render();
+    try{ await rpc("set_owns", { p_code: code, p_device: deviceId, p_appids: [a], p_own: own }); }
+    catch(err){ console.warn("set_owns", err.message); await refresh(); render(); }
+  });
+  refreshPrices();
   if(sheet && sheet.kind === "discord") wireDiscord();
+  app.querySelectorAll("[data-shareback]").forEach(b => b.onclick = () => { sheet = { kind:"share" }; render(); });
 
   // --- name entry, step one
   const ni = document.getElementById("nameinput");
@@ -3999,14 +4281,19 @@ function wireGroup(d, filtered){
     // benched, not deleted: takes and play history all survive
     try{ await rpc("bench_game", {p_code:code, p_device:deviceId, p_appid:a}); }finally{ refresh(); }
   };
-  const cg = document.getElementById("closego");    if(cg) cg.onclick = () => closeRound(d.ranked[0].appid);
+  const cg = document.getElementById("closego");    if(cg) cg.onclick = () => closeRound(sheet.appid || d.ranked[0].appid);
   const nr = document.getElementById("newroundgo"); if(nr) nr.onclick = () => startRound(sheet.verdict, sheet.bench, false);
   const nb = document.getElementById("newroundbreak"); if(nb) nb.onclick = () => startRound(sheet.verdict, sheet.bench, true);
   document.querySelectorAll("[data-sharemode]").forEach(b => b.onclick = () => {
     sheet.mode = b.dataset.sharemode; render();
   });
   const cshare = document.getElementById("copyshare");
-  if(cshare) cshare.onclick = () => copy(sheet.mode === "sesh" ? seshShareText(d) : sheet.mode === "nudge" ? nudgeText(d) : summaryText(d), cshare);
+  if(cshare) cshare.onclick = () => copy(shareBody(d, sheet.mode || "state"), cshare);
+  // phones: the OS share sheet goes straight to WhatsApp, Messenger, iMessage and friends
+  const ns = document.getElementById("nativeshare");
+  if(ns) ns.onclick = async () => { const m = sheet.mode || "state", link = shareBody(d, "link");
+    try{ await navigator.share(m === "link" ? { title: S.group.name, url: link } : { title: S.group.name, text: shareBody(d, m) }); }catch{} };
+  const dr = document.getElementById("discordrow"); if(dr) dr.onclick = () => { sheet = { kind:"discord", back:"share" }; render(); };
   const ul2 = document.getElementById("unlinkothers");
   if(ul2) ul2.onclick = async () => {
     ul2.disabled = true; ul2.textContent = "Unlinking…";
