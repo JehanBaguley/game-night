@@ -68,7 +68,7 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates eighteen tables, locks them all behind row level security with no policies, and exposes forty-five functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates nineteen tables, locks them all behind row level security with no policies, and exposes forty-six functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
@@ -520,7 +520,7 @@ The first person in (whoever made it) looks after the crew. There's no role to h
 | Menu, **Manage crew** | **Remove** someone | Their picks and nights go, they can join again with the link |
 | Menu, **Manage crew** | **Delete this crew** | For good, for everyone. Asks first |
 
-Everyone else sees none of this. All four are checked server-side (`crew_remove_game`, `crew_merge_members`, `crew_remove_member`, `crew_delete`), so hiding the buttons isn't the security.
+Every one of these shows up in **Our record** with who did it, and so do calling a round and taking a call back (`crew_log`), so nothing happens quietly. Everyone else sees none of these buttons. All four are checked server-side (`crew_remove_game`, `crew_merge_members`, `crew_remove_member`, `crew_delete`), so hiding the buttons isn't the security.
 
 ### The owner page
 
@@ -557,7 +557,7 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Eighteen tables, row level security, forty-five RPCs |
+| `supabase/schema.sql` | Nineteen tables, row level security, forty-six RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
 | `supabase/functions/prices/index.ts` | Refreshes Steam prices (AUD) for a crew's shelf, at most every four hours per game |
 | `supabase/functions/discord/index.ts` | Posts and edits the crew's live Discord scoreboard through their webhook |

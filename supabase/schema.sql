@@ -410,7 +410,13 @@ begin
        from owns o where o.group_code = p_code), '[]'::json),
     'prices', coalesce((
        select json_agg(to_json(pr)) from prices pr
-        where pr.appid in (select appid from shelf where group_code = p_code)), '[]'::json)
+        where pr.appid in (select appid from shelf where group_code = p_code)), '[]'::json),
+    -- who did the big moments (called, took it back, tidy-ups), last few weeks
+    'log', coalesce((
+       select json_agg(json_build_object('at', l.at, 'member_id', l.member_id, 'kind', l.kind,
+                                         'appid', l.appid, 'round_no', l.round_no, 'note', l.note) order by l.at desc)
+       from (select * from crew_log where group_code = p_code and at > now() - interval '30 days'
+             order by at desc limit 40) l), '[]'::json)
   ) into result;
   return result;
 end; $$;
@@ -558,25 +564,28 @@ end; $$;
 
 create or replace function close_round(p_code text, p_device uuid, p_appid int)
 returns void language plpgsql security definer set search_path = public as $$
-declare rn int;
+declare rn int; m uuid;
 begin
-  perform assert_member(p_code, p_device);
+  m := assert_member(p_code, p_device);
   select round_no into rn from groups where code = p_code;
   update groups set locked_appid = p_appid where code = p_code;
   insert into plays(group_code, appid, round_no) values (p_code, p_appid, rn)
   on conflict (group_code, appid, round_no) do nothing;
+  insert into crew_log(group_code, member_id, kind, appid, round_no) values (p_code, m, 'called', p_appid, rn);
 end; $$;
 
 -- Undo a lock-in before anyone has played it.
 create or replace function reopen_round(p_code text, p_device uuid)
 returns void language plpgsql security definer set search_path = public as $$
-declare rn int; a int;
+declare rn int; a int; m uuid;
 begin
-  perform assert_member(p_code, p_device);
+  m := assert_member(p_code, p_device);
   select round_no, locked_appid into rn, a from groups where code = p_code;
   if a is null then return; end if;
   delete from plays where group_code = p_code and round_no = rn and finished_at is null;
   update groups set locked_appid = null where code = p_code;
+  -- the call disappears from plays, so the log is the only trace it happened
+  insert into crew_log(group_code, member_id, kind, appid, round_no) values (p_code, m, 'reopened', a, rn);
 end; $$;
 
 -- Finish what is on and open a fresh round. The verdict is optional and is
@@ -1277,11 +1286,14 @@ revoke execute on function assert_crew_admin(text, uuid) from public, anon, auth
 -- off the shelf for good: votes, nights and who-owns-it go; finished-game history stays
 create or replace function crew_remove_game(p_code text, p_device uuid, p_appid int)
 returns void language plpgsql security definer set search_path = public as $$
+declare me uuid;
 begin
-  perform assert_crew_admin(p_code, p_device);
+  me := assert_crew_admin(p_code, p_device);
   if (select locked_appid from groups where code = p_code) = p_appid then
     raise exception 'that''s the game you''re playing. Finish it first';
   end if;
+  insert into crew_log(group_code, member_id, kind, appid, note)
+       values (p_code, me, 'removed_game', p_appid, (select name from games where appid = p_appid));
   delete from side_games where group_code = p_code and appid = p_appid;     -- side_players cascade
   delete from takes      where group_code = p_code and appid = p_appid;
   delete from owns       where group_code = p_code and appid = p_appid;
@@ -1307,6 +1319,8 @@ begin
   if not exists (select 1 from members where group_code = p_code and member_id = p_member) then
     raise exception 'no such person in this crew';
   end if;
+  insert into crew_log(group_code, member_id, kind, note)
+       values (p_code, me, 'removed_member', (select name from members where group_code = p_code and member_id = p_member));
   delete from ballots        where group_code = p_code and member_id = p_member;
   delete from takes          where group_code = p_code and member_id = p_member;
   delete from owns           where group_code = p_code and member_id = p_member;
@@ -1322,8 +1336,9 @@ grant execute on function crew_remove_member(text, uuid, uuid) to anon;
 -- have an answer, p_into's stays), their devices link to p_into, p_from goes
 create or replace function crew_merge_members(p_code text, p_device uuid, p_from uuid, p_into uuid)
 returns void language plpgsql security definer set search_path = public as $$
+declare me uuid;
 begin
-  perform assert_crew_admin(p_code, p_device);
+  me := assert_crew_admin(p_code, p_device);
   if p_from = p_into then raise exception 'pick two different people'; end if;
   if (select count(*) from members where group_code = p_code and member_id in (p_from, p_into)) <> 2 then
     raise exception 'no such person in this crew';
@@ -1357,6 +1372,9 @@ begin
   -- the merged person keeps the earlier join date, so a merge never changes who runs the crew
   update members i set first_seen = least(i.first_seen, f.first_seen), last_seen = greatest(i.last_seen, f.last_seen)
     from members f where i.group_code = p_code and i.member_id = p_into and f.group_code = p_code and f.member_id = p_from;
+  insert into crew_log(group_code, member_id, kind, note)
+       values (p_code, me, 'merged', (select name from members where group_code = p_code and member_id = p_from) || ' into ' ||
+                                     (select name from members where group_code = p_code and member_id = p_into));
   delete from members where group_code = p_code and member_id = p_from;
 end; $$;
 grant execute on function crew_merge_members(text, uuid, uuid, uuid) to anon;
@@ -1399,3 +1417,22 @@ returns text[] language sql security definer set search_path = public stable as 
   select coalesce(array_agg(code), '{}') from groups where code = any(p_codes[1:50]);
 $$;
 grant execute on function live_codes(text[]) to anon;
+
+-- ---------------------------------------------------------------------------
+-- CREW LOG
+-- The moments that otherwise leave no trace: who called a round, who took it
+-- back, and the tidy-ups whoever started the crew does. Shown in Our record.
+-- ---------------------------------------------------------------------------
+create table if not exists crew_log (
+  id         bigserial primary key,
+  group_code text not null references groups(code) on update cascade on delete cascade,
+  at         timestamptz not null default now(),
+  member_id  uuid,
+  kind       text not null,
+  appid      int,
+  round_no   int,
+  note       text
+);
+create index if not exists crew_log_recent on crew_log(group_code, at desc);
+alter table crew_log enable row level security;
+revoke all on crew_log from anon, authenticated;

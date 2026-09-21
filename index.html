@@ -1635,8 +1635,20 @@ function feedOf(d){
   (S.ballots||[]).forEach(b => { if(!(b.picks||[]).length || !b.updated_at) return; (votes[b.updated_at.slice(0, 10)] = votes[b.updated_at.slice(0, 10)] || []).push(b); });
   Object.values(votes).forEach(list => { list.sort((x, y) => x.updated_at < y.updated_at ? 1 : -1);
     ev.push({ at: list[0].updated_at, text: `${listNames(list.map(b => who(b.member_id)))} voted` }); });
+  // the big moments with who did them; a call someone took back stays in the story
+  const log = S.log || [];
+  const LOG_TEXT = {
+    called:         l => `${who(l.member_id)} called round ${l.round_no}: ${nm(l.appid)}`,
+    reopened:       l => `${who(l.member_id)} undid the call on ${nm(l.appid)}`,
+    removed_game:   l => `${who(l.member_id)} removed ${l.note || "a game"}`,
+    removed_member: l => `${who(l.member_id)} removed ${l.note || "someone"} from the crew`,
+    merged:         l => `${who(l.member_id)} merged ${l.note || "a double-up"}`,
+  };
+  log.forEach(l => { if(LOG_TEXT[l.kind]) ev.push({ at: l.at, text: LOG_TEXT[l.kind](l) }); });
   (S.plays||[]).forEach(p => {
-    ev.push({ at: p.started_at, text: `Round ${p.round_no} called: ${nm(p.appid)}` });
+    // older calls from before the log keep their plain line
+    if(!log.some(l => l.kind === "called" && l.appid === p.appid && l.round_no === p.round_no))
+      ev.push({ at: p.started_at, text: `Round ${p.round_no} called: ${nm(p.appid)}` });
     if(p.finished_at) ev.push({ at: p.finished_at, text: `Finished ${nm(p.appid)}${p.verdict ? ` · ${VERDICT_ICON[p.verdict]} ${VERDICT[p.verdict]}` : ""}` });
   });
   // sessions are a day, not a moment: count them as that evening
