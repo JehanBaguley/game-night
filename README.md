@@ -31,7 +31,7 @@ The join box on the landing page takes either the seven characters or the whole 
 | --- | --- |
 | Can a stranger find a crew? | Not by browsing. There's no list of crews anywhere, and codes are 7 characters from a 30-letter alphabet (no 0/O, 1/I/L): about 22 billion combinations. Guessing one is not a realistic attack |
 | So what's the actual risk? | The link leaking, e.g. someone screenshots the group chat. Then they can do what any member can: vote, add games, bench them, call a round |
-| What can't they do? | Delete anything. Nothing in the app destroys data: benching is reversible, rounds reopen, play history can be edited but not wiped. There's no admin to take over |
+| What can't they do? | Delete anything. For everyone else benching is reversible, rounds reopen, and play history can be edited but not wiped. Only whoever started the crew can remove things for good (see **Looking after a crew**), and nobody can become them by typing their name |
 | What protects the database itself? | Row level security with zero policies, so the public key can read one table (`games`, Steam data) and nothing else. Every write goes through a function that checks the group code, and editing the crew checks you're a member of it |
 
 ### Crew name and emoji
@@ -68,7 +68,7 @@ The `service_role` key is **not** safe. It never leaves the Supabase dashboard.
 
 **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, run it.
 
-You should see `Success. No rows returned`. That creates seventeen tables, locks them all behind row level security with no policies, and exposes thirty-seven functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
+You should see `Success. No rows returned`. That creates eighteen tables, locks them all behind row level security with no policies, and exposes forty-five functions to the anon key. That is the whole security model: no direct table access, everything through a function that takes a group code.
 
 ### 3. Edge functions
 
@@ -172,7 +172,7 @@ Picking the game and picking the nights are two separate decisions. A game like 
 | A game gets called | A line on the status card: "When are we playing? Tap your nights" |
 | Tap it | The next 10 days as chips. Tap every night you're free; yours get a tick. Each chip says how many are free and fills towards the crew's number, and the line says how far off the best night is ("Thu 24 is 1 short"). **Can't do any of these** counts as an answer too |
 | A night reaches the number | It's **pencilled in**, and the line turns lilac. Anyone can tap **Lock in Thu 24, 8pm** to lock it |
-| Locked | The line goes solid. **Add to calendar** downloads a calendar file with the game, the crew and the link. **Change night** unlocks it |
+| Locked | The line goes solid. **Add to Google Cal** opens Google Calendar with the event filled in (no download); Apple or Outlook get a calendar file instead. **Change night** unlocks it |
 | The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 sessions so far"). Either answer clears the slate for the next one |
 
 **The crew's number** lives in **⋯ → Night rules** (also one tap from the day picker, which shows the current rule): "A night works when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. You can also set a number bigger than the crew is today (up to 12): a crew of one can say "3 free", and it counts as everyone until the others join. A small crew might only play when everyone's free; a bigger one might go at 80%.
@@ -491,8 +491,9 @@ Three things fall out of that:
 | --- | --- |
 | You come back on the same device | `whoami` recognises you before the page renders. Never asked again |
 | You open the link on a second device | You type a name, and if it looks like someone already here you are offered them |
-| Someone types `sam` when `Sam` exists | Same offer. Tap it and your picks carry across |
+| Someone types `sam` when `Sam` exists | Same offer. Tap it and your picks carry across. Two people can't have exactly the same name in a crew, so if it isn't you, it asks for an initial or a nickname instead of making a `Sam (2)` |
 | You start using a new phone or computer | **Link another device** (below) brings every crew across at once |
+| A crew gets a new code | Every device already in it finds it again under the new code (`my_crews`), and says the old link doesn't work any more |
 
 **Opening a crew link and giving your name joins you to that crew** and adds it to **Your crews** on that device's landing page. That's per device, because there are no accounts.
 
@@ -500,13 +501,30 @@ Three things fall out of that:
 
 The matcher normalises case, accents and punctuation, then scores four ways: exact match, one name being a prefix of the other (`Sam` / `Sam L`), a shared first token (`Sam L` / `Sam B`), and an edit distance of one or two (`Sam` / `Samm`). Anything scoring 60 or above is offered, with enough context to recognise yourself: how many picks they have, when they were last here, how many devices.
 
-Claiming is additive, not a takeover. The original device keeps working, and a person with more than one device linked shows a small count in the crew list, which is the only visible signal that it happened.
+Claiming is additive, not a takeover. The one exception is whoever started the crew: they can't be claimed by name at all, only linked from a device they already use, so nobody can pick "that's me" and take over the tidy-up powers. The original device keeps working, and a person with more than one device linked shows a small count in the crew list, which is the only visible signal that it happened.
 
 Nobody is asked for a name until they tap their first pick. Every step before the payoff is a place to leave.
 
 ### Removing things
 
-Nothing is ever deleted. Any member can take a game off the shelf with **Bench it** in the game's detail sheet, which pulls it out of everyone's current picks. Takes and the whole play history survive, the **Benched** filter chip finds it again, and **Put it back** undoes it. Reversible, and nobody can nuke the shelf.
+Any member can take a game off the shelf with **Bench it** (in the game's detail sheet, under **Off the shelf**), which pulls it out of everyone's current picks. Takes and the whole play history survive, the **Benched** filter chip finds it again, and **Put it back** undoes it. Reversible, and nobody can nuke the shelf.
+
+### Looking after a crew
+
+The first person in (whoever made it) looks after the crew. There's no role to hand out or password to set; the server works it out as the earliest member each time. They get:
+
+| Where | What | Why |
+| --- | --- | --- |
+| Game details, **Off the shelf** | **Remove for good** | A game added twice or by mistake. Votes, nights and who-owns-it go; finished games stay in the record |
+| Menu, **Manage crew** | **Merge** two people | The same person joined twice. Picks, nights, owns and devices move across; where both answered, the one you keep wins. Likely double-ups are flagged |
+| Menu, **Manage crew** | **Remove** someone | Their picks and nights go, they can join again with the link |
+| Menu, **Manage crew** | **Delete this crew** | For good, for everyone. Asks first |
+
+Everyone else sees none of this. All four are checked server-side (`crew_remove_game`, `crew_merge_members`, `crew_remove_member`, `crew_delete`), so hiding the buttons isn't the security.
+
+### The owner page
+
+`…/#/admin` is for whoever runs the Supabase project. It takes an owner key (stored in `admin_keys` only as a SHA-256 hash; add one with `insert into admin_keys(hash) values (encode(sha256(convert_to('your-long-key','UTF8')),'hex'))`) and then lists every crew with its link, who's in, their devices and when they were last here. From there you can give a crew a **New code** (everything follows it; handy if a link leaks) or **Delete** it. The key lives in that browser only, and without it the page shows nothing.
 
 ---
 
@@ -539,7 +557,7 @@ Both are covered in steps 3 and 5 of the setup above.
 | File | What it is |
 | --- | --- |
 | `index.html` | The whole app. No build step |
-| `supabase/schema.sql` | Seventeen tables, row level security, thirty-seven RPCs |
+| `supabase/schema.sql` | Eighteen tables, row level security, forty-five RPCs |
 | `supabase/functions/card/index.ts` | Serves Open Graph tags per group so links unfurl in chat, then redirects |
 | `supabase/functions/prices/index.ts` | Refreshes Steam prices (AUD) for a crew's shelf, at most every four hours per game |
 | `supabase/functions/discord/index.ts` | Posts and edits the crew's live Discord scoreboard through their webhook |

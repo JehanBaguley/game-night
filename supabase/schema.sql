@@ -1085,3 +1085,309 @@ begin
      where d.device_id = p_device), '[]'::json);
 end; $$;
 grant execute on function finish_pairing(text, uuid) to anon;
+
+-- ---------------------------------------------------------------------------
+-- CHANGING A CREW'S CODE, AND YOUR CREWS BY DEVICE
+-- Every foreign key to a crew now follows its code, so a crew can get a new
+-- code with all its data intact. Devices stay linked through member_devices,
+-- so members' browsers find the crew again by device (my_crews); anyone who
+-- only has the old code gets nothing.
+-- ---------------------------------------------------------------------------
+do $$
+declare r record; def text;
+begin
+  for r in
+    select c.conname, c.conrelid::regclass as tbl, pg_get_constraintdef(c.oid) as d
+      from pg_constraint c
+     where c.contype = 'f' and c.confrelid in ('public.groups'::regclass, 'public.side_games'::regclass)
+       and pg_get_constraintdef(c.oid) not ilike '%on update cascade%'
+  loop
+    execute format('alter table %s drop constraint %I', r.tbl, r.conname);
+    execute format('alter table %s add constraint %I %s on update cascade', r.tbl, r.conname, r.d);
+  end loop;
+end $$;
+
+-- the crews this browser belongs to, with the name it goes by in each
+create or replace function my_crews(p_device uuid)
+returns json language sql security definer set search_path = public stable as $$
+  select coalesce(json_agg(json_build_object('code', g.code, 'name', g.name, 'emoji', g.emoji, 'me', m.name) order by g.name), '[]'::json)
+    from member_devices d join groups g on g.code = d.group_code
+    join members m on m.group_code = d.group_code and m.member_id = d.member_id
+   where d.device_id = p_device;
+$$;
+grant execute on function my_crews(uuid) to anon;
+
+-- ---------------------------------------------------------------------------
+-- THE OWNER'S PAGE (#/admin)
+-- One secret key, stored only as a SHA-256 hash. With it: every crew, its
+-- link, who's in and when they were last here, and a button to give a crew a
+-- new code. Without it, nothing.
+-- ---------------------------------------------------------------------------
+create table if not exists admin_keys (
+  hash       text primary key,
+  created_at timestamptz not null default now()
+);
+alter table admin_keys enable row level security;
+revoke all on admin_keys from anon, authenticated;
+
+create or replace function assert_admin(p_key text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if p_key is null or length(p_key) < 20 or not exists (
+       select 1 from admin_keys where hash = encode(sha256(convert_to(p_key, 'UTF8')), 'hex')) then
+    raise exception 'not the owner key';
+  end if;
+end; $$;
+revoke execute on function assert_admin(text) from public, anon, authenticated;
+
+create or replace function admin_overview(p_key text)
+returns json language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_admin(p_key);
+  return coalesce((
+    select json_agg(json_build_object(
+      'code', g.code, 'name', g.name, 'emoji', g.emoji, 'created_at', g.created_at,
+      'round_no', g.round_no, 'playing', (select name from games where appid = g.locked_appid),
+      'paused', g.paused_at is not null, 'discord', g.discord_hook is not null,
+      'games', (select count(*) from shelf s where s.group_code = g.code and not s.benched),
+      'last_seen', (select max(last_seen) from members m where m.group_code = g.code),
+      'members', coalesce((
+        select json_agg(json_build_object(
+          'name', m.name, 'first_seen', m.first_seen, 'last_seen', m.last_seen,
+          'devices', (select count(*) from member_devices d where d.group_code = g.code and d.member_id = m.member_id),
+          'voted', exists (select 1 from ballots b where b.group_code = g.code and b.member_id = m.member_id
+                                                      and b.round_no = g.round_no and coalesce(array_length(b.picks, 1), 0) > 0)
+        ) order by m.first_seen) from members m where m.group_code = g.code), '[]'::json)
+    ) order by g.created_at) from groups g), '[]'::json);
+end; $$;
+grant execute on function admin_overview(text) to anon;
+
+create or replace function admin_rotate_code(p_key text, p_code text)
+returns text language plpgsql security definer set search_path = public as $$
+declare c text; tries int := 0;
+begin
+  perform assert_admin(p_key);
+  if not exists (select 1 from groups where code = p_code) then raise exception 'no crew with that code'; end if;
+  loop
+    c := make_code();
+    exit when not exists (select 1 from groups where code = c);
+    tries := tries + 1; if tries > 20 then raise exception 'try again'; end if;
+  end loop;
+  update groups set code = c where code = p_code;           -- every table follows via on update cascade
+  update games set custom_group = c where custom_group = p_code;
+  update groups set discord_msg = null, discord_sig = null where code = c;  -- next update posts a fresh scoreboard with the new link
+  return c;
+end; $$;
+grant execute on function admin_rotate_code(text, text) to anon;
+
+-- owner-only: delete a crew and everything in it (every table cascades from groups)
+create or replace function admin_delete_crew(p_key text, p_code text)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_admin(p_key);
+  if not exists (select 1 from groups where code = p_code) then raise exception 'no crew with that code'; end if;
+  delete from groups where code = p_code;
+  -- games added by hand belonged to this crew only
+  delete from games g where g.custom_group = p_code
+     and not exists (select 1 from shelf s where s.appid = g.appid);
+end; $$;
+grant execute on function admin_delete_crew(text, text) to anon;
+
+-- ---------------------------------------------------------------------------
+-- ONE NAME, ONE PERSON
+-- Two people can't go by exactly the same name in a crew (case, accents and
+-- spacing ignored). "Sam" and "Sam B" are fine; a second "sam" is refused, so
+-- the page never has to show "Sam (2)".
+-- ---------------------------------------------------------------------------
+create or replace function name_key(p text)
+returns text language sql immutable as $$
+  select trim(regexp_replace(lower(coalesce(p, '')), '\s+', ' ', 'g'));
+$$;
+
+create or replace function assert_name_free(p_code text, p_name text, p_except uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from members where group_code = p_code
+                and member_id is distinct from p_except and name_key(name) = name_key(p_name)) then
+    raise exception 'someone here is already called %', trim(p_name);
+  end if;
+end; $$;
+revoke execute on function assert_name_free(text, text, uuid) from public, anon, authenticated;
+
+create or replace function join_as_new(p_code text, p_device uuid, p_person text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare m uuid; nm text := left(coalesce(nullif(trim(p_person),''),'Someone'), 24);
+begin
+  if not exists (select 1 from groups where code = p_code) then
+    raise exception 'no group with that code';
+  end if;
+
+  m := member_of(p_code, p_device);
+  if m is not null then
+    -- already linked, so this is a rename rather than a second person
+    perform assert_name_free(p_code, nm, m);
+    update members set name = nm, last_seen = now()
+     where group_code = p_code and member_id = m;
+    return m;
+  end if;
+
+  if (select count(*) from members where group_code = p_code) >= 60 then
+    raise exception 'this group already has 60 people';
+  end if;
+  perform assert_name_free(p_code, nm, null);
+
+  insert into members(group_code, name) values (p_code, nm) returning member_id into m;
+  insert into member_devices(group_code, device_id, member_id) values (p_code, p_device, m);
+  return m;
+end; $$;
+
+create or replace function rename_me(p_code text, p_device uuid, p_person text)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid; nm text := left(coalesce(nullif(trim(p_person),''),'Someone'), 24);
+begin
+  m := assert_member(p_code, p_device);
+  perform assert_name_free(p_code, nm, m);
+  update members set name = nm where group_code = p_code and member_id = m;
+end; $$;
+
+-- ---------------------------------------------------------------------------
+-- WHOEVER STARTED THE CREW LOOKS AFTER IT
+-- The first person in (the one who made it, unless they've been removed) can
+-- tidy up: take a game off the shelf for good, remove someone, or fold a
+-- duplicate person into the real one. Everyone else can still bench games.
+-- ---------------------------------------------------------------------------
+create or replace function crew_admin_of(p_code text)
+returns uuid language sql security definer set search_path = public stable as $$
+  select member_id from members where group_code = p_code order by first_seen, member_id limit 1;
+$$;
+revoke execute on function crew_admin_of(text) from public, anon, authenticated;
+
+create or replace function assert_crew_admin(p_code text, p_device uuid)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if m is distinct from crew_admin_of(p_code) then
+    raise exception 'only the person who started the crew can do that';
+  end if;
+  return m;
+end; $$;
+revoke execute on function assert_crew_admin(text, uuid) from public, anon, authenticated;
+
+-- off the shelf for good: votes, nights and who-owns-it go; finished-game history stays
+create or replace function crew_remove_game(p_code text, p_device uuid, p_appid int)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_crew_admin(p_code, p_device);
+  if (select locked_appid from groups where code = p_code) = p_appid then
+    raise exception 'that''s the game you''re playing. Finish it first';
+  end if;
+  delete from side_games where group_code = p_code and appid = p_appid;     -- side_players cascade
+  delete from takes      where group_code = p_code and appid = p_appid;
+  delete from owns       where group_code = p_code and appid = p_appid;
+  delete from sesh_free  where group_code = p_code and appid = p_appid;
+  delete from sesh_none  where group_code = p_code and appid = p_appid;
+  delete from sesh_lock  where group_code = p_code and appid = p_appid;
+  update ballots set picks = array_remove(picks, p_appid), updated_at = now()
+   where group_code = p_code and p_appid = any(picks);
+  delete from shelf where group_code = p_code and appid = p_appid;
+  delete from games g where g.appid = p_appid and g.custom_group = p_code
+     and not exists (select 1 from plays p where p.appid = g.appid)
+     and not exists (select 1 from sessions s where s.appid = g.appid);
+end; $$;
+grant execute on function crew_remove_game(text, uuid, int) to anon;
+
+-- someone left or was a mistake: their picks, nights and devices go with them
+create or replace function crew_remove_member(p_code text, p_device uuid, p_member uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare me uuid;
+begin
+  me := assert_crew_admin(p_code, p_device);
+  if p_member = me then raise exception 'you can''t remove yourself'; end if;
+  if not exists (select 1 from members where group_code = p_code and member_id = p_member) then
+    raise exception 'no such person in this crew';
+  end if;
+  delete from ballots        where group_code = p_code and member_id = p_member;
+  delete from takes          where group_code = p_code and member_id = p_member;
+  delete from owns           where group_code = p_code and member_id = p_member;
+  delete from sesh_free      where group_code = p_code and member_id = p_member;
+  delete from sesh_none      where group_code = p_code and member_id = p_member;
+  delete from side_players   where group_code = p_code and member_id = p_member;
+  delete from member_devices where group_code = p_code and member_id = p_member;
+  delete from members        where group_code = p_code and member_id = p_member;
+end; $$;
+grant execute on function crew_remove_member(text, uuid, uuid) to anon;
+
+-- the same person twice: everything from p_from moves onto p_into (where both
+-- have an answer, p_into's stays), their devices link to p_into, p_from goes
+create or replace function crew_merge_members(p_code text, p_device uuid, p_from uuid, p_into uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_crew_admin(p_code, p_device);
+  if p_from = p_into then raise exception 'pick two different people'; end if;
+  if (select count(*) from members where group_code = p_code and member_id in (p_from, p_into)) <> 2 then
+    raise exception 'no such person in this crew';
+  end if;
+  -- where both answered, keep p_into's; a blank ballot doesn't count as an answer
+  delete from ballots f where f.group_code = p_code and f.member_id = p_from and exists (
+    select 1 from ballots i where i.group_code = p_code and i.member_id = p_into and i.round_no = f.round_no
+       and coalesce(array_length(i.picks, 1), 0) > 0);
+  delete from ballots i where i.group_code = p_code and i.member_id = p_into and exists (
+    select 1 from ballots f where f.group_code = p_code and f.member_id = p_from and f.round_no = i.round_no);
+  update ballots set member_id = p_into where group_code = p_code and member_id = p_from;
+  delete from takes f where f.group_code = p_code and f.member_id = p_from
+     and exists (select 1 from takes i where i.group_code = p_code and i.member_id = p_into and i.appid = f.appid);
+  update takes set member_id = p_into where group_code = p_code and member_id = p_from;
+  delete from owns f where f.group_code = p_code and f.member_id = p_from
+     and exists (select 1 from owns i where i.group_code = p_code and i.member_id = p_into and i.appid = f.appid);
+  update owns set member_id = p_into where group_code = p_code and member_id = p_from;
+  delete from sesh_free f where f.group_code = p_code and f.member_id = p_from
+     and exists (select 1 from sesh_free i where i.group_code = p_code and i.member_id = p_into and i.appid = f.appid and i.day = f.day);
+  update sesh_free set member_id = p_into where group_code = p_code and member_id = p_from;
+  delete from sesh_none f where f.group_code = p_code and f.member_id = p_from
+     and exists (select 1 from sesh_none i where i.group_code = p_code and i.member_id = p_into and i.appid = f.appid);
+  update sesh_none set member_id = p_into where group_code = p_code and member_id = p_from;
+  delete from side_players f where f.group_code = p_code and f.member_id = p_from
+     and exists (select 1 from side_players i where i.group_code = p_code and i.member_id = p_into and i.appid = f.appid);
+  update side_players set member_id = p_into where group_code = p_code and member_id = p_from;
+  update shelf      set added_by   = p_into where group_code = p_code and added_by   = p_from;
+  update sesh_lock  set locked_by  = p_into where group_code = p_code and locked_by  = p_from;
+  update side_games set started_by = p_into where group_code = p_code and started_by = p_from;
+  update member_devices set member_id = p_into where group_code = p_code and member_id = p_from;
+  -- the merged person keeps the earlier join date, so a merge never changes who runs the crew
+  update members i set first_seen = least(i.first_seen, f.first_seen), last_seen = greatest(i.last_seen, f.last_seen)
+    from members f where i.group_code = p_code and i.member_id = p_into and f.group_code = p_code and f.member_id = p_from;
+  delete from members where group_code = p_code and member_id = p_from;
+end; $$;
+grant execute on function crew_merge_members(text, uuid, uuid, uuid) to anon;
+
+-- whoever started the crew can delete it (same as the owner page)
+create or replace function crew_delete(p_code text, p_device uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  perform assert_crew_admin(p_code, p_device);
+  delete from groups where code = p_code;
+  delete from games g where g.custom_group = p_code
+     and not exists (select 1 from shelf s where s.appid = g.appid);
+end; $$;
+grant execute on function crew_delete(text, uuid) to anon;
+
+-- Nobody can say "that's me" to become whoever started the crew: they add
+-- another device with Link another device, which needs a device already in.
+create or replace function claim_member(p_code text, p_device uuid, p_member uuid)
+returns uuid language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from members where group_code = p_code and member_id = p_member) then
+    raise exception 'no such person in this group';
+  end if;
+  if p_member = crew_admin_of(p_code) and member_of(p_code, p_device) is distinct from p_member then
+    raise exception 'they started this crew, so to add a device use Link another device on one they already use';
+  end if;
+
+  insert into member_devices(group_code, device_id, member_id)
+       values (p_code, p_device, p_member)
+  on conflict (group_code, device_id) do update set member_id = excluded.member_id;
+
+  update members set last_seen = now() where group_code = p_code and member_id = p_member;
+  return p_member;
+end; $$;

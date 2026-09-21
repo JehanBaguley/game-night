@@ -791,6 +791,7 @@ td.r{text-align:right;white-space:nowrap}
 .sheetwrap{position:fixed;inset:0;z-index:60;background:rgba(10,12,15,.62);display:grid;place-items:end center;overscroll-behavior:contain}
 @media (min-width:640px){ .sheetwrap{place-items:center;padding:20px} }
 /* opening: the scrim fades, the sheet rises (phone) or settles (desktop) */
+.grab{display:none}
 .sheetwrap.enter{animation:scrimin .2s ease-out}
 .sheetwrap.enter .sheet{animation:sheetup .28s cubic-bezier(.2,.8,.2,1)}
 @keyframes scrimin{from{background-color:rgba(10,12,15,0)}}
@@ -811,8 +812,12 @@ td.r{text-align:right;white-space:nowrap}
 @media (max-width:639px){
   .sheet:not(.sheet--tall){min-height:min(54dvh, 560px)}
   .sheet:not(.sheet--tall) > .row:last-child{margin-top:auto;padding-top:4px}
-  .sheet:not(.sheet--tall)::before{content:"";flex:none;align-self:center;width:40px;height:5px;border-radius:999px;background:var(--line-strong);margin:-10px 0 0;padding:0;box-shadow:0 0 0 12px transparent}
-  .sheet:not(.sheet--tall){touch-action:pan-y;will-change:transform}
+  .sheet:not(.sheet--tall){will-change:transform}
+  /* the grabber is a real 28px strip across the top: the browser never scrolls
+     from it, so a drag there always moves the sheet */
+  .sheet:not(.sheet--tall) > .grab{display:block;flex:none;height:26px;margin:-20px -18px -8px;position:relative;touch-action:none;cursor:grab}
+  .grab::after{content:"";position:absolute;left:50%;top:10px;width:40px;height:5px;border-radius:999px;background:var(--line-strong);transform:translateX(-50%);transition:background .15s,width .15s}
+  .sheet.dragging .grab::after{background:var(--ink-2);width:48px}
 }
 
 /* The filter sheet is the one that needs real height, a scrolling middle and a
@@ -977,7 +982,22 @@ td.r{text-align:right;white-space:nowrap}
 /* emoji + name + Create always share one row: the name field gives way first */
 .add .row--one{flex-wrap:nowrap}
 .add .row--one .input{flex:1 1 0;min-width:0}
-.hint--bad{color:var(--e3)}
+.hint--bad,.sheet .hint--bad{color:var(--e3)}
+.plist{display:flex;flex-direction:column;gap:6px}
+.prow{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-md);background:var(--surface-2);flex-wrap:wrap}
+.prow .dot{width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-weight:700;font-size:12px;color:#fff;flex:none}
+.prow .txt{min-width:0;flex:1 1 100px;display:flex;flex-direction:column}
+.prow .txt b{font-size:14px;font-weight:700}
+.prow .txt em{font-style:normal;font-weight:600;font-size:11px;color:var(--muted)}
+.prow .txt span{font-size:12px;color:var(--muted)}
+.prow .txt .twin{font-size:12px;font-weight:600;color:var(--ink-2)}
+.pacts{display:flex;gap:4px;margin-left:auto}
+.pacts .btn--sm{padding-inline:10px}
+.pdanger{color:var(--e3)}
+.rmgame{display:flex;flex-direction:column;gap:6px}
+.offrow{display:flex;gap:8px;flex-wrap:wrap}
+.cand--locked,.cand--locked:hover{opacity:.8;cursor:default;background:var(--surface-2)}
+.input[aria-invalid="true"],.input[aria-invalid="true"]:focus{border-color:var(--e3);box-shadow:0 0 0 3px color-mix(in srgb, var(--e3) 22%, transparent)}
 
 /* ---------- next sesh ---------- */
 .status{flex-wrap:wrap}
@@ -1091,6 +1111,26 @@ tbody tr[data-row]{cursor:pointer}
 .rowname .chev{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:2.2;margin-left:auto}
 .paircode{font-size:30px;font-weight:800;letter-spacing:.14em;text-align:center;padding:12px;border-radius:var(--r-md);background:var(--surface);color:var(--ink)}
 .pairlink{margin-top:10px}
+.mygroup--here{background:var(--accent-soft)}
+.mygroup--here .cd{color:var(--accent-text);letter-spacing:0;font-weight:600}
+/* owner page */
+.admin{padding-bottom:40px}
+.admlist{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.admcrew{display:flex;flex-direction:column;gap:10px}
+.admhead{display:flex;align-items:center;gap:12px}
+.admemoji{font-size:28px;line-height:1}
+.admid{display:flex;flex-direction:column;gap:2px;min-width:0}
+.admid b{font-size:16px}
+.admid span{font-size:12px;color:var(--muted)}
+.admlink{flex-wrap:wrap;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.admlink code{flex:1 1 220px;min-width:0;font-size:12px;background:var(--surface-2);border-radius:var(--r-sm);padding:8px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admpeople{min-width:0;width:100%;font-size:12.5px}
+.admpeople th,.admpeople td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line)}
+.admpeople th{position:static}
+.admacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.admacts .admdelask{margin-left:auto;color:var(--e3)}
+.btn--danger{background:var(--e3);color:var(--e3-ink);border-color:transparent}
+.admacts .hint{margin:0;flex:1 1 200px}
 .snapwrap{position:relative;border-radius:var(--r-md);overflow:hidden;background:#2B2D31;min-height:120px;display:grid;place-items:center}
 .snapwrap img{display:block;width:100%;height:auto;opacity:0;transition:opacity .2s}
 .snapwrap.ready img{opacity:1}
@@ -1131,6 +1171,7 @@ tbody tr[data-row]{cursor:pointer}
 .seshwho{font-size:12.5px;color:var(--ink-2);line-height:1.55}
 .seshwho b{color:var(--ink);font-weight:650}
 .linkbtn{align-self:flex-start;font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
+.calrow .btn{white-space:nowrap;text-decoration:none;justify-content:center;text-align:center}
 .linkbtn:hover{color:var(--ink-2)}
 .linkbtn:disabled{text-decoration:none;cursor:default}
 #seshbody{display:flex;flex-direction:column;gap:12px}
@@ -1898,7 +1939,9 @@ function seshBody(d, x){
     if(waiting.length) who = `<p class="seshwho">Waiting on ${esc(people(waiting))}</p>`;
   }
   const acts = x.lock
-    ? `<div class="row"><button class="btn" id="icsgo">Add to calendar</button><button class="btn btn--ghost" id="unlockgo">Change night</button></div>`
+    ? `<div class="row calrow"><a class="btn" id="gcalgo" href="${esc(gcalUrl({ ...(d.gamesById[x.appid] || {}), appid: x.appid }, x.lock.day))}" target="_blank" rel="noopener">Add to Google Cal</a>
+         <button class="btn btn--ghost" id="unlockgo">Change night</button></div>
+       <button class="linkbtn" id="icsgo">Apple or Outlook? Get a calendar file</button>`
     : x.pencil
     ? `<div class="row"><button class="btn" id="lockgo" data-lday="${x.pencil}">Lock in ${esc(dayLabel(x.pencil))}, ${esc(t)}</button></div>`
     : "";
@@ -1934,20 +1977,32 @@ function parseTime(t){
   if(m[3] === "am" && h === 12) h = 0;
   return h < 24 && mm < 60 ? { h, m: mm } : { h: 20, m: 0 };
 }
-const icsEsc = s => String(s).replace(/[\;,]/g, c => "\\" + c).replace(/\n/g, "\\n");
-function downloadIcs(game, day){
+/** The night's start and end in local time, plus the crew link: shared by both calendar options. */
+function seshEvent(game, day){
   const t = parseTime(S.group.sesh_time);
   const start = dayDate(day); start.setHours(t.h, t.m, 0, 0);
   const end = new Date(start.getTime() + 3 * 36e5);                 // three hours, a normal night
-  // floating local time: the calendar puts it at 8pm wherever the phone is
   const stamp = dt => isoDay(dt).replace(/-/g, "") + "T" + pad2(dt.getHours()) + pad2(dt.getMinutes()) + "00";
   const link = location.origin + location.pathname + "#/g/" + S.group.code;
+  const title = (S.group.emoji || DEFAULT_EMOJI) + " " + (game.name || "Game night") + " · " + S.group.name;
+  return { start: stamp(start), end: stamp(end), link, title };
+}
+/** Opens Google Calendar's "new event" page already filled in: no file, one tap to save. */
+function gcalUrl(game, day){
+  const e = seshEvent(game, day);
+  const q = new URLSearchParams({ action: "TEMPLATE", text: e.title, dates: e.start + "/" + e.end, details: "Locked in on Game Night. " + e.link });
+  return "https://calendar.google.com/calendar/render?" + q.toString();
+}
+const icsEsc = s => String(s).replace(/[\;,]/g, c => "\\" + c).replace(/\n/g, "\\n");
+function downloadIcs(game, day){
+  // floating local time: the calendar puts it at 8pm wherever the phone is
+  const e = seshEvent(game, day), link = e.link;
   const ics = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Game Night//EN", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
     "UID:" + S.group.code + "-" + game.appid + "-" + day + "@gamenight",
     "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z",
-    "DTSTART:" + stamp(start), "DTEND:" + stamp(end),
-    "SUMMARY:" + icsEsc((S.group.emoji || DEFAULT_EMOJI) + " " + (game.name || "Game night") + " · " + S.group.name),
+    "DTSTART:" + e.start, "DTEND:" + e.end,
+    "SUMMARY:" + icsEsc(e.title),
     "DESCRIPTION:" + icsEsc("Locked in on Game Night. " + link),
     "URL:" + link, "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
@@ -2176,6 +2231,15 @@ function lev(a, b){
   return prev[n];
 }
 /** Everyone in the group who might already be this person. */
+/** Whoever joined first looks after the crew (the server checks the same thing). */
+const crewAdminId = () => ((S && S.members) || [])[0]?.member_id;
+const iRunCrew = () => !!myMemberId && myMemberId === crewAdminId();
+/** Someone else in the crew already goes by exactly this name (ignoring case, accents, spacing). */
+function nameTaken(input, members, exceptId){
+  const n = normName(input);
+  const hit = n && (members || []).find(m => m.member_id !== exceptId && normName(m.name) === n);
+  return hit ? hit.name : "";     // their spelling, for the error message
+}
 function nameMatches(input, members){
   const n = normName(input);
   if (!n) return [];
@@ -2331,7 +2395,7 @@ async function rpc(fn, args){
    (a round called, a night locked, a new round) post a fresh message instead,
    which pings the channel and lands at the bottom. */
 const DISCORD_WRITES = new Set(["set_picks","add_game","bench_game","unbench_game","close_round","reopen_round","new_round",
-  "set_break","set_free","set_none","lock_sesh","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","update_group","rename_me"]);
+  "set_break","set_free","set_none","lock_sesh","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","update_group","rename_me","crew_remove_game","crew_remove_member","crew_merge_members"]);
 const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","start_side_game"]);
 let discordTimer = null, discordFresh = false;
 function queueDiscord(fresh){
@@ -2796,8 +2860,11 @@ async function refresh(opts = {}){
     render();
   }catch(err){
     if(/no group/i.test(err.message)){
+      // the crew's gone or has a new code: drop the old one, and if this device
+      // was in it, my_crews brings it back under the new code
       myGroups = myGroups.filter(g => g.code !== code);
       store.set("groups", myGroups);
+      crewMoved = true; crewsSynced = false;
       location.hash = "";
     }
   }
@@ -3199,7 +3266,8 @@ function renderNow(){
   if(!SDK_OK) return renderNoSDK();
   if(!CONFIGURED) return renderSetup();
   const m = location.hash.match(/^#\/g\/([A-Za-z0-9]+)/);
-  if(!m){ code=""; setTabIdentity(DEFAULT_EMOJI, "Game Night"); applyCrewColour(null); return renderLanding(); }
+  if(/^#\/admin/.test(location.hash)){ code=""; setTabIdentity("🔑", "Game Night · owner"); applyCrewColour(null); return renderAdmin(); }
+  if(!m){ code=""; setTabIdentity(DEFAULT_EMOJI, "Game Night"); applyCrewColour(null); syncMyCrews(); return renderLanding(); }
   const wasCode = code;
   code = m[1].toUpperCase();
   if(code !== wasCode) loadF();
@@ -3434,10 +3502,18 @@ function renderGroup(){
                     <li><b>Call it</b> once enough of you have picked</li>
                   </ol>
                 </div>`
-            : `<div class="empty"><b>Nothing survived that</b>
-                 ${F.crew ? "Nothing here seats "+F.crew+" of you." : F.q ? "Nothing on the shelf called that." : "That is a lot of filters."}
-                 <br><button class="clearall" id="clearall2">Clear the lot</button>
-               </div>`}
+            : `<div class="shelf0 shelf0--none">
+                  <span class="shelf0-e" aria-hidden="true">🔍</span>
+                  <h3>${F.q ? `No “${esc(F.q.trim())}” on the shelf` : "Nothing fits all that"}</h3>
+                  <p>${F.q
+                    ? (active.length > (F.q ? 1 : 0) ? "Your filters might be hiding it too. " : "") + "Not on the shelf yet? Look it up and it's up for a vote straight away."
+                    : F.crew && active.length === 1 ? `Nothing here seats ${F.crew} of you. Loosen a filter or two, or add something that does.`
+                    : "That's a lot of filters. Loosen one or two, or add something new."}</p>
+                  <div class="shelf0-acts">
+                    ${F.q ? `<button class="btn" id="addfromq">Add “${esc(F.q.trim().slice(0, 28))}”</button>` : `<button class="btn" id="addfirst">Add a game</button>`}
+                    <button class="btn btn--ghost" id="clearall2">Clear ${active.length > 1 || !F.q ? "filters" : "search"}</button>
+                  </div>
+                </div>`}
 
         </main>
 
@@ -3718,7 +3794,7 @@ function card(s, d){
 // backlogCard removed: card() handles every state, so there is one component
 /* ---------- sheets ---------- */
 function renderSheet(d){
-  const shell = inner => `<div class="sheetwrap" data-scrim><div class="sheet" role="dialog" aria-modal="true">${inner}</div></div>`;
+  const shell = inner => `<div class="sheetwrap" data-scrim><div class="sheet" role="dialog" aria-modal="true"><div class="grab" aria-hidden="true"></div>${inner}</div></div>`;
 
   if(sheet.kind === "name"){
     if(sheet.step === "match"){
@@ -3735,13 +3811,17 @@ function renderSheet(d){
           else bits.push("no picks yet");
           bits.push("last here " + ago(c.last_seen));
           if(c.device_count>1) bits.push(c.device_count+" devices");
+          // whoever started the crew can't be claimed by name, only linked from a device they already use
+          if(c.member_id === crewAdminId()) return `<div class="cand cand--locked">
+            <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
+            <span class="txt"><b>${esc(c.name)}</b><span>Started this crew. If that's you, open the menu on your usual device and use Link another device.</span></span></div>`;
           return `<button class="cand" data-claim="${esc(c.member_id)}">
             <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
             <span class="txt"><b>${esc(c.name)}</b><span>${esc(bits.join(" · "))}</span></span>
             <span style="color:var(--muted)">→</span></button>`;
         }).join("")}
         <div class="row">
-          <button class="btn btn--ghost" id="notme">Nah, I'm new</button>
+          <button class="btn btn--ghost" id="notme">${nameTaken(sheet.typed, S.members) ? "Not me, pick another name" : "Nah, I'm new"}</button>
         </div>`);
     }
     const returning = !!myName;
@@ -3750,7 +3830,8 @@ function renderSheet(d){
       <p>${returning
         ? "We know you on this device. Only change it if you are, in fact, someone else."
         : "Just a name for the list. No signup, nothing to remember."}</p>
-      <input class="input" id="nameinput" placeholder="Your name" maxlength="24" value="${esc(sheet.typed||"")}">
+      <input class="input" id="nameinput" placeholder="Your name" maxlength="24" value="${esc(sheet.typed||"")}"${sheet.taken ? ` aria-invalid="true" aria-describedby="nameerr"` : ""}>
+      ${sheet.taken ? `<p class="hint hint--bad" id="nameerr" role="alert">Someone here's already ${esc(sheet.taken)}. Add an initial or a nickname so the crew can tell you apart.</p>` : ""}
       <div class="row"><button class="btn" id="namego">${returning ? "Continue as "+esc(myName) : "That's me"}</button></div>`);
   }
 
@@ -3846,7 +3927,17 @@ function renderSheet(d){
           <span class="eyebrow">On the side</span>
           <p class="fhint">Fewer of you, alongside ${esc((d.gamesById[S.group.locked_appid]||{}).name || "the main game")}. It gets its own strip and picks its own nights.</p>
           <button class="btn btn--ghost" id="sidego">Play it on the side</button>` : ""}
-        ${stateOf(s, d) === "open" ? `<button class="danger" id="retirego">Bench it</button>` : ""}
+        ${(() => {
+          // bench is for everyone and undoable; removing for good is only for whoever started the crew
+          const canBench = stateOf(s, d) === "open", canRemove = iRunCrew() && S.group.locked_appid !== sheet.appid;
+          if(!canBench && !canRemove) return "";
+          if(sheet.rmgame) return `<div class="rmgame"><p class="hint hint--bad">Takes it off the shelf for good: its votes, nights and who owns it. Games you've finished stay in your record.</p>
+               <div class="row"><button class="btn btn--ghost btn--sm" id="rmgameno">Keep it</button><button class="btn btn--sm btn--danger" id="rmgameyes">Remove for good</button></div></div>`;
+          return `<span class="eyebrow">Off the shelf</span>
+            <p class="fhint">${canBench ? "Bench it to take it out of the vote. It sits on the bench and comes back any time." : ""}${canRemove ? (canBench ? " " : "") + "Added by mistake or a double-up? Remove it for good." : ""}</p>
+            <div class="offrow">${canBench ? `<button class="btn btn--ghost btn--sm" id="retirego">Bench it</button>` : ""}${
+              canRemove ? `<button class="btn btn--ghost btn--sm pdanger" id="rmgameask">Remove for good…</button>` : ""}</div>`;
+        })()}
       </div>
       <div class="sheetfoot"><button class="btn" id="facetgo">Save</button></div>
     </div></div>`;
@@ -3968,6 +4059,37 @@ function renderSheet(d){
         <div class="row"><button class="btn btn--ghost" ${sheet.back ? "data-shareback" : "data-dismiss"}>${sheet.back ? "Back" : "Cancel"}</button><button class="btn" id="dcgo" disabled>Connect</button></div>`}`);
   }
 
+  if(sheet.kind === "people"){
+    const ms = d.members, me = myMemberId;
+    const meta = mm => [mm.member_id === crewAdminId() ? "started the crew" : "",
+      mm.device_count > 1 ? mm.device_count + " devices" : "", "last here " + ago(mm.last_seen)].filter(Boolean).join(" · ");
+    const dot = mm => `<span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(monogram(mm.name))}</span>`;
+    if(sheet.merge){
+      const from = ms.find(x => x.member_id === sheet.merge);
+      if(from) return shell(`<h3>Who's ${esc(from.label)} really?</h3>
+        <p>Their picks, nights and devices move across. Where both answered, the one you tap keeps theirs.</p>
+        ${ms.filter(x => x.member_id !== from.member_id).map(x => `<button class="cand" data-mergeinto="${esc(x.member_id)}">${dot(x)}
+          <span class="txt"><b>${esc(x.label)}</b><span>${esc(meta(x))}</span></span><span style="color:var(--muted)">→</span></button>`).join("")}
+        <div class="row"><button class="btn btn--ghost" data-peopleback>Back</button></div>`);
+    }
+    return shell(`<h3>Manage crew</h3>
+      <p>You started the crew, so tidying up is on you. Removing someone clears their picks and nights; they can join again with the link.</p>
+      <div class="plist">${ms.map(mm => {
+        const twin = mm.member_id !== me && ms.find(x => x.member_id !== mm.member_id && nameMatches(mm.name, [x]).length);
+        return `<div class="prow">${dot(mm)}
+          <span class="txt"><b>${esc(mm.label)}${mm.member_id === me ? ` <em>you</em>` : ""}</b>
+            <span>${esc(meta(mm))}${twin ? ` · <b class="twin">maybe ${esc(twin.label)}?</b>` : ""}</span></span>
+          ${mm.member_id === me ? "" : sheet.rm === mm.member_id
+            ? `<span class="pacts"><button class="btn btn--ghost btn--sm" data-rmno>Keep</button><button class="btn btn--sm btn--danger" data-rmyes="${esc(mm.member_id)}">Remove ${esc(mm.label)}</button></span>`
+            : `<span class="pacts"><button class="btn btn--ghost btn--sm" data-merge="${esc(mm.member_id)}">Merge</button><button class="btn btn--ghost btn--sm pdanger" data-rm="${esc(mm.member_id)}">Remove</button></span>`}
+        </div>`; }).join("")}</div>
+      ${sheet.delcrew
+        ? `<div class="rmgame"><p class="hint hint--bad">Deletes ${esc(S.group.name)} for everyone: every game, vote and night. There's no undo.</p>
+             <div class="row"><button class="btn btn--ghost btn--sm" id="delcrewno">Keep it</button><button class="btn btn--sm btn--danger" id="delcrewyes">Delete the crew</button></div></div>`
+        : `<button class="danger" id="delcrewask">Delete this crew…</button>`}
+      <div class="row"><button class="btn btn--ghost" data-dismiss>Done</button></div>`);
+  }
+
   if(sheet.kind === "menu"){
     return shell(`
       <h3>${esc(S.group.emoji || DEFAULT_EMOJI)} ${esc(S.group.name)}</h3>
@@ -3985,6 +4107,7 @@ function renderSheet(d){
       <div class="menu">
         <button class="menuitem" id="editcrew"><b>Edit crew</b><span>Name and emoji</span></button>
         <button class="menuitem" id="seshrulesbtn"><b>Night rules</b><span>How many make a night, and the usual start</span></button>
+        ${iRunCrew() ? `<button class="menuitem" id="peoplebtn"><b>Manage crew</b><span>Merge double-ups, remove people, delete the crew · only you, you started it</span></button>` : ""}
       </div>
       ${S.group.paused_at && !S.group.locked_appid ? "" : `<span class="eyebrow">This round</span>`}
       <div class="menu">
@@ -4125,7 +4248,8 @@ function renderSheet(d){
     return shell(`<h3>That's you</h3>
       <p>Rename yourself here and your votes come with you.</p>
       <label class="rulesrow" for="renameinput">Your name</label>
-      <input class="input" id="renameinput" maxlength="24" value="${esc(me.name||"")}">
+      <input class="input" id="renameinput" maxlength="24" value="${esc(sheet.typed ?? me.name ?? "")}"${sheet.taken ? ` aria-invalid="true" aria-describedby="nameerr"` : ""}>
+      ${sheet.taken ? `<p class="hint hint--bad" id="nameerr" role="alert">Someone here's already ${esc(sheet.taken)}. Try an initial or a nickname.</p>` : ""}
       <div class="row"><button class="btn" id="renamego">Save name</button></div>
       ${me.device_count > 1 ? `<div class="rules">
         <div class="rulesrow"><b>Linked on ${me.device_count} browsers</b></div>
@@ -4144,9 +4268,9 @@ function renderSheet(d){
 
   if(sheet.kind === "switch"){
     return shell(`<h3>Your crews</h3>
-      <div class="mygroups">${myGroups.map(g => `<button class="mygroup" data-open="${esc(g.code)}">
+      <div class="mygroups">${myGroups.map(g => `<button class="mygroup${g.code === code ? " mygroup--here" : ""}" data-open="${esc(g.code)}"${g.code === code ? ' aria-current="true"' : ""}>
         ${crewTile(g)}
-        <span class="nm">${esc(g.name)}</span><span class="cd">${esc(g.code)}</span></button>`).join("")}</div>
+        <span class="nm">${esc(g.name)}</span><span class="cd">${g.code === code ? "You're here" : esc(g.code)}</span></button>`).join("")}</div>
       <div class="row"><button class="btn btn--ghost" id="tolanding">Start or join another</button></div>`);
   }
   return "";
@@ -4175,7 +4299,7 @@ function wireSheetDrag(scrim){
   const fromTop = y => y - sh.getBoundingClientRect().top;
   sh.addEventListener("touchstart", e => {
     const y = e.touches[0].clientY;
-    const nearGrabber = fromTop(y) < 48;
+    const nearGrabber = !!e.target.closest(".grab") || fromTop(y) < 30;
     const insideScroller = e.target.closest("input, textarea, select, .ownlist, .ep-grid, .sharepre, .dgrid");
     y0 = nearGrabber || (sh.scrollTop <= 0 && !insideScroller) ? y : null;
     dy = 0; dragging = false; trail = [];
@@ -4186,11 +4310,13 @@ function wireSheetDrag(scrim){
     const now = performance.now(); trail.push([now, dy]); while(trail.length > 2 && now - trail[0][0] > 120) trail.shift();
     if(!dragging){ if(dy > 6) dragging = true; else if(dy < -6){ y0 = null; return; } else return; }
     e.preventDefault();                                   // we own this gesture now, the page mustn't scroll
+    sh.classList.add("dragging");
     sh.style.transition = "none";
     sh.style.transform = `translateY(${Math.max(0, dy)}px)`;
     scrim.style.backgroundColor = `rgba(10,12,15,${(0.62 * Math.max(0, 1 - dy / sh.offsetHeight)).toFixed(3)})`;
   }, { passive: false });
   const end = () => {
+    sh.classList.remove("dragging");
     if(!dragging){ y0 = null; return; }
     // speed over the last ~120ms, so a slow drag that ends in a flick still counts
     const [ta, da] = trail[0] || [0, 0], [tb, db] = trail[trail.length - 1] || [1, 0];
@@ -4209,6 +4335,122 @@ function wireSheetDrag(scrim){
   };
   sh.addEventListener("touchend", end);
   sh.addEventListener("touchcancel", end);
+}
+
+/* ---------- your crews, from the server ----------
+   The list on the landing page lives in this browser, but membership lives in
+   the database. Once per visit, ask which crews this device is in, so a crew
+   that got a new code (or one joined on this device some other way) shows up. */
+let crewsSynced = false, crewMoved = false;
+async function syncMyCrews(){
+  if(crewsSynced || !CONFIGURED || !SDK_OK) return;
+  crewsSynced = true;
+  try{
+    const list = await rpc("my_crews", { p_device: deviceId }) || [];
+    let changed = false;
+    list.forEach(c => { const had = myGroups.find(g => g.code === c.code);
+      if(!had || had.name !== c.name || had.emoji !== c.emoji){ changed = true;
+        myGroups = [...myGroups.filter(g => g.code !== c.code), { code: c.code, name: c.name, emoji: c.emoji }]; } });
+    if(!myName && list[0]){ myName = list[0].me; store.set("name", myName); }
+    if(changed){ store.set("groups", myGroups); if(!code && !/^#\/admin/.test(location.hash)) render(); }
+    if(crewMoved){ crewMoved = false; const h = document.getElementById("joinhint");
+      if(h) h.textContent = "That crew link doesn't work any more. If it got a new code and you were in it, it's in your list above."; }
+  }catch(err){ console.warn("my_crews", err && err.message); }
+}
+
+/* ============================================================================
+   OWNER PAGE (#/admin)
+   Only for whoever holds the owner key. Every crew, its link, who's in, when
+   they were last here, and a way to give a crew a new code. The key is kept in
+   this browser after the first time.
+   ========================================================================== */
+let adminData = null, adminErr = "";
+function renderAdmin(){
+  const key = store.get("adminKey", "");
+  const link = c => location.origin + location.pathname + "#/g/" + c;
+  const when = iso => iso ? new Date(iso).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "";
+  app.innerHTML = `
+    <header class="top"><div class="wrap inner">
+      <div class="brand"><span class="gn">🔑 Owner</span></div>
+      <a class="btn btn--ghost btn--sm" href="${esc(location.pathname)}">Back to Game Night</a>
+    </div></header>
+    <div class="wrap admin">
+      ${!key || adminErr ? `
+        <div class="sechead"><div><h2>Owner key</h2><p>Paste the key you were given. It stays in this browser only.</p></div></div>
+        <div class="add"><div class="row row--one">
+          <input class="input" id="admkey" type="password" autocomplete="off" placeholder="Owner key">
+          <button class="btn" id="admgo">Open</button></div>
+          ${adminErr ? `<p class="hint hint--bad">${esc(adminErr)}</p>` : ""}</div>`
+      : !adminData ? `<p class="hint">Loading every crew…</p>`
+      : `
+        <div class="sechead"><div><h2>${adminData.length} ${adminData.length === 1 ? "crew" : "crews"}</h2>
+          <p>${adminData.reduce((n, g) => n + g.members.length, 0)} people · newest activity first</p></div>
+          <button class="btn btn--ghost btn--sm" id="admout">Forget key here</button></div>
+        <div class="admlist">${[...adminData].sort((a, b) => (b.last_seen || "") < (a.last_seen || "") ? -1 : 1).map(g => `
+          <section class="panel admcrew">
+            <div class="admhead">
+              <span class="admemoji">${esc(g.emoji || "🎮")}</span>
+              <div class="admid"><b>${esc(g.name)}</b>
+                <span>${esc(g.code)} · started ${esc(when(g.created_at))} · round ${g.round_no} · ${g.games} ${g.games === 1 ? "game" : "games"}${
+                  g.playing ? " · playing " + esc(g.playing) : ""}${g.paused ? " · on a break" : ""}${g.discord ? " · Discord on" : ""}</span></div>
+            </div>
+            <div class="admlink"><code>${esc(link(g.code))}</code>
+              <button class="btn btn--ghost btn--sm" data-admcopy="${esc(g.code)}">Copy</button>
+              <a class="btn btn--ghost btn--sm" href="#/g/${esc(g.code)}">Open</a></div>
+            <table class="admpeople"><thead><tr><th>Who</th><th>Devices</th><th>Last here</th><th>Joined</th><th>Voted</th></tr></thead>
+              <tbody>${g.members.map(m => `<tr><td><b>${esc(m.name)}</b></td><td class="num">${m.devices}</td>
+                <td>${esc(ago(m.last_seen))}</td><td>${esc(when(m.first_seen))}</td><td>${m.voted ? "✓" : ""}</td></tr>`).join("")
+                || `<tr><td colspan="5">Nobody yet</td></tr>`}</tbody></table>
+            <div class="admacts">
+              ${g._confirm === "delete"
+                ? `<span class="hint hint--bad">Deletes ${esc(g.name)} for ${g.members.length} ${g.members.length === 1 ? "person" : "people"}: every game, vote and night. There's no undo.</span>
+                   <button class="btn btn--ghost btn--sm" data-admno="${esc(g.code)}">Keep it</button>
+                   <button class="btn btn--sm btn--danger" data-admdel="${esc(g.code)}">Delete for good</button>`
+                : g._confirm
+                ? `<span class="hint hint--bad">Old links stop working. Everyone's devices keep access and see the new code.</span>
+                   <button class="btn btn--ghost btn--sm" data-admno="${esc(g.code)}">Keep it</button>
+                   <button class="btn btn--sm" data-admrot="${esc(g.code)}">Give it a new code</button>`
+                : g._new ? `<span class="hint">New code <b>${esc(g.code)}</b>. Send the link above round.</span>`
+                : `<button class="btn btn--ghost btn--sm" data-admask="${esc(g.code)}">New code…</button>
+                   <button class="btn btn--ghost btn--sm admdelask" data-admdelask="${esc(g.code)}">Delete crew…</button>`}
+            </div>
+          </section>`).join("")}</div>`}
+    </div>`;
+  const kin = document.getElementById("admkey");
+  const go = document.getElementById("admgo");
+  if(go) go.onclick = () => { const v = kin.value.trim(); if(!v) return; store.set("adminKey", v); adminErr = ""; adminData = null; renderAdmin(); };
+  if(kin) kin.addEventListener("keydown", e => { if(e.key === "Enter") go.click(); });
+  const out = document.getElementById("admout"); if(out) out.onclick = () => { store.set("adminKey", ""); adminData = null; renderAdmin(); };
+  app.querySelectorAll("[data-admcopy]").forEach(b => b.onclick = () => copy(link(b.dataset.admcopy), b));
+  const find = c => adminData.find(g => g.code === c);
+  app.querySelectorAll("[data-admask]").forEach(b => b.onclick = () => { find(b.dataset.admask)._confirm = true; renderAdmin(); });
+  app.querySelectorAll("[data-admdelask]").forEach(b => b.onclick = () => { find(b.dataset.admdelask)._confirm = "delete"; renderAdmin(); });
+  app.querySelectorAll("[data-admdel]").forEach(b => b.onclick = async () => {
+    b.disabled = true; b.textContent = "Deleting…";
+    try{
+      const c = b.dataset.admdel;
+      await rpc("admin_delete_crew", { p_key: store.get("adminKey", ""), p_code: c });
+      adminData = adminData.filter(g => g.code !== c);
+      myGroups = myGroups.filter(x => x.code !== c); store.set("groups", myGroups);   // gone from this browser's switcher too
+      renderAdmin();
+    }catch(err){ b.disabled = false; b.textContent = "Delete for good"; alert(err.message); }
+  });
+  app.querySelectorAll("[data-admno]").forEach(b => b.onclick = () => { find(b.dataset.admno)._confirm = false; renderAdmin(); });
+  app.querySelectorAll("[data-admrot]").forEach(b => b.onclick = async () => {
+    b.disabled = true; b.textContent = "Changing…";
+    try{
+      const old = b.dataset.admrot, fresh = await rpc("admin_rotate_code", { p_key: store.get("adminKey", ""), p_code: old });
+      const g = find(old); g.code = fresh; g._confirm = false; g._new = true;
+      // this browser's list follows too
+      myGroups = myGroups.map(x => x.code === old ? { ...x, code: fresh } : x); store.set("groups", myGroups);
+      renderAdmin();
+    }catch(err){ b.disabled = false; b.textContent = "Give it a new code"; alert(err.message); }
+  });
+  if(key && !adminData && !adminErr){
+    rpc("admin_overview", { p_key: key })
+      .then(d => { adminData = d || []; if(/^#\/admin/.test(location.hash)) renderAdmin(); })
+      .catch(err => { adminErr = /owner key/.test(err.message) ? "That key didn't work." : err.message; store.set("adminKey", ""); renderAdmin(); });
+  }
 }
 
 /* ---------- linking another device ---------- */
@@ -4384,6 +4626,8 @@ function wireCommon(d){
   });
   const notme = document.getElementById("notme");
   if(notme) notme.onclick = async () => {
+    // same exact name as someone already here: no silent "Jehan (2)", ask for another
+    const taken = nameTaken(sheet.typed, S.members); if(taken){ sheet = { ...sheet, step:null, taken }; render(); return; }
     notme.disabled = true;
     try{ await finishAsNew(sheet.typed); }catch(e){ notme.disabled=false; alert(e.message); }
   };
@@ -4420,6 +4664,29 @@ function wireSesh(d){
 
   // next-sesh rules: from the menu, or from the day picker (then Back returns to it)
   const openRules = back => { sheet = { kind:"seshrules", need: S.group.sesh_need ?? null, time: S.group.sesh_time || "8pm", back }; render(); };
+  const pb = document.getElementById("peoplebtn"); if(pb) pb.onclick = () => { sheet = { kind:"people" }; render(); };
+  app.querySelectorAll("[data-merge]").forEach(b => b.onclick = () => { sheet = { kind:"people", merge:b.dataset.merge }; render(); });
+  app.querySelectorAll("[data-peopleback]").forEach(b => b.onclick = () => { sheet = { kind:"people" }; render(); });
+  app.querySelectorAll("[data-rm]").forEach(b => b.onclick = () => { sheet = { kind:"people", rm:b.dataset.rm }; render(); });
+  app.querySelectorAll("[data-rmno]").forEach(b => b.onclick = () => { sheet = { kind:"people" }; render(); });
+  const dca = document.getElementById("delcrewask"); if(dca) dca.onclick = () => { sheet = { kind:"people", delcrew:true }; render(); };
+  const dcn = document.getElementById("delcrewno");  if(dcn) dcn.onclick = () => { sheet = { kind:"people" }; render(); };
+  const dcy = document.getElementById("delcrewyes");
+  if(dcy) dcy.onclick = async () => {
+    dcy.disabled = true; dcy.textContent = "Deleting…";
+    try{ await rpc("crew_delete", { p_code:code, p_device:deviceId }); }
+    catch(err){ dcy.disabled = false; dcy.textContent = "Delete the crew"; alert(err.message); return; }
+    myGroups = myGroups.filter(x => x.code !== code); store.set("groups", myGroups);
+    sheet = null; S = null; myMemberId = null; location.hash = "";
+  };
+  const peopleDo = async (btn, fn, args) => {
+    btn.disabled = true;
+    try{ await rpc(fn, { p_code:code, p_device:deviceId, ...args }); sheet = { kind:"people" }; }
+    catch(err){ btn.disabled = false; alert(err.message); return; }
+    await refresh(); render();
+  };
+  app.querySelectorAll("[data-rmyes]").forEach(b => b.onclick = () => peopleDo(b, "crew_remove_member", { p_member:b.dataset.rmyes }));
+  app.querySelectorAll("[data-mergeinto]").forEach(b => b.onclick = () => peopleDo(b, "crew_merge_members", { p_from:sheet.merge, p_into:b.dataset.mergeinto }));
   const rb = document.getElementById("seshrulesbtn"); if(rb) rb.onclick = () => openRules(null);
   const rj = document.getElementById("seshrulesjump"); if(rj) rj.onclick = () => openRules(sheet.appid);
   if(sheet && sheet.kind === "seshrules"){
@@ -4609,6 +4876,9 @@ function wireGroup(d, filtered){
   // adding opens a sheet, so the Steam search never competes with the shelf search
   const openAdd = () => { sheet = {kind:"add"}; render(); const box = document.getElementById("addq"); if(box) box.focus(); };
   ["addbtn","addfirst"].forEach(id => { const b = document.getElementById(id); if(b) b.onclick = openAdd; });
+  // empty search: take what they typed straight into the Steam search
+  const afq = document.getElementById("addfromq");
+  if(afq) afq.onclick = () => { const t = F.q.trim(); openAdd(); const box = document.getElementById("addq"); if(box){ box.value = t; box.dispatchEvent(new Event("input")); } };
   const sf = document.getElementById("sharefirst"); if(sf) sf.onclick = () => { sheet = { kind:"share" }; render(); };
   const mb2 = document.getElementById("morebtn"); if(mb2) mb2.onclick = () => { sheet = {kind:"menu"}; render(); };
   const sm2 = document.getElementById("sharemenu"); if(sm2) sm2.onclick = () => { sheet = {kind:"share"}; render(); };
@@ -4750,6 +5020,15 @@ function wireGroup(d, filtered){
     if(tk && tk.value.trim() !== was) saveTake(a, tk.value.trim());
     saveFacets(a, e, raw ? Number(raw) : null, s, rawMod ? Number(rawMod) : null, v);
   };
+  const rga = document.getElementById("rmgameask"); if(rga) rga.onclick = () => { sheet = { ...sheet, rmgame:true }; render(); const y = document.getElementById("rmgameyes"); if(y) y.scrollIntoView({block:"nearest"}); };
+  const rgn = document.getElementById("rmgameno");  if(rgn) rgn.onclick = () => { sheet = { ...sheet, rmgame:false }; render(); };
+  const rgy = document.getElementById("rmgameyes");
+  if(rgy) rgy.onclick = async () => {
+    rgy.disabled = true; rgy.textContent = "Removing…";
+    try{ await rpc("crew_remove_game", {p_code:code, p_device:deviceId, p_appid:sheet.appid}); sheet = null; }
+    catch(err){ rgy.disabled = false; rgy.textContent = "Remove for good"; alert(err.message); return; }
+    finally{ refresh(); }
+  };
   const rg = document.getElementById("retirego");
   if(rg) rg.onclick = async () => {
     const a = sheet.appid; sheet = null; render();
@@ -4782,6 +5061,7 @@ function wireGroup(d, filtered){
   if(rn) rn.onclick = async () => {
     const v = document.getElementById("renameinput").value.trim();
     if(!v) return;
+    const taken = nameTaken(v, S.members, myMemberId); if(taken){ sheet = { ...sheet, typed:v, taken }; render(); return; }
     sheet = null; myName = v; store.set("name", v);
     try{ await rpc("rename_me", {p_code:code, p_device:deviceId, p_person:v}); }finally{ refresh(); }
   };
