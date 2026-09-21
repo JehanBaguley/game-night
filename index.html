@@ -826,6 +826,8 @@ td.r{text-align:right;white-space:nowrap}
 .sheet .danger{font-size:12px;color:var(--e3);font-weight:500;align-self:flex-start}
 .sheetbody{display:flex;flex-direction:column;gap:10px}
 .dl{display:flex;gap:5px;flex-wrap:wrap}
+.pill--rel{background:var(--ink);color:var(--surface);font-weight:650}
+.addedby{font-size:12px;color:var(--muted);margin-top:-4px}
 .dlong{display:flex;flex-direction:column;gap:10px}
 .dlong p{font-size:13px;color:var(--ink-2);line-height:1.65}
 .menu{display:flex;flex-direction:column;gap:5px;margin-top:4px}
@@ -888,6 +890,9 @@ td.r{text-align:right;white-space:nowrap}
 /* the emoji button that sits in front of a name field */
 .ebtn{width:46px;min-height:42px;flex:none;border-radius:var(--r-md);display:grid;place-items:center;font-size:22px;line-height:1;background:var(--surface-2);transition:background .12s}
 .ebtn:hover{background:var(--surface-3)}
+/* a small pencil so the tile reads as 'tap to change', not decoration */
+#newemoji{position:relative}
+#newemoji::after{content:"✎";position:absolute;right:-3px;bottom:-3px;width:16px;height:16px;border-radius:999px;display:grid;place-items:center;font-size:9px;background:var(--surface);color:var(--ink-2);box-shadow:0 0 0 1px var(--line-strong)}
 .ebtn--lg{width:56px;min-height:56px;font-size:30px;border-radius:14px}
 .crewedit{display:flex;gap:10px;align-items:center}
 /* a new crew's card wearing its emoji's colour before it exists */
@@ -1492,7 +1497,10 @@ function seshShareText(d){
 
 /** The crew's "lock a night when" rule, in words. */
 function needWords(need, total){
-  if(need == null || need >= total) return { val: "all " + total, hint: "Everyone has to be free. Right for a small crew that only plays together." };
+  if(need != null && need > total) return { val: String(need),
+    hint: `Needs ${need} free once there are that many of you. You're ${total === 1 ? "just one" : "only " + total} so far, so for now it's everyone.` };
+  if(need != null && need === total) return { val: need + " of " + total, hint: `Everyone for now, and it stays at ${need} as more join.` };
+  if(need == null || need >= total) return { val: "all " + total, hint: "Everyone has to be free, and it stays everyone as people join. Right for a small crew that only plays together." };
   return { val: need + " of " + total, hint: need + " free is enough, so a night still works if " + (total - need) + " can't make it." };
 }
 
@@ -3158,12 +3166,12 @@ function renderSheet(d){
       </div>
       <div class="sheetbody">
         <div class="dl">
+          ${releaseOf(game) !== "out" ? `<span class="pill pill--rel">${esc(RELEASE[releaseOf(game)])}${releaseOf(game) === "soon" && game.released ? " · " + esc(game.released) : ""}</span>` : ""}
           ${game.review_pct != null ? `<span class="pill pill--rev" title="${esc(game.review_desc||"")}">${game.review_pct}% on Steam · ${(game.review_count||0).toLocaleString()} reviews</span>` : ""}
           <a class="pill pill--link" href="https://store.steampowered.com/app/${sheet.appid}/" target="_blank" rel="noopener">Steam ↗</a>
-          ${s.added_name ? `<span class="pill">Added by ${esc(s.added_name)}</span>` : ""}
-          ${releaseOf(game) !== "out" ? `<span class="pill">${esc(RELEASE[releaseOf(game)])}${releaseOf(game) === "soon" && game.released ? " · " + esc(game.released) : ""}</span>` : ""}
           ${game.demo_appid ? `<a class="pill pill--link" href="https://store.steampowered.com/app/${game.demo_appid}/" target="_blank" rel="noopener">Try the demo ↗</a>` : ""}
         </div>
+        ${s.added_name ? `<p class="addedby">Added by ${esc(s.added_name)}</p>` : ""}
         ${desc ? `<div class="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>` : ""}
 
         <span class="eyebrow">What people reckon</span>
@@ -3613,11 +3621,13 @@ function wireSesh(d){
   if(sheet && sheet.kind === "seshrules"){
     const back = sheet.back;
     const bb = app.querySelector("[data-rulesback]"); if(bb) bb.onclick = () => { sheet = { kind:"sesh", appid: back }; render(); };
-    // the stepper: null means everyone, so it keeps meaning "all of us" as the crew grows
+    // the stepper runs 1, 2 … all … up to 12. "All" (null) sits where the crew size would be
+    // and keeps meaning everyone as people join; a number above the crew size is a fixed bar
+    // for when the rest turn up, and counts as everyone until then
     app.querySelectorAll("[data-need]").forEach(b => b.onclick = () => {
-      const total = (S.members||[]).length, cur = sheet.need ?? total;
-      const next = b.dataset.need === "-" ? Math.max(1, cur - 1) : cur + 1;
-      sheet.need = next >= total ? null : next;
+      const total = Math.max(1, (S.members||[]).length), cur = sheet.need ?? total;
+      let next = b.dataset.need === "-" ? Math.max(1, cur - 1) : Math.min(Math.max(12, total), cur + 1);
+      sheet.need = next === total ? null : next;
       const w = needWords(sheet.need, total);
       document.getElementById("needval").textContent = w.val;
       document.getElementById("needhint").textContent = w.hint;

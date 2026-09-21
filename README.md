@@ -174,7 +174,7 @@ Picking the game and picking the nights are two separate decisions. A game like 
 | Locked | The line goes solid. **Add to calendar** downloads a calendar file with the game, the crew and the link. **Change night** unlocks it |
 | The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 sessions so far"). Either answer clears the slate for the next one |
 
-**The crew's number** lives in **⋯ → Night rules** (also one tap from the day picker, which shows the current rule): "A night works when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. Crabs only plays when everyone's free; a bigger crew might go at 80%.
+**The crew's number** lives in **⋯ → Night rules** (also one tap from the day picker, which shows the current rule): "A night works when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. You can also set a number bigger than the crew is today (up to 12): a crew of one can say "3 free", and it counts as everyone until the others join. Crabs only plays when everyone's free; a bigger crew might go at 80%.
 
 On a phone it's the line on the status card. On desktop it's also a **Next sesh** card at the top of the right-hand rail, with ten little bars per game so you can see the shape of the fortnight at a glance.
 
