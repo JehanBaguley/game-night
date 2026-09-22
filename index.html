@@ -256,6 +256,13 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   .status{flex-wrap:wrap}
   .status .st-acts{margin-left:auto}
 }
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);z-index:80;max-width:min(92vw,460px);
+  padding:11px 15px;border-radius:999px;font-size:13.5px;line-height:1.4;text-align:center;
+  background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--ring), 0 14px 34px -12px rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;transition:opacity .2s, transform .2s}
+.toast.in{opacity:1;transform:translate(-50%,0)}
+.toast--bad{background:var(--e3-bg);color:var(--e3);box-shadow:0 0 0 1px color-mix(in oklab, var(--e3) 35%, transparent), 0 14px 34px -12px rgba(0,0,0,.5)}
+@media (prefers-reduced-motion: reduce){ .toast{transition:opacity .2s} }
 .flash{
   margin-top:20px;background:var(--accent-soft);color:var(--accent-text);border-radius:var(--r-md);
   padding:9px 12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;
@@ -692,6 +699,16 @@ td.r,th.r{text-align:right;white-space:nowrap}
   .cols .rail{position:sticky;top:66px;margin-top:18px}
 }
 .rail{display:flex;flex-direction:column;gap:12px;margin-top:28px}
+.candlist{display:flex;flex-direction:column;gap:6px}
+.who--claim{cursor:pointer;border:1px dashed var(--line-strong)}
+.who--claim:hover{background:var(--surface-3);border-style:solid}
+/* on a phone the rail sits under the whole shelf, so the two panels people
+   actually need (nights, who's in) get a copy up here instead */
+.uptop{display:none}
+@media (max-width:900px){
+  .uptop{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+  .rail .seshpanel, .rail .whopanel{display:none}
+}
 .panel{background:var(--surface);background-image:var(--sheen);border-radius:var(--r-lg);padding:14px;box-shadow:inset 0 1px 0 var(--edge), 0 0 0 1px var(--ring), var(--lift)}
 .panel h3{font-size:12px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
 
@@ -1585,15 +1602,22 @@ function saleOf(d, appid){
 }
 
 /** Who's in: the crew, who's here now, who's voted. First in the rail. */
-function whoPanel(d){
+function whoPanel(d, h){
+  h = h || "h3";
+  // before you've said who you are, the list is how you claim yourself
+  const claim = !myMemberId && d.members.length;
   return `<section class="panel whopanel">
-            <h3>Who's in</h3>
+            <${h}>Who's in</${h}>
+            ${claim ? `<p class="pnote">Already in this list? Tap your name so your picks and nights stay yours.</p>` : ""}
             <div class="crew">${d.members.length ? d.members.map(mm => {
               const voted = mm.member_id === myMemberId || (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
-              return `<span class="who${voted?"":" novote"}" title="${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}">
-                ${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
-                <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}
-              </span>`;
+              const inner = `${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
+                <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}`;
+              const cls = `who${voted?"":" novote"}${claim ? " who--claim" : ""}`;
+              const tip = claim ? `That's me: ${esc(mm.name)}` : `${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}`;
+              return claim
+                ? `<button class="${cls}" data-claimwho="${esc(mm.member_id)}" title="${tip}">${inner}</button>`
+                : `<span class="${cls}" title="${tip}">${inner}</span>`;
             }).join("") : `<span class="empty">Just you so far.</span>`}</div>
             <button class="btn btn--ghost btn--sm railshare" id="railshare">Send to the chat</button>
           </section>`;
@@ -1930,10 +1954,11 @@ function wireSnapshot(d){
 
 /** Desktop rail: every game in play, ten little bars each. Hidden on a phone,
  *  where the status card already carries the same line. */
-function seshPanel(d){
+function seshPanel(d, h){
+  h = h || "h3";
   const list = inPlay(d);
   if(!list.length) return "";
-  return `<section class="panel seshpanel"><h3>Next sesh</h3>${list.map(ip => {
+  return `<section class="panel seshpanel"><${h}>Next sesh</${h}>${list.map(ip => {
     const x = seshFor(d, ip), game = d.gamesById[ip.appid] || {};
     const bars = x.days.map(day => {
       const n = x.byDay[day].length;
@@ -2004,7 +2029,11 @@ function queueFree(appid){
   const id = freeTimer = setTimeout(async () => {
     const days = seshWindow().filter(day => (S.sesh_free || []).some(f => f.appid === appid && f.day === day && f.member_id === myMemberId));
     try{ await rpc("set_free", { p_code: code, p_device: deviceId, p_appid: appid, p_days: days }); }
-    catch(err){ console.warn("set_free", err && err.message); }
+    catch(err){
+      console.warn("set_free", err && err.message);
+      toast(saveProblem(err, "your nights"), "bad");
+      sheet = null;                                  // the sheet was showing a game that has moved on
+    }
     if(freeTimer === id){ freeTimer = null; seshDirty = false; refresh(); }
   }, 600);
 }
@@ -2959,6 +2988,24 @@ async function forgetPlay(appid, round){
   finally{ refresh(); }
 }
 
+/** A small line at the bottom of the screen. Used when something didn't save. */
+let toastTimer = null;
+function toast(text, kind){
+  let el = document.getElementById("toast");
+  if(!el){ el = document.createElement("div"); el.id = "toast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el); }
+  el.className = "toast" + (kind === "bad" ? " toast--bad" : "") + " in";
+  el.textContent = text;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("in"), 5000);
+}
+/** Turns the server's wording into something a person can act on. */
+function saveProblem(err, what){
+  const m = (err && err.message) || "";
+  if(/not on right now/i.test(m)) return "That game isn't on any more, so nights can't change. Refreshing…";
+  if(/no group/i.test(m)) return "This crew's link has changed. Open the new one.";
+  if(/not in this crew|assert_member|not a member/i.test(m)) return "This device isn't in the crew yet. Tap your name up the top to join.";
+  return `Couldn't save ${what}. Check your connection and try again.`;
+}
 async function saveFacets(appid, energy, crew, setup, crewMod, doing){
   try{ await rpc("set_facets", {p_code:code, p_device:deviceId, p_appid:appid,
                                 p_energy:energy, p_crew_max:crew, p_setup:setup,
@@ -3481,6 +3528,7 @@ function renderGroup(){
 
       ${renderStatus(d, g, call)}
       ${renderSides(d)}
+      <div class="uptop">${seshPanel(d, "h2")}${whoPanel(d, "h2")}</div>
 
       <div class="cols">
         <main>
@@ -3863,6 +3911,21 @@ function card(s, d){
 function renderSheet(d){
   const shell = inner => `<div class="sheetwrap" data-scrim><div class="sheet" role="dialog" aria-modal="true"><div class="grab" aria-hidden="true"></div>${inner}</div></div>`;
 
+  // one person's row in the "which one's you" list
+  const candRow = c => {
+    const voted = (S.ballots||[]).find(b => b.member_id===c.member_id && (b.picks||[]).length);
+    const bits = [voted ? voted.picks.length + (voted.picks.length===1?" pick":" picks") : "no picks yet",
+                  "last here " + ago(c.last_seen)];
+    if(c.device_count>1) bits.push(c.device_count+" devices");
+    // whoever started the crew can't be claimed by name, only linked from a device they already use
+    if(c.member_id === crewAdminId()) return `<div class="cand cand--locked">
+      <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
+      <span class="txt"><b>${esc(c.name)}</b><span>Started this crew. If that's you, open the menu on your usual device and use Link another device.</span></span></div>`;
+    return `<button class="cand" data-claim="${esc(c.member_id)}">
+      <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
+      <span class="txt"><b>${esc(c.name)}</b><span>${esc(bits.join(" · "))}</span></span>
+      <span style="color:var(--muted)">→</span></button>`;
+  };
   if(sheet.kind === "name"){
     if(sheet.step === "match"){
       // the "is that the same as this account" moment
@@ -3871,35 +3934,27 @@ function renderSheet(d){
         <h3>Have we met?</h3>
         <p>There ${many?"are already people":"is already someone"} in this group with a name like
            <b>${esc(sheet.typed)}</b>. If one of them is you, tap it and your picks carry over to this device.</p>
-        ${sheet.candidates.map(c => {
-          const voted = (S.ballots||[]).find(b => b.member_id===c.member_id && (b.picks||[]).length);
-          const bits = [];
-          if(voted) bits.push(voted.picks.length + (voted.picks.length===1?" pick":" picks"));
-          else bits.push("no picks yet");
-          bits.push("last here " + ago(c.last_seen));
-          if(c.device_count>1) bits.push(c.device_count+" devices");
-          // whoever started the crew can't be claimed by name, only linked from a device they already use
-          if(c.member_id === crewAdminId()) return `<div class="cand cand--locked">
-            <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
-            <span class="txt"><b>${esc(c.name)}</b><span>Started this crew. If that's you, open the menu on your usual device and use Link another device.</span></span></div>`;
-          return `<button class="cand" data-claim="${esc(c.member_id)}">
-            <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
-            <span class="txt"><b>${esc(c.name)}</b><span>${esc(bits.join(" · "))}</span></span>
-            <span style="color:var(--muted)">→</span></button>`;
-        }).join("")}
+        ${sheet.candidates.map(candRow).join("")}
         <div class="row">
           <button class="btn btn--ghost" id="notme">${nameTaken(sheet.typed, S.members) ? "Not me, pick another name" : "Nah, I'm new"}</button>
         </div>`);
     }
     const returning = !!myName;
+    // if the crew already has people and this device isn't one of them, picking
+    // yourself off the list beats typing a name that's already there
+    const roster = (!myMemberId && sheet.then !== "create" && S && (S.members || []).length) ? S.members : [];
     return shell(`
-      <h3>${returning ? "Back again" : "Who's this?"}</h3>
-      <p>${returning
+      <h3>${roster.length ? "Which one's you?" : returning ? "Back again" : "Who's this?"}</h3>
+      <p>${roster.length
+        ? "Tap your name and your picks, nights and history come with you on this device."
+        : returning
         ? "We know you on this device. Only change it if you are, in fact, someone else."
         : "Just a name for the list. No signup, nothing to remember."}</p>
+      ${roster.length ? `<div class="candlist">${roster.map(candRow).join("")}</div>
+        <span class="eyebrow">Not in the list</span>` : ""}
       <input class="input" id="nameinput" placeholder="Your name" maxlength="24" value="${esc(sheet.typed||"")}"${sheet.taken ? ` aria-invalid="true" aria-describedby="nameerr"` : ""}>
       ${sheet.taken ? `<p class="hint hint--bad" id="nameerr" role="alert">Someone here's already ${esc(sheet.taken)}. Add an initial or a nickname so the crew can tell you apart.</p>` : ""}
-      <div class="row"><button class="btn" id="namego">${returning ? "Continue as "+esc(myName) : "That's me"}</button></div>`);
+      <div class="row"><button class="btn" id="namego">${roster.length ? "I'm new, add me" : returning ? "Continue as "+esc(myName) : "That's me"}</button></div>`);
   }
 
   if(sheet.kind === "take"){
@@ -4205,8 +4260,11 @@ function renderSheet(d){
   if(sheet.kind === "close"){
     if(S.group.locked_appid){
       const g2 = d.gamesById[S.group.locked_appid] || {};
-      return shell(`<h3>How was ${esc(g2.name || "it")}?</h3>
-        <p>For future reference. Skip it if you cannot be bothered.</p>
+      const nights = (S.sesh_lock || []).find(l => l.appid === S.group.locked_appid);
+      return shell(`<h3>Done with ${esc(g2.name || "it")}?</h3>
+        <p>This finishes it for everyone: picks reset and ${nights ? `<b>${esc(dayLabel(nights.day))} comes off the calendar</b>` : "the nights everyone picked are cleared"}. If the crew's still keen, tap Not yet.</p>
+        <span class="eyebrow">How was it?</span>
+        <p class="fhint">For future reference. Skip it if you cannot be bothered.</p>
         <div class="eopts">
           ${Object.keys(VERDICT).map(k => `<button class="eopt" data-verdict="${k}" aria-pressed="${sheet.verdict===k}">
             <b>${VERDICT_ICON[k]}</b><span>${esc(VERDICT[k])}</span></button>`).join("")}
@@ -4222,7 +4280,7 @@ function renderSheet(d){
         <div class="row">
           <button class="btn btn--ghost" data-dismiss>Not yet</button>
           <button class="btn btn--ghost" id="newroundbreak">Take a break</button>
-          <button class="btn" id="newroundgo">Next round</button>
+          <button class="btn" id="newroundgo">Finish and start the next round</button>
         </div>`);
     }
     const top = d.ranked[0], game = d.gamesById[sheet.appid || top.appid] || {};
@@ -4597,7 +4655,8 @@ function trapFocus(scrim){
   const items = () => [...box.querySelectorAll(FOCUSABLE)].filter(el => el.offsetParent !== null);
   const first = items()[0];
   // a text field wants the caret; anything else just wants the ring
-  if(first && !box.contains(document.activeElement)) first.focus();
+  // focusing a row inside a scrolling list would scroll the top of it out of sight
+  if(first && !box.contains(document.activeElement)) first.focus({ preventScroll: true });
   box.addEventListener("keydown", e => {
     if(e.key !== "Tab") return;
     const list = items();
@@ -4659,12 +4718,17 @@ function wireCommon(d){
   });
   refreshPrices();
   if(sheet && sheet.kind === "discord") wireDiscord();
+  app.querySelectorAll("[data-claimwho]").forEach(b => b.onclick = () => {
+    const m = (S.members || []).find(x => String(x.member_id) === b.dataset.claimwho);
+    if(m) { sheet = { kind:"name", step:"match", typed:m.name, candidates:[m] }; render(); }
+  });
   app.querySelectorAll("[data-shareback]").forEach(b => b.onclick = () => { sheet = { kind:"share" }; render(); });
 
   // --- name entry, step one
   const ni = document.getElementById("nameinput");
   if(ni){
-    ni.focus();
+    // with the crew listed above, focusing the field would pop the keyboard over it
+    if(!document.querySelector(".candlist")) ni.focus();
     const go = async () => {
       const v = ni.value.trim(); if(!v) return;
       const then = sheet.then, groupName = sheet.groupName;
