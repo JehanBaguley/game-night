@@ -3303,10 +3303,13 @@ const TYPED_EGGS = [
   { test: v => /^(help|halp)$/i.test(v), run: () => toast("Pick three, the rest sorts itself out.", "fun") },
   // the pets. Typing one sends it walking across the bottom of the page.
   { test: v => /^whin(slet)?$/i.test(v),
-    run: () => { toast("\u{1F408} Whin says hi", "fun"); critter("\u{1F408}", true); } },
+    run: () => { toast("\u{1F431} Whin says hi", "fun"); critter("\u{1F431}", true); } },
+  { test: v => /^(luna|amber)$/i.test(v),
+    run: v => { const n = v[0].toUpperCase() + v.slice(1).toLowerCase();
+                toast(`\u{1F431} ${n} says hi`, "fun"); critter("\u{1F431}", true); } },
   { test: v => /^(taro|arnold|frank|gus)$/i.test(v),
     run: v => { const n = v[0].toUpperCase() + v.slice(1).toLowerCase();
-                toast(`\u{1F415} ${n}, good dog`, "fun"); critter("\u{1F415}", true); } },
+                toast(`\u{1F436} ${n}, good dog`, "fun"); critter("\u{1F436}", true); } },
   // 6 7
   { test: v => /^6\s*[- ]?\s*7$/.test(v), run: () => toast("\u{1F937} 6 7", "fun") },
   // a mate's name is not a game, and the crew emoji sends the critter for a lap

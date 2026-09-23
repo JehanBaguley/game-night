@@ -707,8 +707,9 @@ Typing certain things into the shelf search gets an answer back. They fire on a 
 | `rosebud`, `motherlode` | No money here, just games. |
 | `please`, `pls` | Manners noted. |
 | `help` | Pick three, the rest sorts itself out. |
-| `whin`, `whinslet` | 🐈 Whin says hi, and the cat walks across the bottom |
-| `taro`, `arnold`, `frank`, `gus` | 🐕 *name*, good dog, and the dog walks across |
+| `whin`, `whinslet` | 🐱 Whin says hi, and the cat walks across the bottom |
+| `luna`, `amber` | 🐱 *name* says hi, and the cat walks across |
+| `taro`, `arnold`, `frank`, `gus` | 🐶 *name*, good dog, and the dog walks across |
 | `67`, `6 7`, `6-7` | 🤷 6 7 |
 | A crew member's name | *name* isn't a game. |
 | The crew's emoji | Sends it for a lap |
