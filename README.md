@@ -668,4 +668,25 @@ The script tag carries a **Subresource Integrity hash**, so a compromised CDN ca
 
 ### Little things
 
-A few bits that aren't load-bearing. One roll in twenty on the dice is a natural 20 and picks the least-voted game on the shelf. The crew's emoji strolls across the bottom of the page once a visit (never with reduced motion on). Three rounds running on the same game and the strip says **Again?!**. Between 1am and 5am the round line adds "who's still up?". Typing `gg` in the shelf search says gg wp and clears itself.
+A few bits that aren't load-bearing. None of them run with reduced motion on.
+
+One roll in twenty on the dice is a natural 20 and picks the least-voted game on the shelf. Three rounds running on the same game and the strip says **Again?!**. Between 1am and 5am the round line adds "who's still up?".
+
+The crew's emoji strolls across the bottom of the page when the whole crew has picked, once a visit. Tapping the emoji in the header three times inside a second and a bit sends it across on demand. The emoji isn't a button, editing the crew is the small pencil next to the name.
+
+Typing certain things into the shelf search gets an answer back. They fire on a pause in typing, not on each keystroke, so searching a real title that starts with one of these words is safe.
+
+| Type | Get |
+| --- | --- |
+| `gg`, `gg wp` | gg wp, plus bursts of paper |
+| `steam` | we know |
+| `xyzzy` | Nothing happens. |
+| `42`, `the answer` | The answer, but not to what we're playing. |
+| `iddqd`, `idkfa`, `godmode` | God mode's off. You still have to pick. |
+| `rosebud`, `motherlode` | No money here, just games. |
+| `please`, `pls` | Manners noted. |
+| `help` | Pick three, the rest sorts itself out. |
+| A crew member's name | *name* isn't a game. |
+| The crew's emoji | Sends it for a lap |
+
+They live in one `TYPED_EGGS` array, a `test` and a `run` per entry, so adding another is a line.

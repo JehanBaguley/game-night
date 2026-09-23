@@ -264,6 +264,32 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .toast--bad{background:var(--e3-bg);color:var(--e3);box-shadow:0 0 0 1px color-mix(in oklab, var(--e3) 35%, transparent), 0 14px 34px -12px rgba(0,0,0,.5)}
 @media (prefers-reduced-motion: reduce){ .toast{transition:opacity .2s} }
 @media (max-width:899px){ .toast{bottom:96px} }
+/* the fun ones sit up near the top and are bigger, a quiet toast down the bottom gets missed */
+.toast--fun{bottom:auto;top:26vh;font-size:20px;font-weight:650;padding:15px 26px;border-radius:16px;
+  background:var(--surface);color:var(--ink);
+  box-shadow:0 0 0 1.5px color-mix(in oklab, var(--accent) 45%, transparent), var(--glow), 0 24px 54px -16px rgba(0,0,0,.5);
+  transform:translate(-50%,10px) scale(.94)}
+.toast--fun.in{transform:translate(-50%,0) scale(1);animation:funpop .45s cubic-bezier(.2,1.5,.4,1)}
+@keyframes funpop{
+  0%{transform:translate(-50%,12px) scale(.9)}
+  58%{transform:translate(-50%,0) scale(1.07)}
+  100%{transform:translate(-50%,0) scale(1)}
+}
+@media (prefers-reduced-motion: reduce){ .toast--fun.in{animation:none} }
+@media (max-width:899px){ .toast--fun{top:24vh;font-size:17.5px;padding:13px 20px} }
+.fworks{position:fixed;inset:0;z-index:90;pointer-events:none;overflow:hidden}
+/* flat paper squares, no glow. Small enough that half of them read as diamonds. */
+.fworks i{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:1px;opacity:0;
+  animation:fw var(--dur,1.9s) var(--delay,0s) linear forwards}
+@keyframes fw{
+  /* 0 to 42% is the burst outward, easing off. 42% on is gravity taking over. */
+  0%{transform:translate(0,0) rotate(var(--tilt,0deg));opacity:0}
+  6%{opacity:1}
+  42%{transform:translate(var(--tx,0), var(--ty,0)) rotate(calc(var(--tilt,0deg) + var(--spin,180deg) * .5));opacity:1}
+  100%{transform:translate(calc(var(--tx,0) * 1.12), calc(var(--ty,0) + var(--fall,100px)))
+       rotate(calc(var(--tilt,0deg) + var(--spin,180deg)));opacity:0}
+}
+@media (prefers-reduced-motion: reduce){ .fworks{display:none} }
 /* the crew's emoji wanders past the bottom of the page once a visit */
 .critter{position:fixed;bottom:6px;left:-60px;z-index:5;font-size:26px;pointer-events:none;
   animation:critter 9s linear forwards;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))}
@@ -986,9 +1012,18 @@ td.r,th.r{text-align:right;white-space:nowrap}
 /* a crew's tile in lists: emoji on a soft square, replacing the old monogram */
 .ctile{width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:19px;line-height:1;background:var(--surface-2)}
 /* header: the crew's emoji doubles as the way into Edit crew */
-.gemoji{user-select:none;-webkit-user-select:none;margin-left:-9px;margin-right:-3px;width:38px;height:38px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:20px;line-height:1;transition:background .12s,transform .12s;align-self:center}
-.gemoji:hover{background:var(--surface-2)}
+.gemoji{cursor:default;user-select:none;-webkit-user-select:none;margin-left:-9px;margin-right:-3px;width:38px;height:38px;flex:none;border-radius:10px;display:grid;place-items:center;font-size:20px;line-height:1;transition:background .12s,transform .12s;align-self:center}
 .gemoji:active{transform:scale(.94)}
+/* edit lives on its own pencil now, so the emoji is free to be tapped for fun.
+   Hover-only on desktop, always there on touch where hover does not exist. */
+.pencilbtn{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--muted);
+  transition:background .12s,color .12s,opacity .12s}
+.pencilbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}
+.pencilbtn:hover{background:var(--surface-2);color:var(--ink)}
+@media (hover:hover) and (min-width:900px){
+  .pencilbtn{opacity:0}
+  .brand:hover .pencilbtn,.brand:focus-within .pencilbtn{opacity:1}
+}
 /* the emoji button that sits in front of a name field */
 .ebtn{width:46px;min-height:42px;flex:none;border-radius:var(--r-md);display:grid;place-items:center;font-size:22px;line-height:1;background:var(--surface-2);transition:background .12s}
 .ebtn:hover{background:var(--surface-3)}
@@ -3011,10 +3046,83 @@ async function forgetPlay(appid, round){
   finally{ refresh(); }
 }
 
-/** The crew's emoji strolls across the bottom of the page, once per visit. */
+/* Flat paper, a fixed palette so it looks designed rather than random. */
+const FW_PAPER = ["#6D5AE6","#E2585F","#F2A93B","#2FA4A0","#2B3A74","#E86FA8"];
+/** Bursts of paper up where the fun toast sits. Good moments only, never a save. */
+function fireworks(bursts){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const wrap = document.createElement("div");
+  wrap.className = "fworks"; wrap.setAttribute("aria-hidden", "true");
+  const n = bursts || 3;
+  for(let b = 0; b < n; b++){
+    // each burst gets its own spot and its own moment, so they read as fireworks
+    const ox = 22 + Math.random() * 56, oy = 14 + Math.random() * 22;
+    const bits = 22 + Math.floor(Math.random() * 8);
+    const delay = b * 0.32 + Math.random() * 0.05;
+    for(let i = 0; i < bits; i++){
+      const ang = (i / bits) * Math.PI * 2 + Math.random() * 0.22;   // evenly round the circle, slightly jittered
+      const dist = 90 + Math.random() * 110;
+      const e = document.createElement("i");
+      e.style.left = ox + "%"; e.style.top = oy + "vh";
+      e.style.setProperty("--tx", (Math.cos(ang) * dist).toFixed(0) + "px");
+      e.style.setProperty("--ty", (Math.sin(ang) * dist).toFixed(0) + "px");
+      // fall is the gravity leg: how far the paper drifts down after the burst
+      e.style.setProperty("--fall", (90 + Math.random() * 120).toFixed(0) + "px");
+      e.style.setProperty("--spin", (Math.random() * 900 - 450).toFixed(0) + "deg");
+      e.style.setProperty("--tilt", (Math.random() * 90).toFixed(0) + "deg");
+      e.style.setProperty("--dur", (1.5 + Math.random() * 0.8).toFixed(2) + "s");
+      e.style.setProperty("--delay", (delay + Math.random() * 0.08).toFixed(2) + "s");
+      e.style.background = FW_PAPER[Math.floor(Math.random() * FW_PAPER.length)];
+      wrap.appendChild(e);
+    }
+  }
+  document.body.appendChild(wrap);
+  setTimeout(() => wrap.remove(), n * 330 + 2600);
+}
+
+/* Type one of these into the search and it answers back. Whole-word matches
+   only, and they fire on a pause in typing, so searching "SteamWorld" never
+   trips the "steam" one. keep:true leaves your text alone. */
+const TYPED_EGGS = [
+  { test: v => /^gg( wp)?$/i.test(v),   run: () => { toast("gg wp \u{1F91D}", "fun"); fireworks(); } },
+  { test: v => /^steam$/i.test(v),      run: () => toast("we know") },
+  { test: v => /^xyzzy$/i.test(v),      run: () => toast("Nothing happens.") },
+  { test: v => /^(42|the answer)$/i.test(v), run: () => toast("The answer, but not to what we're playing.") },
+  { test: v => /^(iddqd|idkfa|god ?mode)$/i.test(v), run: () => toast("God mode's off. You still have to pick.") },
+  { test: v => /^(rosebud|motherlode)$/i.test(v), run: () => toast("No money here, just games.") },
+  { test: v => /^(please|pls)$/i.test(v), run: () => toast("Manners noted.") },
+  { test: v => /^(help|halp)$/i.test(v), run: () => toast("Pick three, the rest sorts itself out.") },
+  // a mate's name is not a game, and the crew emoji sends the critter for a lap
+  { test: v => !!nameInCrew(v),         run: v => toast(nameInCrew(v) + " isn't a game.") },
+  { test: v => !!(S && S.group && S.group.emoji) && v === S.group.emoji, run: () => critter(S.group.emoji, true) },
+];
+/** The crew member whose name this is, if any. Their spelling, not yours. */
+function nameInCrew(v){
+  const n = normName(v);
+  if(!n || n.length < 3) return "";
+  const hit = ((S && S.members) || []).find(m => normName(m.name) === n);
+  return hit ? hit.name : "";
+}
+let eggTimer = null;
+/** Runs after a pause in typing, so a half-typed game title never triggers one. */
+function tryTypedEgg(v){
+  const hit = TYPED_EGGS.find(e => { try{ return e.test(v); }catch(_){ return false; } });
+  if(!hit) return;
+  const el = document.getElementById("q");
+  if(el && el.value.trim() !== v) return;   // they carried on typing, leave them be
+  hit.run(v);
+  if(hit.keep) return;
+  if(el) el.value = "";
+  F.q = ""; render();
+}
+
+/** The crew's emoji strolls across the bottom of the page. Once per visit, and
+    only when something worth marking happened: the whole crew has picked, or
+    you tapped the emoji three times. */
 let critterDone = false;
-function critter(emoji){
-  if(critterDone || !emoji) return;
+let emojiTaps = 0, emojiTapAt = 0;
+function critter(emoji, force){
+  if(!emoji || (critterDone && !force)) return;
   critterDone = true;
   if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   setTimeout(() => {
@@ -3022,17 +3130,18 @@ function critter(emoji){
     el.className = "critter"; el.setAttribute("aria-hidden", "true"); el.textContent = emoji;
     document.body.appendChild(el);
     el.addEventListener("animationend", () => el.remove());
-  }, 2500);
+  }, force ? 0 : 2500);
 }
 /** A small line at the bottom of the screen. Used when something didn't save. */
 let toastTimer = null;
 function toast(text, kind){
   let el = document.getElementById("toast");
   if(!el){ el = document.createElement("div"); el.id = "toast"; el.setAttribute("role", "status"); el.setAttribute("aria-live", "polite"); document.body.appendChild(el); }
-  el.className = "toast" + (kind === "bad" ? " toast--bad" : "") + " in";
+  el.className = "toast" + (kind === "bad" ? " toast--bad" : kind === "fun" ? " toast--fun" : "") + " in";
   el.textContent = text;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("in"), 5000);
+  // the loud kind sits over the page, so it gets out of the way sooner
+  toastTimer = setTimeout(() => el.classList.remove("in"), kind === "fun" ? 3000 : 5000);
 }
 /** Turns the server's wording into something a person can act on. */
 function saveProblem(err, what){
@@ -3551,7 +3660,8 @@ function renderGroup(){
   const restoreFocus = keepFocus();
   app.innerHTML = `
     <header class="top"><div class="wrap inner">
-      <div class="brand"><button class="gemoji" id="crewbtn" aria-label="Edit crew name and emoji" title="Edit crew">${esc(g.emoji || DEFAULT_EMOJI)}</button><h1 class="gn">${esc(g.name)}</h1><span class="code">${esc(g.code)}</span></div>
+      <div class="brand"><span class="gemoji" id="crewbtn" aria-hidden="true">${esc(g.emoji || DEFAULT_EMOJI)}</span><h1 class="gn">${esc(g.name)}</h1><span class="code">${esc(g.code)}</span>
+        <button class="pencilbtn" id="crewedit" aria-label="Edit crew name and emoji" title="Edit crew"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L20 8l-4-4L4 16v4z"/><path d="M14 6l4 4"/></svg></button></div>
       ${d.meMember ? `<button class="mepill" id="mebtn" title="That's you">
         <span class="dot" style="width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;font-family:var(--f-display);background:hsl(${hueOf(d.meMember.name)} 58% 30%)">${esc(d.meMember.name[0].toUpperCase())}</span>
         <span class="nm">${esc(d.meMember.name)}</span></button>` : ""}
@@ -3669,7 +3779,8 @@ function renderGroup(){
 
   wireGroup(d, filtered);
   wireSesh(d);
-  critter(g.emoji || DEFAULT_EMOJI);
+  // marks the moment the last person picks, rather than firing for no reason
+  if(d.lookedCount > 1 && d.votedCount >= d.lookedCount) critter(g.emoji || DEFAULT_EMOJI);
   settleImages();
   restoreFocus();
   if(tookover){
@@ -4759,7 +4870,16 @@ function wireCommon(d){
     };
   }
   const openCrew = () => { sheet = { kind:"crew", name: S.group.name, emoji: S.group.emoji || DEFAULT_EMOJI }; render(); };
-  const cb = document.getElementById("crewbtn"); if(cb) cb.onclick = openCrew;
+  const ce = document.getElementById("crewedit"); if(ce) ce.onclick = openCrew;
+  // three quick taps on the crew emoji sends it for a lap. No affordance on
+  // purpose, it is meant to be found by accident.
+  const cb = document.getElementById("crewbtn");
+  if(cb) cb.onclick = () => {
+    const now = Date.now();
+    if(now - emojiTapAt > 1200) emojiTaps = 0;   // a slow tap starts the count over
+    emojiTapAt = now;
+    if(++emojiTaps >= 3){ emojiTaps = 0; critter(S.group.emoji || DEFAULT_EMOJI, true); }
+  };
   const ec = document.getElementById("editcrew"); if(ec) ec.onclick = openCrew;
   const dcb = document.getElementById("discordbtn"); if(dcb) dcb.onclick = () => { sheet = { kind:"discord" }; render(); };
   app.querySelectorAll("[data-fold]").forEach(b => b.onclick = () => { toggleFold(b.dataset.fold); render(); });
@@ -4995,8 +5115,11 @@ function wireGroup(d, filtered){
   const q = document.getElementById("q");
   if(q){
     q.oninput = e => {
-      if(/^gg$/i.test(e.target.value.trim())){ e.target.value = ""; F.q = ""; toast("gg wp 🤝"); render(); return; }
       F.q = e.target.value; render();
+      // eggs wait for a pause, so they cannot eat a real search mid-word
+      clearTimeout(eggTimer);
+      const v = e.target.value.trim();
+      if(v) eggTimer = setTimeout(() => tryTypedEgg(v), 650);
     };
   }
   const qc = document.getElementById("qclear");
@@ -5099,7 +5222,7 @@ function wireGroup(d, filtered){
       : filtered[Math.floor(Math.random()*filtered.length)];
     sheet = {kind:"shuffle", appid:pick.appid, pool:filtered.length, crit};
     render();
-    if(crit) toast("🎲 Natural 20. The dice has spoken: the least-loved game on the shelf.");
+    if(crit) toast("🎲 Natural 20. The dice went for the least-loved game on the shelf.", "fun");
   };
   const reroll = document.getElementById("reroll");
   if(reroll) reroll.onclick = () => {
