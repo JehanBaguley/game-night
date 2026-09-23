@@ -39,6 +39,7 @@
   --control:#FFFFFF; --control-hover:#F4F2FB;
 
   --accent:#6D5AE6; --accent-ink:#FFFFFF; --accent-soft:#ECE9FE;
+  --dotop:.62;                       /* the status dot grid, light theme */
   --accent-text:#5B48D9;             /* accent as text on a tinted surface */
   --grad-a:#6252DA; --grad-b:#4B62DB;     /* both hold white text at 5:1 */
   --grad:linear-gradient(135deg, var(--grad-a), var(--grad-b));
@@ -72,6 +73,7 @@
     --line:rgba(196,181,253,.10); --line-strong:rgba(196,181,253,.20);
     --edge:rgba(255,255,255,.06); --card-line:transparent;
     --ring:rgba(255,255,255,.035); --sheen:linear-gradient(180deg, rgba(255,255,255,.06), transparent 42%);
+    --dotop:.5;
     --control:#1E1E27; --control-hover:#282833;
     --accent:#C4B5FD; --accent-ink:#1A1533; --accent-soft:#2A2450;
     --accent-text:#C4B5FD;
@@ -225,6 +227,23 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   background-image:linear-gradient(90deg, color-mix(in oklab, var(--accent) 13%, transparent), transparent 65%);
 }
 .status{isolation:isolate}
+/* A fine dot grid that only exists where your cursor is. ::after rather than a
+   canvas: one repeating-gradient layer, masked by a soft circle that follows
+   the pointer, so there is no per-frame drawing to do. --dot is your own
+   member colour, so the same page looks slightly different per person.
+   Desktop and a real pointer only, and never with reduced motion on. */
+.status::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
+  transition:opacity .4s ease;
+  background-image:radial-gradient(circle at center, var(--dot, var(--accent)) 1.1px, transparent 1.6px);
+  background-size:14px 14px;
+  /* four stops rather than three, so the edge of the pool fades out instead of
+     ending on a visible ring */
+  -webkit-mask-image:radial-gradient(165px circle at var(--mx, -999px) var(--my, -999px), #000 0%, rgba(0,0,0,.72) 32%, rgba(0,0,0,.28) 58%, transparent 78%);
+  mask-image:radial-gradient(165px circle at var(--mx, -999px) var(--my, -999px), #000 0%, rgba(0,0,0,.72) 32%, rgba(0,0,0,.28) 58%, transparent 78%)}
+@media (hover:hover) and (pointer:fine) and (min-width:900px){
+  .status.lit::after{opacity:var(--dotop, .5)}
+}
+@media (prefers-reduced-motion: reduce){ .status::after{display:none} }
 .status--art::before{content:"";position:absolute;inset:-30px;z-index:-1;pointer-events:none;
   background:var(--art) center/cover no-repeat;filter:blur(30px) saturate(1.4);opacity:.22;
   -webkit-mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.5) 35%,transparent 70%);mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.5) 35%,transparent 70%)}
@@ -287,11 +306,13 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 .fworks i{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:1px;opacity:0;
   animation:fw var(--dur,1.9s) var(--delay,0s) linear forwards}
 @keyframes fw{
-  /* 0 to 42% is the burst outward, easing off. 42% on is gravity taking over. */
+  /* 0 to 26% is the burst outward, easing off. After that gravity takes over and
+     has the rest of the run to carry the paper off the bottom of the screen. */
   0%{transform:translate(0,0) rotate(var(--tilt,0deg));opacity:0}
-  6%{opacity:1}
-  42%{transform:translate(var(--tx,0), var(--ty,0)) rotate(calc(var(--tilt,0deg) + var(--spin,180deg) * .5));opacity:1}
-  100%{transform:translate(calc(var(--tx,0) * 1.12), calc(var(--ty,0) + var(--fall,100px)))
+  4%{opacity:1}
+  26%{transform:translate(var(--tx,0), var(--ty,0)) rotate(calc(var(--tilt,0deg) + var(--spin,180deg) * .3));opacity:1}
+  82%{opacity:1}
+  100%{transform:translate(calc(var(--tx,0) * 1.25), calc(var(--ty,0) + var(--fall,400px)))
        rotate(calc(var(--tilt,0deg) + var(--spin,180deg)));opacity:0}
 }
 @media (prefers-reduced-motion: reduce){ .fworks{display:none} }
@@ -2734,6 +2755,37 @@ function stateOf(s, d){
 const VERDICT_ICON = {banger:"\u2605", fine:"\u25C6", never_again:"\u2716"};
 const SHAPE_ORDER = {dropin:0, sitting:1, campaign:2, longhaul:3};
 
+/* Follows the pointer across the status strip and writes --mx/--my for the
+   dot grid's mask. One rAF per frame at most, and it sets style on the element
+   rather than re-rendering, so a poll landing mid-move cannot fight it. */
+let litRaf = 0;
+function wireLit(d){
+  if(!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const st = document.querySelector(".status");
+  if(!st) return;
+  // your own colour, so the grid is a little bit yours
+  const me = d && d.meMember;
+  // blended toward the accent so a hash landing on bilious yellow still sits
+  // in the palette; it is a tint of you, not a free-for-all
+  st.style.setProperty("--dot", me
+    ? `color-mix(in oklab, hsl(${hueOf(me.name)} 72% 52%) 55%, var(--accent))`
+    : "var(--accent)");
+  let next = null;
+  st.addEventListener("pointermove", e => {
+    const r = st.getBoundingClientRect();
+    next = [e.clientX - r.left, e.clientY - r.top];
+    if(litRaf) return;
+    litRaf = requestAnimationFrame(() => {
+      litRaf = 0;
+      if(!next) return;
+      st.style.setProperty("--mx", next[0].toFixed(0) + "px");
+      st.style.setProperty("--my", next[1].toFixed(0) + "px");
+      st.classList.add("lit");
+    });
+  });
+  st.addEventListener("pointerleave", () => { st.classList.remove("lit"); next = null; });
+}
 function hueOf(str){ let h=0; for(let i=0;i<String(str).length;i++) h=(h*31+String(str).charCodeAt(i))%360; return h; }
 function monogram(name){
   const w = String(name||"?").replace(/[^A-Za-z0-9 ]/g,"").split(" ").filter(Boolean);
@@ -3089,31 +3141,35 @@ function fireworks(bursts){
   if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const wrap = document.createElement("div");
   wrap.className = "fworks"; wrap.setAttribute("aria-hidden", "true");
-  const n = bursts || 3;
+  // nine bursts over about three and a half seconds, so the last paper is still
+  // falling at five. Bursts walk across and down the screen rather than all
+  // going off in the same band.
+  const n = bursts || 9;
   for(let b = 0; b < n; b++){
-    // each burst gets its own spot and its own moment, so they read as fireworks
-    const ox = 22 + Math.random() * 56, oy = 14 + Math.random() * 22;
-    const bits = 22 + Math.floor(Math.random() * 8);
-    const delay = b * 0.32 + Math.random() * 0.05;
+    const ox = 10 + Math.random() * 80, oy = 8 + Math.random() * 44;
+    const bits = 26 + Math.floor(Math.random() * 12);
+    const delay = b * 0.38 + Math.random() * 0.12;
     for(let i = 0; i < bits; i++){
       const ang = (i / bits) * Math.PI * 2 + Math.random() * 0.22;   // evenly round the circle, slightly jittered
-      const dist = 90 + Math.random() * 110;
+      const dist = 110 + Math.random() * 190;
       const e = document.createElement("i");
       e.style.left = ox + "%"; e.style.top = oy + "vh";
       e.style.setProperty("--tx", (Math.cos(ang) * dist).toFixed(0) + "px");
       e.style.setProperty("--ty", (Math.sin(ang) * dist).toFixed(0) + "px");
-      // fall is the gravity leg: how far the paper drifts down after the burst
-      e.style.setProperty("--fall", (90 + Math.random() * 120).toFixed(0) + "px");
-      e.style.setProperty("--spin", (Math.random() * 900 - 450).toFixed(0) + "deg");
+      // fall is the gravity leg: how far the paper drifts down after the burst.
+      // Generous, so pieces leave the bottom of the screen rather than stopping.
+      e.style.setProperty("--fall", (420 + Math.random() * 620).toFixed(0) + "px");
+      e.style.setProperty("--spin", (Math.random() * 1600 - 800).toFixed(0) + "deg");
       e.style.setProperty("--tilt", (Math.random() * 90).toFixed(0) + "deg");
-      e.style.setProperty("--dur", (1.5 + Math.random() * 0.8).toFixed(2) + "s");
-      e.style.setProperty("--delay", (delay + Math.random() * 0.08).toFixed(2) + "s");
+      e.style.setProperty("--dur", (2.6 + Math.random() * 1.6).toFixed(2) + "s");
+      e.style.setProperty("--delay", (delay + Math.random() * 0.14).toFixed(2) + "s");
       e.style.background = FW_PAPER[Math.floor(Math.random() * FW_PAPER.length)];
       wrap.appendChild(e);
     }
   }
   document.body.appendChild(wrap);
-  setTimeout(() => wrap.remove(), n * 330 + 2600);
+  // last burst starts at n*0.38s and runs up to 4.2s, so clear well after that
+  setTimeout(() => wrap.remove(), n * 380 + 4600);
 }
 
 /* Type one of these into the search and it answers back. Whole-word matches
@@ -3177,7 +3233,7 @@ function toast(text, kind){
   el.textContent = text;
   clearTimeout(toastTimer);
   // the loud kind sits over the page, so it gets out of the way sooner
-  toastTimer = setTimeout(() => el.classList.remove("in"), kind === "fun" ? 3000 : 5000);
+  toastTimer = setTimeout(() => el.classList.remove("in"), kind === "fun" ? 4200 : 5000);
 }
 /** Turns the server's wording into something a person can act on. */
 function saveProblem(err, what){
@@ -3635,7 +3691,7 @@ function renderLanding(){
         <button class="btn" id="joinbtn" disabled>Join</button>
       </div><p class="hint" id="joinhint" aria-live="polite"></p></div>
       <button class="linkbtn pairlink" id="pairopen">Using it somewhere else already? Link this device</button>
-      <p class="footer"><span>No accounts, nothing to install. Cover art and stats come from Steam.</span><span class="credit">Made by Jehan · <a href="https://github.com/JehanBaguley/game-night" target="_blank" rel="noopener">GitHub</a></span></p>
+      <p class="footer"><span>No accounts, nothing to install. Cover art and stats come from Steam.</span><span class="credit">Made by <a href="https://au.linkedin.com/in/jehanbaguley" target="_blank" rel="noopener">Jehan</a> · <a href="https://github.com/JehanBaguley/game-night" target="_blank" rel="noopener">GitHub</a></span></p>
     </div>
     ${sheet ? renderSheet(null) : ""}`;
 
@@ -3845,6 +3901,7 @@ function renderGroup(){
 
   wireGroup(d, filtered);
   wireSesh(d);
+  wireLit(d);
   // marks the moment the last person picks, rather than firing for no reason
   if(d.lookedCount > 1 && d.votedCount >= d.lookedCount) critter(g.emoji || DEFAULT_EMOJI);
   settleImages();

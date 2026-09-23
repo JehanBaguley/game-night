@@ -681,6 +681,8 @@ The script tag carries a **Subresource Integrity hash**, so a compromised CDN ca
 
 A few bits that aren't load-bearing. None of them run with reduced motion on.
 
+**The status strip lights up under your cursor.** A fine dot grid sits over the strip, masked by a soft circle that follows the pointer, so the dots only exist where you are looking. It is one CSS layer and a masked gradient rather than a canvas: the pointer handler writes `--mx`/`--my` at most once per frame and nothing is redrawn. The dot colour comes from your own member colour blended toward the accent, so the same strip is slightly different per person without ever leaving the palette. Desktop with a real pointer only (`hover: hover and pointer: fine`, 900px up), because on a touch screen there is no cursor to follow, and it is removed entirely with reduced motion on.
+
 One roll in twenty on the dice is a natural 20 and picks the least-voted game on the shelf. Three rounds running on the same game and the strip says **Again?!**. Between 1am and 5am the round line adds "who's still up?".
 
 The crew's emoji strolls across the bottom of the page when the whole crew has picked, once a visit. Tapping the emoji in the header three times inside a second and a bit sends it across on demand. The emoji isn't a button, editing the crew is the small pencil next to the name.
@@ -689,7 +691,7 @@ Typing certain things into the shelf search gets an answer back. They fire on a 
 
 | Type | Get |
 | --- | --- |
-| `gg`, `gg wp` | gg wp, plus bursts of paper |
+| `gg`, `gg wp` | gg wp, plus nine bursts of paper across about five seconds |
 | `steam` | we know |
 | `xyzzy` | Nothing happens. |
 | `42`, `the answer` | The answer, but not to what we're playing. |

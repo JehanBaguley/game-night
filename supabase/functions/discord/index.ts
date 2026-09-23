@@ -42,6 +42,22 @@ const headerFor = (appid: number) =>
   appid > 0 ? `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg` : undefined;
 /** "Sam and Kat", "A, B and C" */
 const listNames = (xs: string[]) => xs.length < 2 ? xs.join("") : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1];
+/** Same list, with a cutoff so a wide tie does not run off the line. */
+const andList = (xs: string[], cap = 3) =>
+  xs.length <= cap ? listNames(xs) : xs.slice(0, cap).join(", ") + " and " + (xs.length - cap) + " more";
+/* The ranking grouped by vote count, so nothing hands out a medal it has not
+   earned. rank is competition ranking: 1, 1, 1, then 4. Mirrors voteTiers()
+   in index.html; the two have to agree or the snapshot and the live
+   scoreboard will tell the crew different things. */
+function voteTiers(ranked: { appid: number; n: number }[]) {
+  const out: { n: number; rank: number; appids: number[] }[] = [];
+  for (const r of ranked ?? []) {
+    const last = out[out.length - 1];
+    if (last && last.n === r.n) last.appids.push(r.appid);
+    else out.push({ n: r.n, rank: out.reduce((a, t) => a + t.appids.length, 0) + 1, appids: [r.appid] });
+  }
+  return out;
+}
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
 
 /** The crew colour as the integer Discord wants for the embed's side bar. */
@@ -99,16 +115,30 @@ function buildEmbed(data: State) {
     const need = Math.min(g.quorum ?? total, total);
     description = `**Round ${g.round_no}** · ${voted.size} of ${total} voted` +
       (voted.size >= need && ranked.length ? " · enough to call it" : "");
+    // medals for a rank a game actually holds, a handshake for a genuine tie
     const medals = ["🥇", "🥈", "🥉"];
+    const tiers = voteTiers(ranked);
+    const rows: string[] = [];
+    let shown = 0;
+    for (const t of tiers) {
+      if (shown >= 3) break;
+      const names = t.appids.map((a) => `**${gname(a)}**`);
+      rows.push(
+        t.appids.length > 1
+          ? `🤝 ${andList(names)} · ${plural(t.n, "vote")} each`
+          : `${medals[t.rank - 1] ?? "·"} ${names[0]} · ${plural(t.n, "vote")}`,
+      );
+      shown += t.appids.length;
+    }
+    const heat = tiers.length > 0 && tiers[0].appids.length > 1;
     fields.push({
-      name: "Top picks",
-      value: ranked.length
-        ? ranked.slice(0, 3).map((r, i) => `${medals[i]} **${gname(r.appid)}** · ${plural(r.n, "vote")}`).join("\n")
-        : "Nobody's picked yet. Get in first.",
+      name: heat ? "Dead heat" : "Top picks",
+      value: rows.length ? rows.join("\n") : "Nobody's picked yet. Get in first.",
     });
     const waiting = members.filter((m) => !voted.has(m.member_id)).map((m) => m.name);
     if (waiting.length && total > 1) fields.push({ name: "Still to vote", value: listNames(waiting) });
-    if (ranked.length) image = headerFor(ranked[0].appid);
+    // a dead heat has no single face, so it gets no hero image either
+    if (tiers.length > 0 && tiers[0].appids.length === 1) image = headerFor(tiers[0].appids[0]);
   }
 
   return {
