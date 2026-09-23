@@ -3301,6 +3301,14 @@ const TYPED_EGGS = [
   { test: v => /^(rosebud|motherlode)$/i.test(v), run: () => { toast("No money here, just games.", "fun"); fx("shake"); } },
   { test: v => /^(please|pls)$/i.test(v), run: () => toast("Manners noted.", "fun") },
   { test: v => /^(help|halp)$/i.test(v), run: () => toast("Pick three, the rest sorts itself out.", "fun") },
+  // the pets. Typing one sends it walking across the bottom of the page.
+  { test: v => /^whin(slet)?$/i.test(v),
+    run: () => { toast("\u{1F408} Whin says hi", "fun"); critter("\u{1F408}", true); } },
+  { test: v => /^(taro|arnold|frank|gus)$/i.test(v),
+    run: v => { const n = v[0].toUpperCase() + v.slice(1).toLowerCase();
+                toast(`\u{1F415} ${n}, good dog`, "fun"); critter("\u{1F415}", true); } },
+  // 6 7
+  { test: v => /^6\s*[- ]?\s*7$/.test(v), run: () => toast("\u{1F937} 6 7", "fun") },
   // a mate's name is not a game, and the crew emoji sends the critter for a lap
   { test: v => !!nameInCrew(v),         run: v => toast(nameInCrew(v) + " isn't a game.", "fun") },
   { test: v => !!(S && S.group && S.group.emoji) && v === S.group.emoji, run: () => critter(S.group.emoji, true) },
