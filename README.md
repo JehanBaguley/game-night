@@ -707,11 +707,13 @@ Typing certain things into the shelf search gets an answer back. They fire on a 
 | `rosebud`, `motherlode` | No money here, just games. |
 | `please`, `pls` | Manners noted. |
 | `help` | Pick three, the rest sorts itself out. |
-| `whin`, `whinslet` | 🐱 Whin says hi, and the cat walks across the bottom |
-| `luna`, `amber` | 🐱 *name* says hi, and the cat walks across |
-| `taro`, `arnold`, `frank`, `gus` | 🐶 *name*, good dog, and the dog walks across |
+| `whin`, `whinslet` | 🐱 Whin says pat me :3, and the cat walks across the bottom |
+| `luna`, `amber` | 🐱 *name* says pat me :3, and the cat walks across |
+| `taro`, `arnold`, `frank`, `gus` | 🐶 *name*, good dog. pat me, and the dog walks across |
 | `67`, `6 7`, `6-7` | 🤷 6 7 |
 | A crew member's name | *name* isn't a game. |
 | The crew's emoji | Sends it for a lap |
+
+**The pets can actually be patted.** Asking to be patted and then not being pattable is a worse joke than not asking, so the walking pet takes pointer events, pauses under your cursor, and turns into a happy face with a purr when you tap it. The walk lives on the outer span and the reaction on the inner one, so a pat can bounce the face without fighting the walk's transform. It sits at `z-index: 60`, above the phone's votebar at 50, because at its old `z-index: 5` it was walking behind the bar, which is to say invisibly on every phone.
 
 They live in one `TYPED_EGGS` array, a `test` and a `run` per entry, so adding another is a line.

@@ -332,8 +332,24 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 }
 @media (prefers-reduced-motion: reduce){ .fworks{display:none} }
 /* the crew's emoji wanders past the bottom of the page once a visit */
-.critter{position:fixed;bottom:6px;left:-60px;z-index:5;font-size:26px;pointer-events:none;
+/* z-index 60 puts it over the phone's votebar (50) but under a toast (80).
+   At z-index 5 it was walking behind the bar, which is to say invisibly. */
+.critter{position:fixed;bottom:6px;left:-60px;z-index:60;font-size:26px;pointer-events:none;
   animation:critter 9s linear forwards;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))}
+.critter > i{display:block;font-style:normal}
+/* a pet asking to be patted has to be pattable. Padding for a 44px target,
+   negative margin so the walk path does not shift. */
+.critter--pat{pointer-events:auto;cursor:pointer;padding:9px;margin:-9px}
+/* stops under your cursor, so patting a moving target is not a test of aim */
+.critter--pat:hover{animation-play-state:paused}
+.critter > i.patted{animation:patted .55s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes patted{
+  0%{transform:scale(1) rotate(0)}
+  40%{transform:scale(1.55) rotate(-9deg)}
+  100%{transform:scale(1.3) rotate(0)}
+}
+/* the phone's votebar is about 66px, so clear it */
+@media (max-width:899px){ .critter{bottom:78px} }
 @keyframes critter{
   0%{transform:translateX(0) rotate(0deg)}
   25%{transform:translateX(30vw) rotate(-6deg)}
@@ -3290,6 +3306,9 @@ function fireworks(bursts){
 /* Type one of these into the search and it answers back. Whole-word matches
    only, and they fire on a pause in typing, so searching "SteamWorld" never
    trips the "steam" one. keep:true leaves your text alone. */
+/* Tap the walking pet and it stops for a pat. face is what it turns into. */
+const PAT_CAT = { face: "\u{1F63B}", say: "\u{1F49C} purr" };
+const PAT_DOG = { face: "\u{1F929}", say: "\u{1F49C} tail going" };
 const TYPED_EGGS = [
   { test: v => /^gg( wp)?$/i.test(v),   run: () => { toast("gg wp \u{1F91D}", "fun"); fireworks(); } },
   { test: v => /^steam$/i.test(v),      run: () => toast("we know", "fun") },
@@ -3303,13 +3322,13 @@ const TYPED_EGGS = [
   { test: v => /^(help|halp)$/i.test(v), run: () => toast("Pick three, the rest sorts itself out.", "fun") },
   // the pets. Typing one sends it walking across the bottom of the page.
   { test: v => /^whin(slet)?$/i.test(v),
-    run: () => { toast("\u{1F431} Whin says hi", "fun"); critter("\u{1F431}", true); } },
+    run: () => { toast("\u{1F431} Whin says pat me :3", "fun"); critter("\u{1F431}", true, PAT_CAT); } },
   { test: v => /^(luna|amber)$/i.test(v),
     run: v => { const n = v[0].toUpperCase() + v.slice(1).toLowerCase();
-                toast(`\u{1F431} ${n} says hi`, "fun"); critter("\u{1F431}", true); } },
+                toast(`\u{1F431} ${n} says pat me :3`, "fun"); critter("\u{1F431}", true, PAT_CAT); } },
   { test: v => /^(taro|arnold|frank|gus)$/i.test(v),
     run: v => { const n = v[0].toUpperCase() + v.slice(1).toLowerCase();
-                toast(`\u{1F436} ${n}, good dog`, "fun"); critter("\u{1F436}", true); } },
+                toast(`\u{1F436} ${n}, good dog. pat me`, "fun"); critter("\u{1F436}", true, PAT_DOG); } },
   // 6 7
   { test: v => /^6\s*[- ]?\s*7$/.test(v), run: () => toast("\u{1F937} 6 7", "fun") },
   // a mate's name is not a game, and the crew emoji sends the critter for a lap
@@ -3341,15 +3360,34 @@ function tryTypedEgg(v){
     you tapped the emoji three times. */
 let critterDone = false;
 let emojiTaps = 0, emojiTapAt = 0;
-function critter(emoji, force){
+function critter(emoji, force, pat){
   if(!emoji || (critterDone && !force)) return;
   critterDone = true;
   if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   setTimeout(() => {
     const el = document.createElement("span");
-    el.className = "critter"; el.setAttribute("aria-hidden", "true"); el.textContent = emoji;
+    el.className = "critter" + (pat ? " critter--pat" : "");
+    // the walk lives on the outer span and the reaction on the inner one, so a
+    // pat can bounce the face without fighting the walk's transform
+    const face = document.createElement("i");
+    face.textContent = emoji;
+    el.appendChild(face);
+    if(pat){
+      el.title = "pat";
+      el.onclick = () => {
+        if(el.dataset.patted) return;
+        el.dataset.patted = "1";
+        el.style.animationPlayState = "paused";   // stop it right where it is
+        face.textContent = pat.face;
+        face.classList.add("patted");
+        toast(pat.say, "fun");
+        setTimeout(() => el.remove(), 1500);
+      };
+    } else {
+      el.setAttribute("aria-hidden", "true");
+    }
     document.body.appendChild(el);
-    el.addEventListener("animationend", () => el.remove());
+    el.addEventListener("animationend", () => { if(!el.dataset.patted) el.remove(); });
   }, force ? 0 : 2500);
 }
 /** A small line at the bottom of the screen. Used when something didn't save. */
