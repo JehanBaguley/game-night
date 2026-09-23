@@ -190,7 +190,7 @@ A link preview can't update itself or carry buttons, so instead the crew gets on
 | Step | What happens |
 | --- | --- |
 | Set up (once) | **⋯ → Send to the chat → Live Discord scoreboard**. In Discord: channel cog → Integrations → Webhooks → New Webhook → Copy Webhook URL. Paste, **Connect**, and the first scoreboard posts straight away |
-| While voting | Round number, how many have voted, the top three with medals, who's still to vote, the leader's cover art |
+| While voting | Round number, how many have voted, the top picks, who's still to vote, the leader's cover art |
 | While playing | What's on, nights so far, where the next night is at (locked, pencilled, or who still owes their nights) and any side games |
 | Small changes | A vote, a night ticked, a game added: the same message is edited, batched over three seconds so a flurry of taps is one edit. Nothing changed, nothing sent |
 | Big moments | A round called, a new round, a night locked, a side game started: a fresh message posts (so the channel lights up) and the old one is marked as old |
@@ -220,6 +220,8 @@ On desktop it's a rail; on a phone the same panels sit under the shelf. Order: W
 | **On sale now** | Shelf games discounted on Steam right now, biggest cut first, with price, was-price and how many still need to buy. Cards get a green −50% badge. Prices are AUD, refreshed by the `prices` function when a crew opens, at most every four hours |
 | **Our record** | Games played, nights played, bangers, a hall of fame, and the last few things that happened ("Sam and Alex voted", "Alex added 3 games", "Wrapped up Valheim · ★ Banger"), pieced together from timestamps the crew already has |
 | **Who's in** | The crew, who's here now, who's voted |
+
+**A dead heat is never dressed up as a ranking.** The ranking is grouped by vote count, so three games on two votes each are one tier, not first, second and third. A tier with one game in it gets its medal (🥇 🥈 🥉); a tier with several gets 🤝 and "2 votes each". The heading changes from **Top picks** to **Dead heat**, no cover art is picked (there is no single face to show), and the copy-text version marks the tie as `=1.` rather than numbering it 1, 2, 3. The status card names the tied games instead of saying "and 2 more", and the line opens a list of them with who picked each. These rules live in both `index.html` and `supabase/functions/discord/index.ts` and have to agree, or the snapshot and the live scoreboard will tell the crew different things.
 
 **Spin for it:** on a dead heat the status card gets a 🎡 button. It spins a wheel of the tied games, lands on one, and **Lock in** calls the round for that game rather than whichever happened to be first.
 
@@ -436,12 +438,21 @@ Nothing scrolls sideways and nothing animates out of the way, because a control 
 
 Every filter combines with every other, in one staged dialog at every screen size.
 
-**Crew size is not one of eight equal things.** It is the only filter that maps to the decision you are actually making, so it sits at the top on its own surface, with a line underneath saying in words what it is doing to the shelf. Everything else is a row of chips.
+The eight filters sit in three named sections, because what they are about differs:
 
-Two earlier mistakes are worth recording, because both looked fine until someone used it:
+| Section | Holds | Why together |
+| --- | --- | --- |
+| **Tonight** | How many of us, Energy, How long | Changes every session, depends who turned up |
+| **The game** | What we'll be doing, Setup, Release | Properties of the game, not of tonight |
+| **Our record** | Have we played it, Only show | The crew's history with it |
 
-- **Six identically weighted grey headings.** *How many of us* and *Vibe* were typographically the same thing, so nothing looked more important than anything else. Nothing was findable because everything was equally findable.
+Each section owns a two-column grid, and a group with a lot of chips spans both columns so nothing wraps to a line of one.
+
+Three earlier mistakes are worth recording, because all three looked fine until someone used it:
+
+- **Six identically weighted grey headings.** *How many of us* and *Vibe* were typographically the same thing, so nothing looked more important than anything else. Nothing was findable because everything was equally findable. There are two levels now: the section name, then the filter label.
 - **A group called Shortcuts.** It held *Only my picks*, *Never played*, *Played before*, *85%+ on Steam* and *Benched*. That is not a category, it is a leftovers drawer, and two of those five were mutually exclusive while looking like independent toggles. *Never played* and *Played before* are now one three-way control (**Either / Never / We have**), and the rest sit under **Only show**, which says what they do.
+- **A fold called "More filters".** Hiding the five less-used filters behind one disclosure made the same mistake again under a new name: *More filters* is not a category either. Worse, `<details>` was a single grid item, so everything inside it was squeezed into one column while the other half of the dialog sat empty. Grouping them honestly removed the need for a fold at all. On a phone the dialog scrolls, which is cheaper than hiding things.
 
 **Options with nothing behind them are hidden, not greyed out.** A chip reading *One sitting 0* is a dead control taking up a row. The exception is one you have already selected, which stays visible or you could not turn it off.
 

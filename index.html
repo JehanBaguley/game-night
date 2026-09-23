@@ -242,6 +242,11 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 @media (min-width:900px){ .status .st-lead{font-size:17px} .status .st-sub{font-size:12.5px} }
 .status .st-lead b{color:var(--ink);font-weight:700}
 .status .st-lead--none{color:var(--muted)}
+/* the tie line is a button, but it should still read as the headline it is */
+.status .st-lead--tie{text-align:left;padding:0;font:inherit;font-size:inherit;color:var(--ink-2);
+  border-bottom:1px dotted color-mix(in oklab, var(--ink-2) 45%, transparent);cursor:pointer}
+.status .st-lead--tie:hover{color:var(--ink)}
+.status .st-lead--tie:hover b{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
 .status .st-sub{font-size:12px;color:var(--muted);flex:1 0 100%}
 .status .st-acts{display:flex;gap:6px;align-items:center;flex:none}
 .status .st-track{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--surface-3)}
@@ -403,13 +408,29 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 
 /* two columns once there is room, so the panel does not push the shelf
    off the screen when several filter groups are open */
-.fpanel{
-  margin-top:8px;background:var(--surface);border-radius:var(--r-lg);
-  padding:15px;display:grid;gap:13px 26px;grid-template-columns:1fr;
-}
+.fpanel{margin-top:8px;display:flex;flex-direction:column;gap:10px}
+/* one section per idea. The section owns the two-column grid, so a group with
+   a lot of chips can span it instead of being squeezed into half the sheet. */
+.fsec{background:var(--surface);border-radius:var(--r-lg);padding:14px 15px 15px;
+  display:grid;gap:12px 24px;grid-template-columns:1fr}
+.fsec > h4{grid-column:1/-1;margin:0 0 1px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:600}
+/* a hairline between sections, so the three ideas read as three without
+   turning the sheet into three heavy cards */
+.fsec + .fsec{border-top:1px solid var(--line);border-radius:0;padding-top:15px}
+.fsec:first-child{border-radius:var(--r-lg) var(--r-lg) 0 0}
+.fsec:last-child{border-radius:0 0 var(--r-lg) var(--r-lg)}
+.fpanel{gap:0}
 @media (min-width:820px){
-  .fpanel{grid-template-columns:1fr 1fr}
+  .fsec{grid-template-columns:1fr 1fr}
+  .fgroup--wide{grid-column:1/-1}
 }
+/* the crew stepper is one control, so it is one row, not a boxed panel */
+.fcrew{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.fcrew .fcrew-l{display:flex;flex-direction:column;gap:2px;min-width:0}
+.fcrew .fhint{margin:0}
+/* the sub-labels sit under the section name, so they are quieter than it */
+.flab{font-size:12.5px;font-weight:600;color:var(--ink-2)}
 .fgroup{display:flex;flex-direction:column;gap:8px}
 .fgroup > .lab{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .fset{display:flex;gap:6px;flex-wrap:wrap}
@@ -738,12 +759,6 @@ td.r,th.r{text-align:right;white-space:nowrap}
 }
 .rail{display:flex;flex-direction:column;gap:12px;margin-top:28px}
 .candlist{display:flex;flex-direction:column;gap:6px}
-.fmore{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
-.fmore>summary{font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer;list-style:none;padding:6px 0;display:flex;align-items:center;gap:6px}
-.fmore>summary::-webkit-details-marker{display:none}
-.fmore>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
-.fmore[open]>summary::after{transform:rotate(-135deg)}
-.fmore>summary:hover{color:var(--ink)}
 .whopanel .pcount{font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--muted)}
 .who .wtick{margin-left:4px;font-size:11px;color:var(--ok, var(--accent))}
 .who--claim{cursor:pointer;border:1px dashed var(--line-strong)}
@@ -835,8 +850,6 @@ td.r,th.r{text-align:right;white-space:nowrap}
 
 /* filter sheet: the lead block is the one filter that maps to the real
    decision, so it gets a surface of its own instead of a fifth grey label */
-.fgroup--lead{background:var(--surface-2);border-radius:var(--r-md);padding:11px 12px;gap:6px}
-.fpanel .fgroup--lead{grid-column:1/-1}
 .fhint{font-size:12px;color:var(--ink-2);line-height:1.35}
 .fset--seg{display:flex;gap:0;background:var(--surface-2);border-radius:var(--r-md);padding:3px;width:fit-content;max-width:100%}
 .fset--seg .chip{background:transparent;flex:1;min-height:36px}
@@ -1016,8 +1029,10 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .gemoji:active{transform:scale(.94)}
 /* edit lives on its own pencil now, so the emoji is free to be tapped for fun.
    Hover-only on desktop, always there on touch where hover does not exist. */
-.pencilbtn{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--muted);
+.pencilbtn{flex:none;width:40px;height:40px;margin:-6px;border-radius:9px;display:grid;place-items:center;color:var(--muted);
   transition:background .12s,color .12s,opacity .12s}
+/* pointer devices get the tighter target back, touch keeps the 40px one */
+@media (hover:hover) and (pointer:fine){ .pencilbtn{width:30px;height:30px;margin:0} }
 .pencilbtn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8}
 .pencilbtn:hover{background:var(--surface-2);color:var(--ink)}
 @media (hover:hover) and (min-width:900px){
@@ -1209,6 +1224,15 @@ tbody tr[data-row]{cursor:pointer}
 .gtext{min-width:0;flex:1}
 .lthumb{width:64px;height:30px;border-radius:6px;flex:none;object-fit:cover;background:var(--tile, var(--surface-3));display:block}
 .lthumb--tile{background:var(--tile, var(--surface-3))}
+/* the dead heat list: one row per level game, and who put it there */
+.tielist{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.tierow{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:9px 8px;
+  border-radius:var(--r-md);background:transparent;transition:background .12s}
+.tierow:hover{background:var(--surface-2)}
+.tierow .tiename{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.tierow .tiename b{font-size:14px;color:var(--ink);font-weight:600}
+.tierow .tiename span{font-size:12px;color:var(--muted)}
+.tierow .chev{color:var(--muted);font-size:17px;flex:none}
 td.g .sub{padding-left:0}
 @media (max-width:480px){ .lthumb{width:40px;height:19px} .gcell{gap:9px} td.g{min-width:0} }
 .paircode{font-size:30px;font-weight:800;letter-spacing:.14em;text-align:center;padding:12px;border-radius:var(--r-md);background:var(--surface);color:var(--ink)}
@@ -1677,7 +1701,7 @@ function whoPanel(d, h){
                 ? `<button class="${cls}" data-claimwho="${esc(mm.member_id)}" title="${tip}">${inner}</button>`
                 : `<span class="${cls}" title="${tip}">${inner}</span>`;
             }).join("") : `<span class="empty">Just you so far.</span>`}</div>
-            <button class="btn btn--ghost btn--sm railshare" id="railshare">Send to the chat</button>
+            <button class="btn btn--ghost btn--sm railshare">Send to the chat</button>
           </section>`;
 }
 
@@ -1883,14 +1907,26 @@ function snapshotData(d){
   } else {
     const total = d.members.length, need = Math.min(g.quorum || total, total);
     desc = `**Round ${g.round_no}** · ${d.votedCount} of ${total} voted` + (d.votedCount >= need && d.ranked.length ? " · enough to call it" : "");
+    // medals for a rank one game actually holds, a handshake for a genuine tie
     const medals = ["🥇", "🥈", "🥉"];
-    fields.push({ name: "Top picks", value: d.ranked.length
-      ? d.ranked.slice(0, 3).map((r, i) => `${medals[i]} **${gname(r.appid)}** · ${plural(r.n, "vote")}`).join("\n")
-      : "Nobody's picked yet. Get in first." });
+    const tiers = voteTiers(d.ranked);
+    const rows = []; let shown = 0;
+    for(const t of tiers){
+      if(shown >= 3) break;
+      const names = t.appids.map(a => `**${gname(a)}**`);
+      rows.push(t.appids.length > 1
+        ? `🤝 ${andList(names)} · ${plural(t.n, "vote")} each`
+        : `${medals[t.rank - 1] || "·"} ${names[0]} · ${plural(t.n, "vote")}`);
+      shown += t.appids.length;
+    }
+    const heat = tiers.length && tiers[0].appids.length > 1;
+    fields.push({ name: heat ? "Dead heat" : "Top picks",
+      value: rows.length ? rows.join("\n") : "Nobody's picked yet. Get in first." });
     const voted = new Set((S.ballots || []).filter(b => (b.picks || []).length).map(b => b.member_id));
     const waiting = d.members.filter(m => !voted.has(m.member_id)).map(m => m.label);
     if(waiting.length && total > 1) fields.push({ name: "Still to vote", value: listNames(waiting) });
-    if(d.ranked.length) cover = d.ranked[0].appid;
+    // a dead heat has no single face, so it gets no hero image either
+    if(tiers.length && tiers[0].appids.length === 1) cover = tiers[0].appids[0];
   }
   return { title: `${g.emoji || DEFAULT_EMOJI} ${g.name}`, desc, fields, cover,
            colour: getComputedStyle(document.documentElement).getPropertyValue("--grad-a").trim() || "#6D5AE6" };
@@ -3421,15 +3457,45 @@ async function joinByCode(c){
 /* ============================================================================
    SHARE TEXT
    ========================================================================== */
+/* The ranking, grouped by vote count. Three games on two votes each are one
+   tier, not first, second and third, so nothing downstream can hand out medals
+   it hasn't earned. rank is competition ranking: 1, 1, 1, then 4. */
+function voteTiers(ranked){
+  const out = [];
+  (ranked || []).forEach(r => {
+    const last = out[out.length - 1];
+    if(last && last.n === r.n) last.appids.push(r.appid);
+    else out.push({ n: r.n, rank: out.reduce((a, t) => a + t.appids.length, 0) + 1, appids: [r.appid] });
+  });
+  return out;
+}
+/** "A, B and C", with a cutoff so a wide tie doesn't run off the line. */
+function andList(names, cap){
+  const max = cap || 3;
+  if(names.length <= max){
+    return names.length < 2 ? (names[0] || "") : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+  }
+  return names.slice(0, max).join(", ") + " and " + (names.length - max) + " more";
+}
+
 function summaryText(d){
   const g = S.group;
   const lines = [(g.emoji || DEFAULT_EMOJI) + " " + g.name + ": what are we playing"];
   lines.push("");
   if(!d.ranked.length) lines.push("nothing yet, someone go first");
-  else d.ranked.slice(0,5).forEach((r,i) => {
-    const g2 = d.gamesById[r.appid];
-    lines.push((i+1)+". "+(g2?g2.name:r.appid)+" · "+r.n+(r.n===1?" vote":" votes"));
-  });
+  else {
+    const nm = a => { const g2 = d.gamesById[a]; return g2 ? g2.name : a; };
+    let shown = 0;
+    for(const t of voteTiers(d.ranked)){
+      if(shown >= 5) break;
+      const votes = t.n + (t.n === 1 ? " vote" : " votes");
+      // "=2." marks a tie the way a ladder does, rather than inventing an order
+      lines.push(t.appids.length > 1
+        ? "=" + t.rank + ". " + andList(t.appids.map(nm)) + " · " + votes + " each"
+        : t.rank + ". " + nm(t.appids[0]) + " · " + votes);
+      shown += t.appids.length;
+    }
+  }
   lines.push("");
   lines.push(S.group.paused_at ? "on a break, votes still welcome"
                                : d.votedCount+" of "+d.lookedCount+" in");
@@ -3804,7 +3870,6 @@ function settleImages(){
 }
 
 // stays open once someone opens it, so a tap on a chip doesn't fold it away
-let fMoreOpen = false;
 function filterPanel(d, pool, counts){
   const n = (fn) => pool.filter(fn).length;
   counts = counts || {};
@@ -3812,7 +3877,7 @@ function filterPanel(d, pool, counts){
   /* A chip with nothing behind it is noise. Zero-count options are dropped
      rather than sat there greyed out, with one exception: an option you have
      already selected has to stay visible or you cannot turn it back off. */
-  const grp = (label, key, map, getter) => {
+  const grp = (label, key, map, getter, wide) => {
     const chips = Object.keys(map).map(k => {
       const val = isNaN(+k) ? k : +k;
       const on = FT()[key].has(val);
@@ -3822,7 +3887,8 @@ function filterPanel(d, pool, counts){
                 ${esc(map[k])}<span class="n num">${count}</span></button>`;
     }).join("");
     if(!chips.trim()) return "";
-    return `<div class="fgroup"><span class="eyebrow">${label}</span>
+    // wide groups take the whole row so their chips never orphan onto a line of one
+    return `<div class="fgroup${wide ? " fgroup--wide" : ""}"><span class="flab">${label}</span>
               <div class="fset">${chips}</div></div>`;
   };
 
@@ -3831,8 +3897,9 @@ function filterPanel(d, pool, counts){
   // night, so it gets a surface of its own rather than a fifth identical
   // grey label, and it says in words what it is doing to the shelf.
   const lead = `
-    <div class="fgroup fgroup--lead">
-      <span class="eyebrow">How many of us tonight</span>
+    <div class="fcrew">
+      <div class="fcrew-l"><span class="flab">How many of us</span>
+        <p class="fhint">${crew ? `Hiding anything that cannot seat ${crew}.` : `Every game, whatever its player cap.`}</p></div>
       <div class="stepper">
         <button class="sbtn" data-crew="-" aria-label="Fewer players">\u2212</button>
         <span class="val${crew ? " num" : ""}">${crew ?? "Any"}</span>
@@ -3840,13 +3907,10 @@ function filterPanel(d, pool, counts){
         ${crew ? `<button class="clearall" data-crew="off">Any</button>`
                : `<span class="off">${d.lookedCount} in the group</span>`}
       </div>
-      <p class="fhint">${crew
-        ? `Hiding anything that cannot seat ${crew}.`
-        : `Every game, whatever its player cap.`}</p>
     </div>`;
 
   const played = `
-    <div class="fgroup"><span class="eyebrow">Have we played it</span>
+    <div class="fgroup"><span class="flab">Have we played it</span>
       <div class="fset fset--seg">
         ${[["","Either"],["fresh","Never"],["again","We have"]].map(([v,l]) =>
           `<button class="chip" data-played="${v}" aria-pressed="${(FT().played||"") === v}">${l}</button>`).join("")}
@@ -3856,7 +3920,7 @@ function filterPanel(d, pool, counts){
   // "Shortcuts" was a junk drawer. These are the two or three that narrow the
   // shelf to a specific pile, and they say so.
   const only = `
-    <div class="fgroup"><span class="eyebrow">Only show</span>
+    <div class="fgroup fgroup--wide"><span class="flab">Only show</span>
       <div class="fset">
         <button class="chip" data-toggle="mine" aria-pressed="${FT().mine}" ${d.myPicks.length?"":"disabled"}>My picks<span class="n num">${d.myPicks.length}</span></button>
         <button class="chip" data-toggle="wellrated" aria-pressed="${FT().wellrated}">85%+ on Steam<span class="n num">${n(s => ((d.gamesById[s.appid]||{}).review_pct ?? 0) >= 85)}</span></button>
@@ -3865,24 +3929,23 @@ function filterPanel(d, pool, counts){
       </div>
     </div>`;
 
-  // how many of us, energy and how long decide most nights. The rest are real
-  // but rarely the first question, so they fold away until someone wants them.
-  const rest = [
-    grp("What we'll be doing", "doing", DOING, (s,dd) => doingOf(s, dd)),
-    grp("Setup", "setup", SETUP, s => s.setup),
-    grp("Release", "release", RELEASE, (s,dd) => releaseOf(dd.gamesById[s.appid])),
-    played, only,
-  ].join("");
-  const restOn = FT().doing.size || FT().setup.size || FT().release.size || FT().played
-               || FT().mine || FT().wellrated || FT().demo || FT().benched;
+  /* Three sections, named for what they are about. The old single "More
+     filters" fold was a junk drawer, and because <details> was one grid item
+     everything inside it was squeezed into half the sheet while the other
+     half sat empty. Sections own the grid now, so nothing is hidden and
+     nothing is cramped. */
+  const sec = (title, inner) => inner.trim()
+    ? `<section class="fsec"><h4>${title}</h4>${inner}</section>` : "";
+
   return `<div class="fpanel">
-    ${lead}
-    ${grp("Energy", "energy", ENERGY, (s,dd) => energyOf(s, dd))}
-    ${grp("How long", "shape", SHAPE, (s,dd) => (dd.gamesById[s.appid]||{}).shape)}
-    <details class="fmore"${restOn || fMoreOpen ? " open" : ""}>
-      <summary>More filters</summary>
-      ${rest}
-    </details>
+    ${sec("Tonight", lead
+      + grp("Energy", "energy", ENERGY, (s2,dd) => energyOf(s2, dd))
+      + grp("How long", "shape", SHAPE, (s2,dd) => (dd.gamesById[s2.appid]||{}).shape))}
+    ${sec("The game",
+        grp("What we'll be doing", "doing", DOING, (s2,dd) => doingOf(s2, dd), true)
+      + grp("Setup", "setup", SETUP, s2 => s2.setup)
+      + grp("Release", "release", RELEASE, (s2,dd) => releaseOf(dd.gamesById[s2.appid])))}
+    ${sec("Our record", played + only)}
   </div>`;
 }
 
@@ -3979,7 +4042,13 @@ function renderStatus(d, g, call){
   const game = top ? d.gamesById[top.appid] : null;
   const tied = top ? d.ranked.filter(r => r.n === top.n) : [];
   const lead = !game ? `<span class="st-lead st-lead--none">No votes yet</span>`
-    : tied.length > 1 ? `<span class="st-lead">Dead heat: <b class="leadname">${esc(game.name)}</b> and ${tied.length-1} more on ${top.n}</span>`
+    : tied.length > 1 ? (() => {
+        // name them rather than saying "and 2 more", and make the line open the
+        // full list with who picked what when the tie is too wide to spell out
+        const names = tied.map(r => `<b class="leadname">${esc((d.gamesById[r.appid] || {}).name || "something")}</b>`);
+        return `<button class="st-lead st-lead--tie" id="tiebtn" title="Who's tied, and who picked them">Dead heat: ${
+          andList(names)} on ${top.n}</button>`;
+      })()
     : `<span class="st-lead"><b class="leadname${tookover === top.appid ? " tookover" : ""}">${esc(game.name)}</b> leads with ${top.n}</span>`;
   const sub = solo ? "just you so far, send the link round"
     : `${d.votedCount} of ${d.lookedCount} in${call.ready ? " · enough to call it" : call.short ? " · "+call.short+" more to call it" : ""}`;
@@ -4507,6 +4576,22 @@ function renderSheet(d){
       <div class="row">${canNative ? `<button class="btn btn--ghost" id="nativeshare">Share…</button>` : ""}<button class="btn" id="copyshare">Copy it</button></div>`}`);
   }
 
+  if(sheet.kind === "tie"){
+    const top = d.ranked.length ? d.ranked[0] : null;
+    const tied = top ? d.ranked.filter(r => r.n === top.n) : [];
+    return shell(`<h3>Dead heat on ${top ? top.n : 0}</h3>
+      <p class="fhint">${tied.length} games level. Call it and the dice decides, spin the wheel, or wait for the rest of the picks.</p>
+      <div class="tielist">${tied.map(r => {
+        const g2 = d.gamesById[r.appid] || {};
+        const who = pickersOf(d, r.appid);
+        const art = artOf(d, r.appid);
+        return `<button class="tierow" data-tiego="${r.appid}">
+          ${art ? `<img class="lthumb" src="${esc(art)}" alt="" loading="lazy">` : `<span class="lthumb lthumb--tile"></span>`}
+          <span class="tiename"><b>${esc(g2.name || "something")}</b>
+            <span>${who.length ? "picked by " + esc(andList(who, 4)) : "no names on it"}</span></span>
+          <span class="chev" aria-hidden="true">\u203A</span></button>`;
+      }).join("")}</div>`);
+  }
   if(sheet.kind === "filters"){
     const draft = fDraft || F;
     const shelfAll = S.shelf || [];
@@ -4969,7 +5054,9 @@ function wireSesh(d){
   app.querySelectorAll("[data-sidejoin]").forEach(b => b.onclick = () =>
     act("side_join", { p_appid: +b.dataset.sidejoin, p_on: b.dataset.on === "1" }, b));
   app.querySelectorAll("[data-sidemenu]").forEach(b => b.onclick = () => { sheet = { kind:"sidewrap", appid: +b.dataset.sidemenu, verdict: null }; render(); });
-  const rs = document.getElementById("railshare"); if(rs) rs.onclick = () => { sheet = { kind:"share" }; render(); };
+  // by class, not id: whoPanel is rendered twice (phone .uptop, desktop rail) and
+  // getElementById would only ever wire the first copy, which is the hidden one
+  app.querySelectorAll(".railshare").forEach(b => b.onclick = () => { sheet = { kind:"share" }; render(); });
   const sg = document.getElementById("sidego");
   if(sg) sg.onclick = async () => { const a = sheet.appid; sheet = null; await act("start_side_game", { p_appid: a }, sg); };
 
@@ -5381,10 +5468,12 @@ function wireGroup(d, filtered){
   const ns = document.getElementById("nativeshare");
   if(ns) ns.onclick = async () => { const m = sheet.mode || "state", link = shareBody(d, "link");
     try{ await navigator.share(m === "link" ? { title: S.group.name, url: link } : { title: S.group.name, text: shareBody(d, m) }); }catch{} };
-  const fmore = document.querySelector(".fmore");
-  if(fmore) fmore.addEventListener("toggle", () => { fMoreOpen = fmore.open; });
   const mw = document.getElementById("moreways");
   if(mw) mw.onclick = () => { sheet = { ...sheet, moreways: true }; render(); };
+  const tb = document.getElementById("tiebtn"); if(tb) tb.onclick = () => { sheet = { kind:"tie" }; render(); };
+  app.querySelectorAll("[data-tiego]").forEach(b => b.onclick = () => {
+    sheet = { kind:"facets", appid: +b.dataset.tiego, e:null, s:null }; render();
+  });
   const dr = document.getElementById("discordrow"); if(dr) dr.onclick = () => { sheet = { kind:"discord", back:"share" }; render(); };
   const ul2 = document.getElementById("unlinkothers");
   if(ul2) ul2.onclick = async () => {
