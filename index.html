@@ -256,13 +256,25 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   .status{flex-wrap:wrap}
   .status .st-acts{margin-left:auto}
 }
-.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,16px);z-index:80;max-width:min(92vw,460px);
+.toast{position:fixed;left:50%;bottom:calc(22px + var(--barh, 0px));transform:translate(-50%,16px);z-index:80;max-width:min(92vw,460px);
   padding:11px 15px;border-radius:999px;font-size:13.5px;line-height:1.4;text-align:center;
   background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--ring), 0 14px 34px -12px rgba(0,0,0,.5);
   opacity:0;pointer-events:none;transition:opacity .2s, transform .2s}
 .toast.in{opacity:1;transform:translate(-50%,0)}
 .toast--bad{background:var(--e3-bg);color:var(--e3);box-shadow:0 0 0 1px color-mix(in oklab, var(--e3) 35%, transparent), 0 14px 34px -12px rgba(0,0,0,.5)}
 @media (prefers-reduced-motion: reduce){ .toast{transition:opacity .2s} }
+@media (max-width:899px){ .toast{bottom:96px} }
+/* the crew's emoji wanders past the bottom of the page once a visit */
+.critter{position:fixed;bottom:6px;left:-60px;z-index:5;font-size:26px;pointer-events:none;
+  animation:critter 9s linear forwards;filter:drop-shadow(0 3px 6px rgba(0,0,0,.35))}
+@keyframes critter{
+  0%{transform:translateX(0) rotate(0deg)}
+  25%{transform:translateX(30vw) rotate(-6deg)}
+  50%{transform:translateX(52vw) rotate(6deg)}
+  75%{transform:translateX(78vw) rotate(-6deg)}
+  100%{transform:translateX(110vw) rotate(0deg)}
+}
+@media (prefers-reduced-motion: reduce){ .critter{display:none} }
 .flash{
   margin-top:20px;background:var(--accent-soft);color:var(--accent-text);border-radius:var(--r-md);
   padding:9px 12px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;
@@ -700,6 +712,14 @@ td.r,th.r{text-align:right;white-space:nowrap}
 }
 .rail{display:flex;flex-direction:column;gap:12px;margin-top:28px}
 .candlist{display:flex;flex-direction:column;gap:6px}
+.fmore{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+.fmore>summary{font-size:12.5px;font-weight:700;color:var(--ink-2);cursor:pointer;list-style:none;padding:6px 0;display:flex;align-items:center;gap:6px}
+.fmore>summary::-webkit-details-marker{display:none}
+.fmore>summary::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s}
+.fmore[open]>summary::after{transform:rotate(-135deg)}
+.fmore>summary:hover{color:var(--ink)}
+.whopanel .pcount{font-size:11px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--muted)}
+.who .wtick{margin-left:4px;font-size:11px;color:var(--ok, var(--accent))}
 .who--claim{cursor:pointer;border:1px dashed var(--line-strong)}
 .who--claim:hover{background:var(--surface-3);border-style:solid}
 /* on a phone the rail sits under the whole shelf, so the two panels people
@@ -1609,12 +1629,13 @@ function whoPanel(d, h){
   // before you've said who you are, the list is how you claim yourself
   const claim = !myMemberId && d.members.length;
   return `<section class="panel whopanel">
-            <${h}>Who's in</${h}>
+            <${h}>Who's in${d.lookedCount > 1 ? ` <span class="pcount">${d.votedCount} of ${d.lookedCount} picked</span>` : ""}</${h}>
             ${claim ? `<p class="pnote">Already in this list? Tap your name so your picks and nights stay yours.</p>` : ""}
             <div class="crew">${d.members.length ? d.members.map(mm => {
               const voted = mm.member_id === myMemberId || (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
               const inner = `${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
-                <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}`;
+                <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}${
+                  voted && !claim ? `<span class="wtick" aria-hidden="true">✓</span>` : ""}`;
               const cls = `who${voted?"":" novote"}${claim ? " who--claim" : ""}`;
               const tip = claim ? `That's me: ${esc(mm.name)}` : `${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}`;
               return claim
@@ -1688,7 +1709,7 @@ function feedOf(d){
     // older calls from before the log keep their plain line
     if(!log.some(l => l.kind === "called" && l.appid === p.appid && l.round_no === p.round_no))
       ev.push({ at: p.started_at, text: `Round ${p.round_no} called: ${nm(p.appid)}` });
-    if(p.finished_at) ev.push({ at: p.finished_at, text: `Finished ${nm(p.appid)}${p.verdict ? ` · ${VERDICT_ICON[p.verdict]} ${VERDICT[p.verdict]}` : ""}` });
+    if(p.finished_at) ev.push({ at: p.finished_at, text: `Wrapped up ${nm(p.appid)}${p.verdict ? ` · ${VERDICT_ICON[p.verdict]} ${VERDICT[p.verdict]}` : ""}` });
   });
   // sessions are a day, not a moment: count them as that evening
   (S.sessions||[]).forEach(se => ev.push({ at: se.day + "T20:00:00", text: `Played ${nm(se.appid)} ${dayLabel(se.day)}` }));
@@ -1704,8 +1725,8 @@ function recordPanel(d){
   if(!done.length && !sessions && !feed.length) return "";
   return `<section class="panel recpanel"><h3>Our record</h3>
     <div class="stats">
-      <span><b class="num">${done.length}</b>finished</span>
-      <span><b class="num">${sessions}</b>${sessions === 1 ? "session" : "sessions"}</span>
+      <span><b class="num">${done.length}</b>played</span>
+      <span><b class="num">${sessions}</b>${sessions === 1 ? "night" : "nights"}</span>
       <span><b class="num">${bangers.length}</b>${bangers.length === 1 ? "banger" : "bangers"}</span>
     </div>
     ${bangers.length ? `<p class="pnote"><b>${VERDICT_ICON.banger} Hall of fame:</b> ${esc(listNames(bangers.map(a => (d.gamesById[a]||{}).name || "?")))}</p>` : ""}
@@ -2574,7 +2595,7 @@ const SHAPE  = {dropin:"Drop in", sitting:"One sitting", campaign:"Campaign", lo
    "chill" again in different words. Mode of play asks a different question. */
 const DOING  = {mucking:"Mucking about", building:"Building something",
                 story:"A story", scary:"Scary", rounds:"Runs and rounds"};
-const VERDICT = {banger:"Banger", fine:"Fine", never_again:"Never again"};
+const VERDICT = {banger:"Banger", fine:"Fine", never_again:"Not for us"};
 /* One control instead of two. Sorting and sectioning were always answering the
    same question - "how do I want this arranged" - and keeping them apart meant
    two things to learn for a shelf of fifteen games. Each option says how the
@@ -2639,7 +2660,7 @@ function stateOf(s, d){
   if(d.nowPlaying && d.nowPlaying.appid === s.appid) return "playing";
   return s.benched ? "benched" : "open";
 }
-const VERDICT_ICON = {banger:"\u2605", fine:"\u25CF", never_again:"\u2716"};
+const VERDICT_ICON = {banger:"\u2605", fine:"\u25C6", never_again:"\u2716"};
 const SHAPE_ORDER = {dropin:0, sitting:1, campaign:2, longhaul:3};
 
 function hueOf(str){ let h=0; for(let i=0;i<String(str).length;i++) h=(h*31+String(str).charCodeAt(i))%360; return h; }
@@ -2990,6 +3011,19 @@ async function forgetPlay(appid, round){
   finally{ refresh(); }
 }
 
+/** The crew's emoji strolls across the bottom of the page, once per visit. */
+let critterDone = false;
+function critter(emoji){
+  if(critterDone || !emoji) return;
+  critterDone = true;
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  setTimeout(() => {
+    const el = document.createElement("span");
+    el.className = "critter"; el.setAttribute("aria-hidden", "true"); el.textContent = emoji;
+    document.body.appendChild(el);
+    el.addEventListener("animationend", () => el.remove());
+  }, 2500);
+}
 /** A small line at the bottom of the screen. Used when something didn't save. */
 let toastTimer = null;
 function toast(text, kind){
@@ -3581,7 +3615,7 @@ function renderGroup(){
                   : listView(sec.items, d)}`; }).join("")
             : !pool.length && !active.length && !F.q
             ? F.benched
-              ? `<div class="empty"><b>The bench is empty</b>Benched games land here.</div>`
+              ? `<div class="empty"><b>The bench is empty</b>Games you bench land here, and come back whenever.</div>`
               : `<div class="shelf0">
                   <span class="shelf0-e" aria-hidden="true">${esc(g.emoji || DEFAULT_EMOJI)}</span>
                   <h3>The shelf's empty</h3>
@@ -3625,7 +3659,7 @@ function renderGroup(){
       <div class="st">
         <div class="a">${g.locked_appid ? "Round's called" : d.myPicks.length === 3 ? "Your three are in" : d.myPicks.length ? "Your picks" : "Pick up to three"}</div>
         <div class="pips" aria-hidden="true">${[0,1,2].map(i => `<i class="${i < d.myPicks.length ? "f":""}"></i>`).join("")}</div>
-        <div class="b num">${g.locked_appid ? "picks reopen next round" : d.myPicks.length === 3 ? "tap a pick to swap it" : (3 - d.myPicks.length) + " left"}</div>
+        <div class="b num">${g.locked_appid ? "picks reopen next round" : d.myPicks.length === 3 ? "tap a pick to swap it" : (3 - d.myPicks.length) + (d.myPicks.length === 2 ? " pick left" : " picks left")}</div>
       </div>
       ${call.ready && !g.locked_appid && !g.paused_at ? `<button class="btn btn--sm btn--ready" id="closebtn2">Call it</button>` : ""}
       <button class="btn btn--ghost btn--sm" id="sharemob">Share</button>
@@ -3635,6 +3669,7 @@ function renderGroup(){
 
   wireGroup(d, filtered);
   wireSesh(d);
+  critter(g.emoji || DEFAULT_EMOJI);
   settleImages();
   restoreFocus();
   if(tookover){
@@ -3657,6 +3692,8 @@ function settleImages(){
   });
 }
 
+// stays open once someone opens it, so a tap on a chip doesn't fold it away
+let fMoreOpen = false;
 function filterPanel(d, pool, counts){
   const n = (fn) => pool.filter(fn).length;
   counts = counts || {};
@@ -3717,15 +3754,24 @@ function filterPanel(d, pool, counts){
       </div>
     </div>`;
 
+  // how many of us, energy and how long decide most nights. The rest are real
+  // but rarely the first question, so they fold away until someone wants them.
+  const rest = [
+    grp("What we'll be doing", "doing", DOING, (s,dd) => doingOf(s, dd)),
+    grp("Setup", "setup", SETUP, s => s.setup),
+    grp("Release", "release", RELEASE, (s,dd) => releaseOf(dd.gamesById[s.appid])),
+    played, only,
+  ].join("");
+  const restOn = FT().doing.size || FT().setup.size || FT().release.size || FT().played
+               || FT().mine || FT().wellrated || FT().demo || FT().benched;
   return `<div class="fpanel">
     ${lead}
     ${grp("Energy", "energy", ENERGY, (s,dd) => energyOf(s, dd))}
     ${grp("How long", "shape", SHAPE, (s,dd) => (dd.gamesById[s.appid]||{}).shape)}
-    ${grp("What we'll be doing", "doing", DOING, (s,dd) => doingOf(s, dd))}
-    ${grp("Setup", "setup", SETUP, s => s.setup)}
-    ${grp("Release", "release", RELEASE, (s,dd) => releaseOf(dd.gamesById[s.appid]))}
-    ${played}
-    ${only}
+    <details class="fmore"${restOn || fMoreOpen ? " open" : ""}>
+      <summary>More filters</summary>
+      ${rest}
+    </details>
   </div>`;
 }
 
@@ -3787,16 +3833,20 @@ function renderStatus(d, g, call){
   if(g.locked_appid){
     const game = d.gamesById[g.locked_appid] || {};
     const art = artOf(d, g.locked_appid);
+    // three rounds in a row on the same game deserves a ribbing
+    const streak = (() => { const by = {}; (S.plays || []).forEach(pl => { by[pl.round_no] = pl.appid; });
+      let n = 0; for(let r = g.round_no; r > 0; r--){ if(by[r] === g.locked_appid) n++; else break; } return n; })();
     return `<section class="status status--playing${stArtAttr(art)}" aria-live="polite">
       ${stArt(art)}
       <div class="st-main">
         <span class="st-k">▶ Playing</span>
         <span class="st-lead"><b class="leadname">${esc(game.name||"")}</b></span>
         <span class="st-sub">round ${g.round_no} · ${(() => { const n = (S.sessions||[]).filter(x => x.appid === g.locked_appid).length;
-          return n ? n + (n === 1 ? " session" : " sessions") + " so far" : "started " + esc(ago((d.nowPlaying||{}).started_at)); })()}</span>
+          return n ? n + (n === 1 ? " night" : " nights") + " so far" : "started " + esc(ago((d.nowPlaying||{}).started_at)); })()}${
+          streak >= 3 ? ` · <b>Again?!</b> ${streak} rounds running` : ""}</span>
       </div>
       <div class="st-acts">
-        <button class="btn btn--ghost btn--sm" id="closebtn">Finished it</button>
+        <button class="btn btn--ghost btn--sm" id="closebtn">Done for now</button>
         ${menu}
       </div>
       ${seshLine(seshFor(d, inPlay(d)[0]))}
@@ -3820,8 +3870,10 @@ function renderStatus(d, g, call){
   const lead = !game ? `<span class="st-lead st-lead--none">No votes yet</span>`
     : tied.length > 1 ? `<span class="st-lead">Dead heat: <b class="leadname">${esc(game.name)}</b> and ${tied.length-1} more on ${top.n}</span>`
     : `<span class="st-lead"><b class="leadname${tookover === top.appid ? " tookover" : ""}">${esc(game.name)}</b> leads with ${top.n}</span>`;
-  const sub = solo ? "just you so far"
+  const sub = solo ? "just you so far, send the link round"
     : `${d.votedCount} of ${d.lookedCount} in${call.ready ? " · enough to call it" : call.short ? " · "+call.short+" more to call it" : ""}`;
+  const hour = new Date().getHours();
+  const owls = hour >= 1 && hour < 5 ? " · who's still up?" : "";
   const pct = Math.min(100, Math.round((d.votedCount / Math.max(1, Math.min(g.quorum, d.lookedCount))) * 100));
   // art only when one game is clearly ahead; a dead heat has no single face
   const art = game && tied.length === 1 ? artOf(d, top.appid) : null;
@@ -3830,7 +3882,7 @@ function renderStatus(d, g, call){
     <div class="st-main">
       <span class="st-k">Round ${g.round_no}</span>
       ${lead}
-      <span class="st-sub">${sub}</span>
+      <span class="st-sub">${sub}${owls}</span>
     </div>
     <div class="st-acts">
       ${tied.length > 1 ? `<button class="btn btn--ghost btn--sm" id="spinbtn" title="Dead heat: let a wheel pick" aria-label="Spin for it">🎡<span class="spinlbl"> Spin for it</span></button>` : ""}
@@ -4251,6 +4303,7 @@ function renderSheet(d){
     const s = (S.shelf||[]).find(x => x.appid === sheet.appid) || {};
     return shell(`
       <h3><span class="die" id="die">🎲</span> <span class="reel" id="reel">${esc(game.name || "That one")}</span></h3>
+      ${sheet.crit ? `<p class="hint"><b>Natural 20.</b> Of the ${sheet.pool} that survived your filters, the dice went for the one nobody's picked.</p>` : ""}
       <p>One of the ${sheet.pool} that survived your filters.
          ${s.setup ? esc(SETUP[s.setup])+"." : ""} ${s.crew_max ? "Up to "+s.crew_max+" players." : ""}</p>
       <div class="row">
@@ -4266,7 +4319,7 @@ function renderSheet(d){
       return shell(`<h3>Done with ${esc(g2.name || "it")}?</h3>
         <p>This finishes it for everyone: picks reset and ${nights ? `<b>${esc(dayLabel(nights.day))} comes off the calendar</b>` : "the nights everyone picked are cleared"}. If the crew's still keen, tap Not yet.</p>
         <span class="eyebrow">How was it?</span>
-        <p class="fhint">For future reference. Skip it if you cannot be bothered.</p>
+        <p class="fhint">Worth logging? Skip it if you can't be bothered.</p>
         <div class="eopts">
           ${Object.keys(VERDICT).map(k => `<button class="eopt" data-verdict="${k}" aria-pressed="${sheet.verdict===k}">
             <b>${VERDICT_ICON[k]}</b><span>${esc(VERDICT[k])}</span></button>`).join("")}
@@ -4320,13 +4373,17 @@ function renderSheet(d){
       <button class="menuitem dcrow" id="discordrow"><b>${S.group.discord ? "✓ Discord scoreboard is on" : "Live Discord scoreboard"}</b>
         <span>${S.group.discord ? "One message in your channel that keeps itself up to date · manage" : "One message in your channel that updates itself · set up"}</span></button>
       <span class="eyebrow">Or send a one-off</span>
-      <div class="fset fset--seg">
+      ${(() => {
+        // most of the time it's a picture or a link; the wordier ones wait behind More ways
+        const more = sheet.moreways || ["state", "nudge", "sesh"].includes(mode);
+        return `<div class="fset fset--seg">
         <button class="chip" data-sharemode="snap" aria-pressed="${mode === "snap"}">Snapshot</button>
         <button class="chip" data-sharemode="link" aria-pressed="${mode === "link"}">Link</button>
-        <button class="chip" data-sharemode="state" aria-pressed="${mode === "state"}">Update</button>
+        ${more ? `<button class="chip" data-sharemode="state" aria-pressed="${mode === "state"}">Update</button>
         <button class="chip" data-sharemode="nudge" aria-pressed="${mode === "nudge"}">Reminder</button>
-        ${canSesh ? `<button class="chip" data-sharemode="sesh" aria-pressed="${mode === "sesh"}">When's next</button>` : ""}
-      </div>
+        ${canSesh ? `<button class="chip" data-sharemode="sesh" aria-pressed="${mode === "sesh"}">When's next</button>` : ""}`
+        : `<button class="chip" id="moreways">More ways…</button>`}
+      </div>`; })()}
       ${mode === "snap" ? `<p class="fhint">The scoreboard as a picture, for anywhere a live one can't go: Discord DMs, Messenger, WhatsApp. It's a snapshot, so it won't update itself.</p>
       <div class="snapwrap"><img id="snapimg" alt="Snapshot of ${esc(S.group.name)}'s scoreboard"><span class="snapwait">Drawing it…</span></div>
       <div class="row">
@@ -4937,7 +4994,10 @@ function wireGroup(d, filtered){
   // toolbar
   const q = document.getElementById("q");
   if(q){
-    q.oninput = e => { F.q = e.target.value; render(); };
+    q.oninput = e => {
+      if(/^gg$/i.test(e.target.value.trim())){ e.target.value = ""; F.q = ""; toast("gg wp 🤝"); render(); return; }
+      F.q = e.target.value; render();
+    };
   }
   const qc = document.getElementById("qclear");
   if(qc) qc.onclick = () => { F.q=""; render(); };
@@ -5028,13 +5088,18 @@ function wireGroup(d, filtered){
   const sm2 = document.getElementById("sharemenu"); if(sm2) sm2.onclick = () => { sheet = {kind:"share"}; render(); };
   const cl = document.getElementById("copylink"); if(cl) cl.onclick = () => copy(location.origin + location.pathname + "#/g/" + code, cl);
 
-  // shuffle
+  // shuffle. one roll in twenty is a natural 20: the dice picks the least-loved
+  // game on the shelf instead of any old one, and says so
   const sh = document.getElementById("shufflebtn");
   if(sh) sh.onclick = () => {
     if(!filtered.length){ return; }
-    const pick = filtered[Math.floor(Math.random()*filtered.length)];
-    sheet = {kind:"shuffle", appid:pick.appid, pool:filtered.length};
+    const crit = filtered.length > 1 && Math.floor(Math.random() * 20) === 0;
+    const pick = crit
+      ? [...filtered].sort((a, b) => (d.counts[a.appid] || 0) - (d.counts[b.appid] || 0))[0]
+      : filtered[Math.floor(Math.random()*filtered.length)];
+    sheet = {kind:"shuffle", appid:pick.appid, pool:filtered.length, crit};
     render();
+    if(crit) toast("🎲 Natural 20. The dice has spoken: the least-loved game on the shelf.");
   };
   const reroll = document.getElementById("reroll");
   if(reroll) reroll.onclick = () => {
@@ -5193,6 +5258,10 @@ function wireGroup(d, filtered){
   const ns = document.getElementById("nativeshare");
   if(ns) ns.onclick = async () => { const m = sheet.mode || "state", link = shareBody(d, "link");
     try{ await navigator.share(m === "link" ? { title: S.group.name, url: link } : { title: S.group.name, text: shareBody(d, m) }); }catch{} };
+  const fmore = document.querySelector(".fmore");
+  if(fmore) fmore.addEventListener("toggle", () => { fMoreOpen = fmore.open; });
+  const mw = document.getElementById("moreways");
+  if(mw) mw.onclick = () => { sheet = { ...sheet, moreways: true }; render(); };
   const dr = document.getElementById("discordrow"); if(dr) dr.onclick = () => { sheet = { kind:"discord", back:"share" }; render(); };
   const ul2 = document.getElementById("unlinkothers");
   if(ul2) ul2.onclick = async () => {

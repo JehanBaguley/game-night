@@ -173,7 +173,7 @@ Picking the game and picking the nights are two separate decisions. A game like 
 | Tap it | The next 10 days as chips. Tap every night you're free; yours get a tick. Each chip says how many are free and fills towards the crew's number, and the line says how far off the best night is ("Thu 24 is 1 short"). **Can't do any of these** counts as an answer too |
 | A night reaches the number | It's **pencilled in**, and the line turns lilac. Anyone can tap **Lock in Thu 24, 8pm** to lock it |
 | Locked | The line goes solid. **Add to Google Cal** opens Google Calendar with the event filled in (no download); Apple or Outlook get a calendar file instead. **Change night** unlocks it |
-| The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 sessions so far"). Either answer clears the slate for the next one |
+| The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 nights so far"). Either answer clears the slate for the next one |
 
 **The crew's number** lives in **⋯ → Night rules** (also one tap from the day picker, which shows the current rule): "A night works when all 4 / 8 of 10 / … are free", plus the usual start time (typed as you'd say it: 8pm, 7:30pm, 20:00). "All" means everyone in the crew and keeps meaning that as people join. You can also set a number bigger than the crew is today (up to 12): a crew of one can say "3 free", and it counts as everyone until the others join. A small crew might only play when everyone's free; a bigger one might go at 80%.
 
@@ -191,7 +191,7 @@ A link preview can't update itself or carry buttons, so instead the crew gets on
 | --- | --- |
 | Set up (once) | **⋯ → Send to the chat → Live Discord scoreboard**. In Discord: channel cog → Integrations → Webhooks → New Webhook → Copy Webhook URL. Paste, **Connect**, and the first scoreboard posts straight away |
 | While voting | Round number, how many have voted, the top three with medals, who's still to vote, the leader's cover art |
-| While playing | What's on, sessions so far, where the next night is at (locked, pencilled, or who still owes their nights) and any side games |
+| While playing | What's on, nights so far, where the next night is at (locked, pencilled, or who still owes their nights) and any side games |
 | Small changes | A vote, a night ticked, a game added: the same message is edited, batched over three seconds so a flurry of taps is one edit. Nothing changed, nothing sent |
 | Big moments | A round called, a new round, a night locked, a side game started: a fresh message posts (so the channel lights up) and the old one is marked as old |
 
@@ -218,7 +218,7 @@ On desktop it's a rail; on a phone the same panels sit under the shelf. Order: W
 | **Next sesh** | While something's being played: ten little bars per game for the nights ahead |
 | **Ready to play** | Games the whole crew already owns, most voted first. **Tick what you own** opens a checklist of the shelf; each tap saves. Cards say "✓ everyone owns it" or "3 to buy", and details says who owns it |
 | **On sale now** | Shelf games discounted on Steam right now, biggest cut first, with price, was-price and how many still need to buy. Cards get a green −50% badge. Prices are AUD, refreshed by the `prices` function when a crew opens, at most every four hours |
-| **Our record** | Games finished, sessions played, bangers, a hall of fame, and the last few things that happened ("Sam and Alex voted", "Alex added 3 games", "Finished Valheim · ★ Banger"), pieced together from timestamps the crew already has |
+| **Our record** | Games played, nights played, bangers, a hall of fame, and the last few things that happened ("Sam and Alex voted", "Alex added 3 games", "Wrapped up Valheim · ★ Banger"), pieced together from timestamps the crew already has |
 | **Who's in** | The crew, who's here now, who's voted |
 
 **Spin for it:** on a dead heat the status card gets a 🎡 button. It spins a wheel of the tied games, lands on one, and **Lock in** calls the round for that game rather than whichever happened to be first.
@@ -269,7 +269,7 @@ Every game on the shelf is in exactly one state. It's derived from `benched` and
 | State | What it means | Action | How it moves |
 | --- | --- | --- | --- |
 | **Up for a vote** | On the shelf. Which is nearly everything | Pick | Wins a round, or gets benched |
-| **On right now** | Won the round | Locked | Finished it, or Changed our minds |
+| **On right now** | Won the round | Locked | Done for now, or Changed our minds |
 | **Benched** | Someone parked it, or it got a never-again | Put it back | One tap, any member |
 
 **There is no backlog.** There used to be: a game nobody owned sat in a second list until two people boosted it. For ten mates that's a nomination process nobody asked for, and it created the worst kind of bug, where a game is *technically there* but invisible. Now a game is up for a vote the moment it's added, and the only thing that takes one out of view is someone deliberately benching it.
@@ -290,7 +290,7 @@ Sections are a grouping, so you can switch them to energy, length, faff or playe
 
 ### What happens to a finished game
 
-Nothing is guessed. **Finished it** asks two questions and both are one tap:
+Nothing is guessed. **Done for now** asks two questions and both are one tap:
 
 1. How was it: banger, fine, never again. Skippable
 2. Where does it go: leave it up, or bench it
@@ -378,7 +378,7 @@ A game never leaves the shelf. What changes is that it gains history.
 | Stage | What you see |
 | --- | --- |
 | You call it | **Now playing** replaces the round strip, the card gets a *playing now* badge |
-| You finish it | **Finished it** asks how it went: banger, fine, or never again. Skippable |
+| The crew moves on | **Done for now** asks first, then how it went: banger, fine, or not for us. Skippable. "Finished" was the wrong word: nobody finishes Valheim, the vote just reopens |
 | Later | The card carries a *played* badge and a line reading *Played 3d ago · ★ Banger*, with the count when there's been more than one go |
 
 Play it again by voting for it again, same as anything else. Nothing needs resurrecting, because nothing was buried. Two filter chips, **Never played** and **Played before**, are there for when you want one or the other, and **By played** as a grouping if you'd rather see the split.
@@ -665,3 +665,7 @@ The script tag carries a **Subresource Integrity hash**, so a compromised CDN ca
 - **Sorting by session length is not wired up.** The list view header offers it, the comparator exists, and nothing sets it. It is in `ARRANGE` as a gap, not a bug.
 
 **Quorum used to be able to exceed the group.** It ships at 5. A two-person group where both had voted still read *"3 more to call it"*, and the Call it shimmer could never fire, because the target was unreachable. Quorum is a floor for a group big enough to have one: everybody having had their say is now always enough, whatever the number says.
+
+### Little things
+
+A few bits that aren't load-bearing. One roll in twenty on the dice is a natural 20 and picks the least-voted game on the shelf. The crew's emoji strolls across the bottom of the page once a visit (never with reduced motion on). Three rounds running on the same game and the strip says **Again?!**. Between 1am and 5am the round line adds "who's still up?". Typing `gg` in the shelf search says gg wp and clears itself.
