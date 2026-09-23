@@ -227,23 +227,15 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
   background-image:linear-gradient(90deg, color-mix(in oklab, var(--accent) 13%, transparent), transparent 65%);
 }
 .status{isolation:isolate}
-/* A fine dot grid that only exists where your cursor is. ::after rather than a
-   canvas: one repeating-gradient layer, masked by a soft circle that follows
-   the pointer, so there is no per-frame drawing to do. --dot is your own
-   member colour, so the same page looks slightly different per person.
-   Desktop and a real pointer only, and never with reduced motion on. */
-.status::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;
-  transition:opacity .4s ease;
-  background-image:radial-gradient(circle at center, var(--dot, var(--accent)) 1.1px, transparent 1.6px);
-  background-size:14px 14px;
-  /* four stops rather than three, so the edge of the pool fades out instead of
-     ending on a visible ring */
-  -webkit-mask-image:radial-gradient(165px circle at var(--mx, -999px) var(--my, -999px), #000 0%, rgba(0,0,0,.72) 32%, rgba(0,0,0,.28) 58%, transparent 78%);
-  mask-image:radial-gradient(165px circle at var(--mx, -999px) var(--my, -999px), #000 0%, rgba(0,0,0,.72) 32%, rgba(0,0,0,.28) 58%, transparent 78%)}
-@media (hover:hover) and (pointer:fine) and (min-width:900px){
-  .status.lit::after{opacity:var(--dotop, .5)}
-}
-@media (prefers-reduced-motion: reduce){ .status::after{display:none} }
+/* The living dot grid. A canvas, because the dots have to move: each one is
+   pushed outward by a travelling wave centred on the cursor, which a CSS mask
+   cannot do. It only runs while the pointer is on the strip, and fades itself
+   out when the pointer leaves, so there is no idle rAF loop. */
+.stgrid{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;transition:opacity .45s ease}
+.status.lit .stgrid{opacity:1}
+@media (prefers-reduced-motion: reduce){ .stgrid{display:none} }
+/* everything the strip actually says or does sits above the grid */
+.status > .st-main,.status > .st-acts,.status > .st-art,.status > .st-track,.status > .sesh{position:relative;z-index:1}
 .status--art::before{content:"";position:absolute;inset:-30px;z-index:-1;pointer-events:none;
   background:var(--art) center/cover no-repeat;filter:blur(30px) saturate(1.4);opacity:.22;
   -webkit-mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.5) 35%,transparent 70%);mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.5) 35%,transparent 70%)}
@@ -301,6 +293,29 @@ button{cursor:pointer;background:none;border:none;padding:0;color:inherit}
 }
 @media (prefers-reduced-motion: reduce){ .toast--fun.in{animation:none} }
 @media (max-width:899px){ .toast--fun{top:24vh;font-size:17.5px;padding:13px 20px} }
+/* Three small one-shot effects, so not every egg has to throw paper.
+   All of them are pointer-events:none, remove themselves, and never run with
+   reduced motion on. */
+@keyframes fxshake{
+  0%,100%{transform:translateX(0)}
+  12%{transform:translateX(-7px)} 28%{transform:translateX(6px)}
+  44%{transform:translateX(-4px)} 62%{transform:translateX(3px)}
+  80%{transform:translateX(-1px)}
+}
+.fxshake{animation:fxshake .5s cubic-bezier(.36,.07,.19,.97)}
+.fxring{position:fixed;left:50%;top:44%;width:24px;height:24px;margin:-12px 0 0 -12px;
+  border-radius:999px;border:2px solid var(--accent);z-index:88;pointer-events:none;opacity:0;
+  animation:fxring 1.1s cubic-bezier(.15,.7,.3,1) forwards}
+@keyframes fxring{
+  0%{transform:scale(.4);opacity:0}
+  10%{opacity:.85}
+  100%{transform:scale(64);opacity:0}
+}
+.fxflash{position:fixed;inset:0;z-index:88;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at 50% 44%, color-mix(in oklab, var(--accent) 55%, transparent), transparent 62%);
+  animation:fxflash .62s ease-out forwards}
+@keyframes fxflash{ 0%{opacity:0} 14%{opacity:.5} 34%{opacity:.08} 48%{opacity:.34} 100%{opacity:0} }
+@media (prefers-reduced-motion: reduce){ .fxring,.fxflash{display:none} }
 .fworks{position:fixed;inset:0;z-index:90;pointer-events:none;overflow:hidden}
 /* flat paper squares, no glow. Small enough that half of them read as diamonds. */
 .fworks i{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:1px;opacity:0;
@@ -2755,37 +2770,117 @@ function stateOf(s, d){
 const VERDICT_ICON = {banger:"\u2605", fine:"\u25C6", never_again:"\u2716"};
 const SHAPE_ORDER = {dropin:0, sitting:1, campaign:2, longhaul:3};
 
-/* Follows the pointer across the status strip and writes --mx/--my for the
-   dot grid's mask. One rAF per frame at most, and it sets style on the element
-   rather than re-rendering, so a poll landing mid-move cannot fight it. */
-let litRaf = 0;
+/* The status strip's dot grid, in the spirit of a fractal-grid canvas: a field
+   of dots, two slow gradient blooms drifting behind them, and a travelling wave
+   that pushes and brightens the dots nearest the cursor. Runs only while the
+   pointer is on the strip and eases out after it leaves, so there is no idle
+   loop. Skipped entirely on touch and with reduced motion on. */
+/* Tight grid, and a radius small enough that the whole ripple circle sits
+   inside the strip rather than running off the top and bottom. */
+const GRID = { gap: 13, dot: 1.25, push: 7 };
+let gridStop = null;
 function wireLit(d){
   if(!matchMedia("(hover:hover) and (pointer:fine)").matches) return;
   if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if(gridStop){ gridStop(); gridStop = null; }
   const st = document.querySelector(".status");
-  if(!st) return;
-  // your own colour, so the grid is a little bit yours
+  if(!st || st.querySelector(".stgrid")) return;
+
+  const cv = document.createElement("canvas");
+  cv.className = "stgrid"; cv.setAttribute("aria-hidden", "true");
+  st.insertBefore(cv, st.firstChild);
+  const ctx = cv.getContext("2d");
+
+  // your own colour, nudged toward the accent so a hash landing on bilious
+  // yellow still sits in the palette
+  // the crew emoji's colour is the strip's colour, so the grid takes it too,
+  // with a small shift toward your own so it is still a bit yours
+  const crewCol = (S.group && emojiColour(S.group.emoji || DEFAULT_EMOJI)) || null;
+  const crewH = crewCol ? Math.round(crewCol.h) : 258;
   const me = d && d.meMember;
-  // blended toward the accent so a hash landing on bilious yellow still sits
-  // in the palette; it is a tint of you, not a free-for-all
-  st.style.setProperty("--dot", me
-    ? `color-mix(in oklab, hsl(${hueOf(me.name)} 72% 52%) 55%, var(--accent))`
-    : "var(--accent)");
-  let next = null;
-  st.addEventListener("pointermove", e => {
+  const hue = me ? Math.round(crewH + shortHue(hueOf(me.name) - crewH) * 0.3) : crewH;
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches
+            && document.documentElement.getAttribute("data-theme") !== "light";
+  const dotL = dark ? 68 : 44, blobA = dark ? 0.075 : 0.055;
+
+  let w = 0, h = 0, dpr = 1;
+  const fit = () => {
     const r = st.getBoundingClientRect();
-    next = [e.clientX - r.left, e.clientY - r.top];
-    if(litRaf) return;
-    litRaf = requestAnimationFrame(() => {
-      litRaf = 0;
-      if(!next) return;
-      st.style.setProperty("--mx", next[0].toFixed(0) + "px");
-      st.style.setProperty("--my", next[1].toFixed(0) + "px");
-      st.classList.add("lit");
-    });
-  });
-  st.addEventListener("pointerleave", () => { st.classList.remove("lit"); next = null; });
+    if(!r.width) return;
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    w = r.width; h = r.height;
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+    cv.style.width = w + "px"; cv.style.height = h + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  fit();
+  const ro = new ResizeObserver(fit); ro.observe(st);
+
+  // pointer position, and how "on" the effect is (eases 0..1 so it does not snap)
+  let px = -999, py = -999, amp = 0, want = 0, raf = 0, t0 = performance.now();
+
+  function frame(now){
+    raf = 0;
+    const t = (now - t0) / 1000;
+    amp += (want - amp) * 0.09;                       // ease toward on/off
+    if(amp < 0.004 && want === 0){ ctx.clearRect(0, 0, w, h); st.classList.remove("lit"); return; }
+    ctx.clearRect(0, 0, w, h);
+
+    // two blooms drifting on their own slow clocks, so the field is never static
+    ctx.globalCompositeOperation = "lighter";
+    for(let i = 0; i < 2; i++){
+      const sp = i ? 0.21 : 0.15, ph = i ? 2.1 : 0;
+      const bx = w * (0.5 + 0.38 * Math.cos(t * sp + ph));
+      const by = h * (0.5 + 0.42 * Math.sin(t * sp * 1.4 + ph));
+      const g = ctx.createRadialGradient(bx, by, 0, bx, by, Math.max(h * 1.6, 120));
+      g.addColorStop(0, `hsla(${hue + (i ? 26 : -18)} 72% 58% / ${(blobA * amp).toFixed(3)})`);
+      g.addColorStop(1, "transparent");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    }
+    ctx.globalCompositeOperation = "source-over";
+
+    // the dots, pushed out and brightened by a wave travelling from the cursor.
+    // R comes from the strip's height so the ring is a whole circle inside it.
+    const R = Math.max(42, Math.min(86, h * 0.78));
+    for(let y = GRID.gap * 0.5; y < h; y += GRID.gap){
+      for(let x = GRID.gap * 0.5; x < w; x += GRID.gap){
+        const dx = x - px, dy = y - py;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        let ox = 0, oy = 0, k = 0.085;  // resting brightness
+        if(dist < R){
+          const fall = 1 - dist / R;                  // 1 at the cursor, 0 at the edge
+          const wave = Math.sin(dist / 10 - t * 3.2); // the ripple itself
+          const f = fall * fall * (0.45 + 0.55 * wave);
+          k = 0.085 + 0.5 * Math.max(0, f);
+          const push = GRID.push * f;
+          if(dist > 0.5){ ox = (dx / dist) * push; oy = (dy / dist) * push; }
+        }
+        const a = k * amp;
+        if(a < 0.02) continue;
+        ctx.fillStyle = `hsla(${hue} 78% ${dotL}% / ${a.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(x + ox, y + oy, GRID.dot * (0.72 + 0.8 * k), 0, 6.2832);
+        ctx.fill();
+      }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  const kick = () => { if(!raf) raf = requestAnimationFrame(frame); };
+
+  const onMove = e => {
+    const r = st.getBoundingClientRect();
+    px = e.clientX - r.left; py = e.clientY - r.top;
+    want = 1; st.classList.add("lit"); kick();
+  };
+  const onLeave = () => { want = 0; px = py = -999; kick(); };
+  st.addEventListener("pointermove", onMove);
+  st.addEventListener("pointerleave", onLeave);
+  gridStop = () => { if(raf) cancelAnimationFrame(raf); ro.disconnect();
+    st.removeEventListener("pointermove", onMove); st.removeEventListener("pointerleave", onLeave); };
 }
+/** The signed shortest distance round the colour wheel, so blending a hue of
+ *  350 toward 258 goes the short way rather than the long way. */
+function shortHue(d){ return ((d % 360) + 540) % 360 - 180; }
 function hueOf(str){ let h=0; for(let i=0;i<String(str).length;i++) h=(h*31+String(str).charCodeAt(i))%360; return h; }
 function monogram(name){
   const w = String(name||"?").replace(/[^A-Za-z0-9 ]/g,"").split(" ").filter(Boolean);
@@ -3134,6 +3229,26 @@ async function forgetPlay(appid, round){
   finally{ refresh(); }
 }
 
+/** One-shot screen effects for the eggs that do not warrant paper.
+ *  shake nudges the page, ring sends a ripple out, flash winks the screen. */
+function fx(kind){
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  if(kind === "shake"){
+    // the app, not the body: a transform on body would re-anchor fixed children
+    app.classList.remove("fxshake");
+    void app.offsetWidth;                       // restart the animation
+    app.classList.add("fxshake");
+    setTimeout(() => app.classList.remove("fxshake"), 700);
+    return;
+  }
+  const el = document.createElement("div");
+  el.className = kind === "ring" ? "fxring" : "fxflash";
+  el.setAttribute("aria-hidden", "true");
+  document.body.appendChild(el);
+  el.addEventListener("animationend", () => el.remove());
+  setTimeout(() => el.remove(), 1600);          // belt and braces if the event is missed
+}
+
 /* Flat paper, a fixed palette so it looks designed rather than random. */
 const FW_PAPER = ["#6D5AE6","#E2585F","#F2A93B","#2FA4A0","#2B3A74","#E86FA8"];
 /** Bursts of paper up where the fun toast sits. Good moments only, never a save. */
@@ -3177,15 +3292,17 @@ function fireworks(bursts){
    trips the "steam" one. keep:true leaves your text alone. */
 const TYPED_EGGS = [
   { test: v => /^gg( wp)?$/i.test(v),   run: () => { toast("gg wp \u{1F91D}", "fun"); fireworks(); } },
-  { test: v => /^steam$/i.test(v),      run: () => toast("we know") },
-  { test: v => /^xyzzy$/i.test(v),      run: () => toast("Nothing happens.") },
-  { test: v => /^(42|the answer)$/i.test(v), run: () => toast("The answer, but not to what we're playing.") },
-  { test: v => /^(iddqd|idkfa|god ?mode)$/i.test(v), run: () => toast("God mode's off. You still have to pick.") },
-  { test: v => /^(rosebud|motherlode)$/i.test(v), run: () => toast("No money here, just games.") },
-  { test: v => /^(please|pls)$/i.test(v), run: () => toast("Manners noted.") },
-  { test: v => /^(help|halp)$/i.test(v), run: () => toast("Pick three, the rest sorts itself out.") },
+  { test: v => /^steam$/i.test(v),      run: () => toast("we know", "fun") },
+  // "nothing happens" with a wink of the screen is funnier than a quiet line
+  { test: v => /^xyzzy$/i.test(v),      run: () => { toast("Nothing happens.", "fun"); fx("flash"); } },
+  { test: v => /^(42|the answer)$/i.test(v), run: () => { toast("The answer, but not to what we're playing.", "fun"); fx("ring"); } },
+  // a cheat code that does not work should feel like the page saying no
+  { test: v => /^(iddqd|idkfa|god ?mode)$/i.test(v), run: () => { toast("God mode's off. You still have to pick.", "fun"); fx("shake"); } },
+  { test: v => /^(rosebud|motherlode)$/i.test(v), run: () => { toast("No money here, just games.", "fun"); fx("shake"); } },
+  { test: v => /^(please|pls)$/i.test(v), run: () => toast("Manners noted.", "fun") },
+  { test: v => /^(help|halp)$/i.test(v), run: () => toast("Pick three, the rest sorts itself out.", "fun") },
   // a mate's name is not a game, and the crew emoji sends the critter for a lap
-  { test: v => !!nameInCrew(v),         run: v => toast(nameInCrew(v) + " isn't a game.") },
+  { test: v => !!nameInCrew(v),         run: v => toast(nameInCrew(v) + " isn't a game.", "fun") },
   { test: v => !!(S && S.group && S.group.emoji) && v === S.group.emoji, run: () => critter(S.group.emoji, true) },
 ];
 /** The crew member whose name this is, if any. Their spelling, not yours. */
@@ -5366,7 +5483,7 @@ function wireGroup(d, filtered){
       : filtered[Math.floor(Math.random()*filtered.length)];
     sheet = {kind:"shuffle", appid:pick.appid, pool:filtered.length, crit};
     render();
-    if(crit) toast("🎲 Natural 20. The dice went for the least-loved game on the shelf.", "fun");
+    if(crit){ toast("🎲 Natural 20. The dice went for the least-loved game on the shelf.", "fun"); fx("ring"); }
   };
   const reroll = document.getElementById("reroll");
   if(reroll) reroll.onclick = () => {

@@ -681,7 +681,15 @@ The script tag carries a **Subresource Integrity hash**, so a compromised CDN ca
 
 A few bits that aren't load-bearing. None of them run with reduced motion on.
 
-**The status strip lights up under your cursor.** A fine dot grid sits over the strip, masked by a soft circle that follows the pointer, so the dots only exist where you are looking. It is one CSS layer and a masked gradient rather than a canvas: the pointer handler writes `--mx`/`--my` at most once per frame and nothing is redrawn. The dot colour comes from your own member colour blended toward the accent, so the same strip is slightly different per person without ever leaving the palette. Desktop with a real pointer only (`hover: hover and pointer: fine`, 900px up), because on a touch screen there is no cursor to follow, and it is removed entirely with reduced motion on.
+**The status strip lights up under your cursor.** A tight field of dots sits over the strip, and a wave travelling out from the pointer pushes and brightens the ones nearest it, with two slow blooms drifting behind. It is a canvas, because the dots have to move and a CSS mask cannot displace them, but it only runs while the pointer is on the strip and eases itself out afterwards, so there is no idle animation loop. The ripple radius is derived from the strip's height, so the whole circle sits inside the banner instead of running off the top and bottom.
+
+The colour comes from the crew emoji, the same source as `--accent`, shifted 30% toward your own member colour so the strip is a little bit yours without leaving the palette. Deliberately faint: it should read as the strip being alive, not as an effect.
+
+Everything the strip says or does (`.st-main`, `.st-acts`, `.st-art`, `.st-track`) is lifted to `z-index: 1` above the canvas, and the canvas is `pointer-events: none`, so no button is ever dimmed or blocked by it. Desktop with a real pointer only (`hover: hover and pointer: fine`), because on a touch screen there is no cursor to follow, and not built at all with reduced motion on.
+
+**Not every egg throws paper.** `fx()` has three one-shot effects for the ones where confetti would be wrong: `shake` nudges the page (a cheat code that does not work should feel like the page saying no), `ring` sends a ripple out from the middle, and `flash` winks the screen. All three remove themselves, none of them take a click, and none run with reduced motion on.
+
+**Every egg's reply is the loud toast.** A joke in a 13px pill at the bottom of the screen is a joke nobody reads, so all of them use the `fun` toast: 20px, up at 26vh, with an accent ring.
 
 One roll in twenty on the dice is a natural 20 and picks the least-voted game on the shelf. Three rounds running on the same game and the strip says **Again?!**. Between 1am and 5am the round line adds "who's still up?".
 
