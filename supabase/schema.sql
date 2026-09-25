@@ -1436,3 +1436,94 @@ create table if not exists crew_log (
 create index if not exists crew_log_recent on crew_log(group_code, at desc);
 alter table crew_log enable row level security;
 revoke all on crew_log from anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- SWITCHING WHO A DEVICE IS
+-- A phone that ended up as the wrong person (a mis-tap, a mate's name typed
+-- to test) had no way back: rename refused the name because it was taken, and
+-- Link another device kept whoever the phone already was in a crew it was in.
+-- Now linking means "this device is that person" everywhere the other device
+-- is, and a switch leaves nothing behind that nobody can reach.
+-- ---------------------------------------------------------------------------
+
+-- A person no device points at any more and who never did anything was made
+-- by accident, so they go. Anyone with picks, nights, takes or games added
+-- stays on the list for whoever started the crew to remove or merge.
+create or replace function tidy_member(p_code text, p_member uuid)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if p_member is null or p_member = crew_admin_of(p_code) then return; end if;
+  if exists (select 1 from member_devices where group_code = p_code and member_id = p_member) then return; end if;
+  if exists (select 1 from ballots where group_code = p_code and member_id = p_member and coalesce(array_length(picks, 1), 0) > 0)
+  or exists (select 1 from takes        where group_code = p_code and member_id  = p_member)
+  or exists (select 1 from owns         where group_code = p_code and member_id  = p_member)
+  or exists (select 1 from sesh_free    where group_code = p_code and member_id  = p_member)
+  or exists (select 1 from sesh_none    where group_code = p_code and member_id  = p_member)
+  or exists (select 1 from side_players where group_code = p_code and member_id  = p_member)
+  or exists (select 1 from shelf        where group_code = p_code and added_by   = p_member)
+  or exists (select 1 from sesh_lock    where group_code = p_code and locked_by  = p_member)
+  or exists (select 1 from side_games   where group_code = p_code and started_by = p_member)
+  then return; end if;
+  delete from ballots where group_code = p_code and member_id = p_member;   -- only empty ones get here
+  delete from members where group_code = p_code and member_id = p_member;
+end; $$;
+revoke execute on function tidy_member(text, uuid) from public, anon, authenticated;
+
+-- Same rules as before (anyone but whoever started the crew can be picked by
+-- name), and whoever this device was before is tidied up if that was a mistake.
+create or replace function claim_member(p_code text, p_device uuid, p_member uuid)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare was uuid;
+begin
+  if not exists (select 1 from members where group_code = p_code and member_id = p_member) then
+    raise exception 'no such person in this group';
+  end if;
+  was := member_of(p_code, p_device);
+  if p_member = crew_admin_of(p_code) and was is distinct from p_member then
+    raise exception 'they started this crew, so to add a device use Link another device on one they already use';
+  end if;
+  -- whoever started the crew can't switch their only device away: nothing
+  -- could ever prove it was them again, and the crew would have nobody to run it
+  if was = crew_admin_of(p_code) and was <> p_member
+     and (select count(*) from member_devices where group_code = p_code and member_id = was) = 1 then
+    raise exception 'you started this crew and this is your only device in it, so it has to stay you';
+  end if;
+
+  insert into member_devices(group_code, device_id, member_id)
+       values (p_code, p_device, p_member)
+  on conflict (group_code, device_id) do update set member_id = excluded.member_id;
+
+  update members set last_seen = now() where group_code = p_code and member_id = p_member;
+  if was is distinct from p_member then perform tidy_member(p_code, was); end if;
+  return p_member;
+end; $$;
+
+-- The code proves this device belongs to the same person as the one that made
+-- it, so this device becomes them in every crew that one is in, including a
+-- crew where it was someone else. Crews only this device is in are untouched.
+create or replace function finish_pairing(p_pair text, p_device uuid)
+returns json language plpgsql security definer set search_path = public as $$
+declare src uuid; r record; was uuid;
+        c text := upper(regexp_replace(coalesce(p_pair, ''), '[^A-Za-z0-9]', '', 'g'));
+begin
+  select device_id into src from device_pairs where code = c and created_at > now() - interval '10 minutes';
+  if src is null then raise exception 'that code has run out or was mistyped, get a fresh one'; end if;
+  if src = p_device then raise exception 'that code is for a different device'; end if;
+  delete from device_pairs where code = c;
+  for r in select group_code, member_id from member_devices where device_id = src loop
+    was := member_of(r.group_code, p_device);
+    -- same guard as claim_member: never strand whoever started a crew
+    continue when was = crew_admin_of(r.group_code) and was <> r.member_id
+      and (select count(*) from member_devices where group_code = r.group_code and member_id = was) = 1;
+    insert into member_devices(group_code, device_id, member_id)
+         values (r.group_code, p_device, r.member_id)
+    on conflict (group_code, device_id) do update set member_id = excluded.member_id;
+    if was is distinct from r.member_id then perform tidy_member(r.group_code, was); end if;
+  end loop;
+  return coalesce((
+    select json_agg(json_build_object('code', g.code, 'name', g.name, 'emoji', g.emoji, 'me', m.name) order by g.name)
+      from member_devices d join groups g on g.code = d.group_code
+      join members m on m.group_code = d.group_code and m.member_id = d.member_id
+     where d.device_id = p_device), '[]'::json);
+end; $$;
+grant execute on function finish_pairing(text, uuid) to anon;

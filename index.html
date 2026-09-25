@@ -2,7 +2,7 @@
 <html lang="en-AU">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Game Night</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AE%3C/text%3E%3C/svg%3E">
 <meta name="description" content="Pick what we play next.">
@@ -934,7 +934,9 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .pips i.f{background:var(--grad)}
 
 /* ---------- sheets ---------- */
-.sheetwrap{position:fixed;inset:0;z-index:60;background:rgba(10,12,15,.62);display:grid;place-items:end center;overscroll-behavior:contain}
+/* --kb is the keyboard's height where the browser draws it over the page
+   (iOS Safari). Android Chrome shrinks the page instead, so --kb stays 0 there. */
+.sheetwrap{position:fixed;inset:0 0 var(--kb, 0px);z-index:60;background:rgba(10,12,15,.62);display:grid;place-items:end center;overscroll-behavior:contain}
 @media (min-width:640px){ .sheetwrap{place-items:center;padding:20px} }
 /* opening: the scrim fades, the sheet rises (phone) or settles (desktop) */
 .grab{display:none}
@@ -946,7 +948,7 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .sheet{
   background:var(--surface);width:100%;max-width:450px;
   border-radius:var(--r-lg) var(--r-lg) 0 0;padding:20px 18px calc(20px + var(--safe-b));
-  display:flex;flex-direction:column;gap:12px;max-height:88vh;overflow-y:auto;
+  display:flex;flex-direction:column;gap:12px;max-height:88vh;max-height:calc(88dvh - var(--kb, 0px));overflow-y:auto;
 }
 @media (min-width:640px){
   .sheet{border-radius:var(--r-lg);padding-bottom:20px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45)}
@@ -958,6 +960,11 @@ td.r,th.r{text-align:right;white-space:nowrap}
 @media (max-width:639px){
   .sheet:not(.sheet--tall){min-height:min(54dvh, 560px)}
   .sheet:not(.sheet--tall) > .row:last-child{margin-top:auto;padding-top:4px}
+  /* While typing, the resting height would push the field and its button up
+     and out of the space the keyboard leaves, so the sheet hugs its content
+     and the safe-area padding (which the keyboard covers anyway) goes. */
+  .kbopen .sheet:not(.sheet--tall){min-height:0}
+  .kbopen .sheet{padding-bottom:14px}
   .sheet:not(.sheet--tall){will-change:transform}
   /* the grabber is a real 28px strip across the top: the browser never scrolls
      from it, so a drag there always moves the sheet */
@@ -1136,6 +1143,9 @@ td.r,th.r{text-align:right;white-space:nowrap}
   flex:1 1 220px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   text-transform:uppercase;letter-spacing:.32em;font-size:16px;font-weight:600;
 }
+/* flex-basis 220px is a width in the landing's row, but in a sheet (a column)
+   it became a height, so the pair sheet's code box was 220px tall */
+.sheet .codebox{flex:none}
 .codebox::placeholder{letter-spacing:.06em;font-family:var(--f-body);text-transform:none;font-weight:400}
 .hint{margin-top:9px;font-size:12px;color:var(--muted)}
 .hint:empty{display:none}
@@ -1351,6 +1361,8 @@ td.g .sub{padding-left:0}
 .linkbtn{align-self:flex-start;font-size:12.5px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:4px 0}
 .calrow .btn{white-space:nowrap;text-decoration:none;justify-content:center;text-align:center}
 .linkbtn:hover{color:var(--ink-2)}
+/* standalone, it needs a thumb-sized target, not a text-sized one */
+.linkbtn--tap{min-height:40px;padding:8px 0;text-align:left}
 .linkbtn:disabled{text-decoration:none;cursor:default}
 #seshbody{display:flex;flex-direction:column;gap:12px}
 
@@ -1743,7 +1755,9 @@ function whoPanel(d, h){
             <${h}>Who's in${d.lookedCount > 1 ? ` <span class="pcount">${d.votedCount} of ${d.lookedCount} picked</span>` : ""}</${h}>
             ${claim ? `<p class="pnote">Already in this list? Tap your name so your picks and nights stay yours.</p>` : ""}
             <div class="crew">${d.members.length ? d.members.map(mm => {
-              const voted = mm.member_id === myMemberId || (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
+              // same rule as the count beside the heading, you included, so the ticks and
+              // the "1 of 2 picked" can never disagree
+              const voted = mm.member_id === myMemberId ? d.myPicks.length > 0 : (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
               const inner = `${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
                 <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}${
                   voted && !claim ? `<span class="wtick" aria-hidden="true">✓</span>` : ""}`;
@@ -3426,12 +3440,14 @@ async function finishAsNew(name){
   if(run) run(); else render();
 }
 async function finishAsClaim(member){
+  const was = myMemberId;
   myName = member.name; store.set("name", member.name);
   myMemberId = await rpc("claim_member", {p_code:code, p_device:deviceId, p_member:member.member_id});
   await refresh();
   sheet = null;
   const run = pending; pending = null;
   if(run) run(); else render();
+  if(was && was !== myMemberId) toast(`You're ${member.name} on this device now`);
 }
 
 /* ---------- add ---------- */
@@ -4608,11 +4624,11 @@ function renderSheet(d){
   }
 
   if(sheet.kind === "pair"){
-    return shell(`<h3>Link this device</h3>
-      <p>On the phone or computer you already use: tap your name up top, then <b>Link another device</b>. Type the six characters it shows.</p>
-      <input class="input codebox" id="pairin" maxlength="7" placeholder="e.g. K7Q M2X" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(sheet.code || "")}">
+    return shell(`<h3>${sheet.who ? `Switch to ${esc(sheet.who)}` : "Link this device"}</h3>
+      <p>On the phone or computer ${sheet.who ? `that's already ${esc(sheet.who)}` : "you already use"}: tap your name up top, then <b>Link another device</b>. Type the six characters it shows.</p>
+      <input class="input codebox" id="pairin" maxlength="7" placeholder="e.g. K7Q M2X" autocapitalize="characters" autocomplete="off" spellcheck="false" enterkeyhint="go" value="${esc(sheet.code || "")}">
       <p class="hint" id="pairmsg" aria-live="polite"></p>
-      <div class="row"><button class="btn btn--ghost" data-dismiss>Cancel</button><button class="btn" id="pairgo"${(sheet.code || "").length === 6 ? "" : " disabled"}>Link it</button></div>`);
+      <div class="row"><button class="btn btn--ghost" ${sheet.back ? `id="pairback"` : "data-dismiss"}>${sheet.back ? "Back" : "Cancel"}</button><button class="btn" id="pairgo"${(sheet.code || "").length === 6 ? "" : " disabled"}>Link it</button></div>`);
   }
 
   if(sheet.kind === "emoji"){
@@ -4852,12 +4868,16 @@ function renderSheet(d){
 
   if(sheet.kind === "me"){
     const me = d.meMember || {};
+    // "taken" by someone else is usually one of two things: a clash, or you on
+    // a device that thinks you're somebody else. Offer both ways out.
+    const takenBy = sheet.taken ? (S.members || []).find(m => m.name === sheet.taken) : null;
     return shell(`<h3>That's you</h3>
       <p>Rename yourself here and your votes come with you.</p>
       <label class="rulesrow" for="renameinput">Your name</label>
-      <input class="input" id="renameinput" maxlength="24" value="${esc(sheet.typed ?? me.name ?? "")}"${sheet.taken ? ` aria-invalid="true" aria-describedby="nameerr"` : ""}>
-      ${sheet.taken ? `<p class="hint hint--bad" id="nameerr" role="alert">Someone here's already ${esc(sheet.taken)}. Try an initial or a nickname.</p>` : ""}
-      <div class="row"><button class="btn" id="renamego">Save name</button></div>
+      <input class="input" id="renameinput" maxlength="24" enterkeyhint="done" autocomplete="off" value="${esc(sheet.typed ?? me.name ?? "")}"${sheet.taken ? ` aria-invalid="true" aria-describedby="nameerr"` : ""}>
+      ${sheet.taken ? `<p class="hint hint--bad" id="nameerr" role="alert">${esc(sheet.taken)}'s already in this crew. If that's you, switch instead. If not, try an initial or a nickname.</p>` : ""}
+      <div class="row">${takenBy ? `<button class="btn btn--ghost" id="takenswitch" data-swapto="${esc(takenBy.member_id)}">I'm ${esc(takenBy.name)}</button>` : ""}<button class="btn" id="renamego">Save name</button></div>
+      <button class="linkbtn linkbtn--tap" id="notmebtn">Not ${esc(me.name || "you")}? Switch to someone else in the crew</button>
       ${me.device_count > 1 ? `<div class="rules">
         <div class="rulesrow"><b>Linked on ${me.device_count} browsers</b></div>
         <p class="fhint">They all count as the same you. Swapped phones or used a borrowed laptop? Unlink the others and they'll ask who you are next time.</p>
@@ -4871,6 +4891,43 @@ function renderSheet(d){
         : `<p class="fhint">Link it to you here and it picks up all your crews at once, as you. No need to open each crew's link again.</p>
           <button class="btn btn--ghost btn--sm btn--on2" id="pairstart" style="align-self:flex-start">Link another device</button>`}
       </div>`);
+  }
+
+  // this device is the wrong person: pick who it should be
+  if(sheet.kind === "whoswap"){
+    const me = d.meMember || {};
+    const admin = crewAdminId();
+    // whoever you tried to rename to goes first, it's almost certainly you
+    const others = (S.members || []).filter(m => m.member_id !== myMemberId)
+      .sort((a, b) => (b.member_id === sheet.first) - (a.member_id === sheet.first));
+    const row = c => c.member_id === admin
+      // whoever started the crew is only ever proven with a code from a device
+      // they already use, never picked by name, so nobody can take the crew over
+      ? `<button class="cand" data-swapstarter="${esc(c.member_id)}">
+          <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
+          <span class="txt"><b>${esc(c.name)}</b><span>Started this crew, so it takes a code from a device that's already them</span></span>
+          <span style="color:var(--muted)">→</span></button>`
+      : candRow(c);
+    // what happens to the person this device is now, said before it happens
+    const mine = id => (S.ballots || []).some(b => b.member_id === id && (b.picks || []).length)
+      || (S.takes || []).some(t => t.member_id === id) || (S.owns || []).some(o => o.member_id === id)
+      || (S.sesh_free || []).some(f => f.member_id === id) || (S.sesh_none || []).some(f => f.member_id === id);
+    // whoever started the crew can't switch their only device away (the server
+    // refuses too): nothing could prove it was them again
+    if(me.member_id === admin && me.device_count <= 1) return shell(`<h3>Who are you?</h3>
+      <p>You started ${esc(S.group.name)} and this is your only device in it, so it has to stay ${esc(me.name)}. Otherwise nobody could run the crew.</p>
+      <p class="fhint">Borrowed device? Link your own first (tap Back, then Link another device), then switch this one.</p>
+      <div class="row"><button class="btn btn--ghost" id="swapback">Back</button></div>`);
+    const leaving = !me.name ? ""
+      : me.member_id === admin ? `You started this crew, so you'll still be ${esc(me.name)} on your other device.`
+      : me.device_count > 1 ? `${esc(me.name)} stays as they are on their other device.`
+      : mine(me.member_id) ? `${esc(me.name)} stays on the list with their picks, so nothing of theirs is lost.`
+      : `${esc(me.name)} hasn't done anything yet, so they drop off the list.`;
+    return shell(`<h3>Who are you?</h3>
+      <p>Pick yourself and this device becomes you in ${esc(S.group.name)}. Your picks and nights are already there.</p>
+      <div class="candlist">${others.length ? others.map(row).join("") : `<p class="fhint">Nobody else is in this crew yet.</p>`}</div>
+      ${leaving ? `<p class="fhint">${leaving}</p>` : ""}
+      <div class="row"><button class="btn btn--ghost" id="swapback">Back</button></div>`);
   }
 
   if(sheet.kind === "switch"){
@@ -5093,10 +5150,27 @@ function wirePairing(){
       sheet.code = v; go.disabled = v.length !== 6; msg.textContent = ""; msg.classList.remove("hint--bad"); });
     pin.addEventListener("keydown", e => { if(e.key === "Enter" && !go.disabled) go.click(); });
   }
+  const pb = document.getElementById("pairback");
+  if(pb) pb.onclick = () => { sheet = { kind: sheet.back }; render(); };
   if(go) go.onclick = async () => {
     go.disabled = true; go.textContent = "Linking…";
     try{
       const crews = await finishPairing(sheet.code);
+      if(code){
+        const was = myMemberId;
+        myMemberId = await rpc("whoami", { p_code: code, p_device: deviceId });
+        const here = crews.find(c => c.code === code);
+        if(here){ myName = here.me; store.set("name", here.me); }
+        sheet = null;
+        await refresh();
+        render();   // refresh skips the redraw when the crew itself didn't change
+        if(here && was !== myMemberId) toast(`You're ${here.me} on this device now`);
+        else if(!here) toast("Linked, but the other device isn't in this crew", "bad");
+        // linked fine, but this crew kept who the device already was (the server
+        // does that to never strand whoever started a crew on their only device)
+        else toast(`Linked, but you're still ${here.me} in this crew. Whoever started it can merge you in People.`, "bad");
+        return;
+      }
       sheet = null; render();
       const h = document.getElementById("joinhint");
       if(h){ h.textContent = `Linked. ${crews.length} ${crews.length === 1 ? "crew" : "crews"} added above.`; h.classList.remove("hint--bad"); }
@@ -5713,6 +5787,20 @@ function wireGroup(d, filtered){
     sheet = null; myName = v; store.set("name", v);
     try{ await rpc("rename_me", {p_code:code, p_device:deviceId, p_person:v}); }finally{ refresh(); }
   };
+  // the keyboard's done key saves, so a hidden button never strands you
+  const ri = document.getElementById("renameinput");
+  if(ri && rn) ri.onkeydown = e => { if(e.key === "Enter"){ e.preventDefault(); rn.click(); } };
+  // this device is the wrong person
+  const nm = document.getElementById("notmebtn");
+  if(nm) nm.onclick = () => { sheet = { kind:"whoswap" }; render(); };
+  const ts = document.getElementById("takenswitch");
+  if(ts) ts.onclick = () => { sheet = { kind:"whoswap", first: ts.dataset.swapto }; render(); };
+  const swb = document.getElementById("swapback");
+  if(swb) swb.onclick = () => { sheet = { kind:"me" }; render(); };
+  document.querySelectorAll("[data-swapstarter]").forEach(b => b.onclick = () => {
+    const m = (S.members || []).find(x => String(x.member_id) === b.dataset.swapstarter);
+    sheet = { kind:"pair", who: m ? m.name : "them", back:"whoswap" }; render();
+  });
   const tl = document.getElementById("tolanding");
   if(tl) tl.onclick = () => { sheet=null; S=null; myMemberId=null; location.hash=""; };
   document.querySelectorAll("[data-open]").forEach(b => {
@@ -5771,6 +5859,43 @@ function spinReel(d, pool){
     });
   }, { passive: true });
 })();
+
+/* ---------- the on-screen keyboard ----------
+   A sheet with a text field has to keep that field and its button above the
+   keyboard. Android Chrome does most of it once the viewport meta says
+   resizes-content. iOS Safari ignores that and draws the keyboard over the
+   page, so there the gap between the window and the visual viewport is the
+   keyboard, and the sheet is lifted by that much (--kb). */
+const TYPING = /^(INPUT|TEXTAREA|SELECT)$/;
+const NOT_TYPING = /^(checkbox|radio|button|submit|range|color|file)$/;
+function isTypingField(el){
+  return !!el && TYPING.test(el.tagName) && !NOT_TYPING.test(el.type || "");
+}
+function syncKeyboard(){
+  const vv = window.visualViewport;
+  // the part of the window the visual viewport no longer covers, from the bottom
+  const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+  // under ~80px is browser chrome sliding about, not a keyboard
+  document.documentElement.style.setProperty("--kb", (kb > 80 ? kb : 0) + "px");
+  // "typing" is the reliable signal on Android, where kb stays 0 by design
+  const typing = matchMedia("(pointer:coarse)").matches && isTypingField(document.activeElement);
+  document.documentElement.classList.toggle("kbopen", typing || kb > 80);
+}
+if(window.visualViewport){
+  visualViewport.addEventListener("resize", syncKeyboard);
+  visualViewport.addEventListener("scroll", syncKeyboard);
+}
+document.addEventListener("focusin", e => {
+  syncKeyboard();
+  if(!isTypingField(e.target) || !e.target.closest(".sheet")) return;
+  // once the keyboard has finished arriving, make sure the field is in the
+  // part of the sheet you can see, not scrolled under its top edge
+  setTimeout(() => {
+    if(document.activeElement === e.target) e.target.scrollIntoView({ block: "nearest" });
+  }, 320);
+});
+// focusout fires before focus lands on the next thing, so check a tick later
+document.addEventListener("focusout", () => setTimeout(syncKeyboard, 60));
 
 /* ---------- keyboard ---------- */
 // one listener instead of setting focusReturn in twenty separate handlers

@@ -504,15 +504,32 @@ Three things fall out of that:
 | You open the link on a second device | You type a name, and if it looks like someone already here you are offered them |
 | Someone types `sam` when `Sam` exists | Same offer. Tap it and your picks carry across. Two people can't have exactly the same name in a crew, so if it isn't you, it asks for an initial or a nickname instead of making a `Sam (2)` |
 | You start using a new phone or computer | **Link another device** (below) brings every crew across at once |
+| A device ended up as the wrong person | **Not Soli? Switch to someone else** in the That's you sheet (below) |
 | A crew gets a new code | Every device already in it finds it again under the new code (`my_crews`), and says the old link doesn't work any more |
 
 **Opening a crew link and giving your name joins you to that crew** and adds it to **Your crews** on that device's landing page. That's per device, because there are no accounts.
 
-**Link another device.** On the device you already use, tap your name, then **Link another device**. It shows a six-character code (and a link to copy or share) that works once, for ten minutes. On the new device, open Game Night and tap **Using it somewhere else already? Link this device**, or just open the link. The new device becomes you in every crew the old one is in, and they all appear under Your crews. A crew the new device had already joined keeps whoever it already was there. `start_pairing` / `finish_pairing` do this server-side; the code is short-lived and single use, so it's safe to send to yourself in a chat.
+**Link another device.** On the device you already use, tap your name, then **Link another device**. It shows a six-character code (and a link to copy or share) that works once, for ten minutes. On the new device, open Game Night and tap **Using it somewhere else already? Link this device**, or just open the link. The new device becomes you in every crew the old one is in, and they all appear under Your crews, including a crew where it was somebody else. It used to keep whoever it already was there, which meant a device that joined as the wrong person could never be fixed. `start_pairing` / `finish_pairing` do this server-side; the code is short-lived and single use, so it's safe to send to yourself in a chat.
 
 The matcher normalises case, accents and punctuation, then scores four ways: exact match, one name being a prefix of the other (`Sam` / `Sam L`), a shared first token (`Sam L` / `Sam B`), and an edit distance of one or two (`Sam` / `Samm`). Anything scoring 60 or above is offered, with enough context to recognise yourself: how many picks they have, when they were last here, how many devices.
 
 Claiming is additive, not a takeover. The one exception is whoever started the crew: they can't be claimed by name at all, only linked from a device they already use, so nobody can pick "that's me" and take over the tidy-up powers. The original device keeps working, and a person with more than one device linked shows a small count in the crew list, which is the only visible signal that it happened.
+
+**Switching who a device is.** A phone that joins as the wrong person (a mis-tap, a mate's name typed to test) used to be stuck: renaming to your own name was refused because that name was taken, by you. Now the That's you sheet has a **Not Soli? Switch to someone else** link, and the taken-name error offers **I'm Jehan** as well as asking for a nickname. Both open **Who are you?**, which lists the crew and says what happens to the person you're leaving before you tap.
+
+| Switching to | How |
+| --- | --- |
+| Anyone who didn't start the crew | One tap, the same as claiming yourself when you first join |
+| Whoever started the crew | A code from a device that's already them (Link another device), so nobody can take the crew over by picking their name |
+
+| The person you're leaving | What happens |
+| --- | --- |
+| Never did anything and no other device | Tidied away (`tidy_member`), so a mis-tap leaves no ghost |
+| Has picks, nights, takes or games added | Stays on the list with all of it. Whoever started the crew can merge or remove them |
+| Is on another device too | Stays as they are there |
+| Started the crew, on their only device | Can't switch. The server refuses and the sheet says why: nothing could prove it was them again and the crew would have nobody to run it |
+
+`claim_member` and `finish_pairing` both apply those rules, and `tidy_member` is not callable from the browser. The SQL is tested against a real Postgres as well as through the UI.
 
 Nobody is asked for a name until they tap their first pick. Every step before the payoff is a place to leave.
 
@@ -619,6 +636,8 @@ Checked with an automated pass that drives the real UI at 375, 768 and 1440px in
 **One token caused most of the contrast failures.** `--muted` sat at `#7A7E87`, which is 3.6:1 on the surface grey. Every pill, count, eyebrow and section heading in the app uses it, at 10 to 13px, so one value under the line failed the whole interface. It is neutral 600 in light and neutral 300 in dark now.
 
 Two more worth naming. The generated avatar circles were white text on `hsl(h 38% 48%)`, which is 2.5:1 , and they carry a person's initial, so that is real text failing badly. And **"Out in front"** on the leader banner was the violet accent over a photograph, which is unreadable over anything bright; it is white on a deeper scrim now.
+
+**Sheets and the keyboard.** A sheet with a text field keeps the field and its main button above the on-screen keyboard. Android Chrome does it once the viewport meta says `interactive-widget=resizes-content`; iOS Safari ignores that and draws the keyboard over the page, so there `visualViewport` measures the keyboard and the sheet is lifted by that much (`--kb`). While typing, the sheet drops its resting height so it hugs its content, heights are in `dvh` rather than `vh`, the focused field is scrolled into view once the keyboard has arrived, and the keyboard's done key saves. The link-code box was also 220px tall inside a sheet (a width meant for the landing row, read as a height in a column), which is fixed.
 
 Motion is opt-out: everything added for feel sits behind `prefers-reduced-motion`, including the confetti, which is skipped entirely rather than shortened.
 
