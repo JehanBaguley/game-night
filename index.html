@@ -934,6 +934,21 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .pips i.f{background:var(--grad)}
 
 /* ---------- sheets ---------- */
+/* Typing on a touch screen, a sheet takes the whole space above the keyboard
+   (iOS's large detent, Material's full-screen dialog for input). A short sheet
+   floating over a sliver of page reads as broken, and a tall one scrolls its
+   own field out of sight. Content reads from the top, the action row sits on
+   the keyboard where your thumb already is, and the page behind is hidden. */
+@media (pointer:coarse){
+  /* extra class in each selector so these beat the phone sheet rules further down */
+  .kbopen .sheetwrap{place-items:stretch;padding:0}
+  .kbopen .sheetwrap .sheet{height:100%;max-height:none;min-height:0;max-width:none;border-radius:0;
+    padding-top:calc(14px + env(safe-area-inset-top, 0px));padding-bottom:14px;box-shadow:none}
+  .kbopen .sheetwrap .sheet > .grab{display:none}
+  .kbopen .sheetwrap .sheet > .row:last-child{margin-top:auto}
+  /* dropping the keyboard (back, or tapping done) brings the normal sheet back,
+     which is also how you get to its scrim and grabber again */
+}
 /* --kb is the keyboard's height where the browser draws it over the page
    (iOS Safari). Android Chrome shrinks the page instead, so --kb stays 0 there. */
 .sheetwrap{position:fixed;inset:0 0 var(--kb, 0px);z-index:60;background:rgba(10,12,15,.62);display:grid;place-items:end center;overscroll-behavior:contain}
@@ -963,8 +978,6 @@ td.r,th.r{text-align:right;white-space:nowrap}
   /* While typing, the resting height would push the field and its button up
      and out of the space the keyboard leaves, so the sheet hugs its content
      and the safe-area padding (which the keyboard covers anyway) goes. */
-  .kbopen .sheet:not(.sheet--tall){min-height:0}
-  .kbopen .sheet{padding-bottom:14px}
   .sheet:not(.sheet--tall){will-change:transform}
   /* the grabber is a real 28px strip across the top: the browser never scrolls
      from it, so a drag there always moves the sheet */
@@ -4390,10 +4403,12 @@ function renderSheet(d){
     const bits = [voted ? voted.picks.length + (voted.picks.length===1?" pick":" picks") : "no picks yet",
                   "last here " + ago(c.last_seen)];
     if(c.device_count>1) bits.push(c.device_count+" devices");
-    // whoever started the crew can't be claimed by name, only linked from a device they already use
-    if(c.member_id === crewAdminId()) return `<div class="cand cand--locked">
+    // whoever started the crew can't be claimed by name, only with a link code
+    // from a device that's already them. Tapping the row is where you type it.
+    if(c.member_id === crewAdminId()) return `<button class="cand" data-swapstarter="${esc(c.member_id)}">
       <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
-      <span class="txt"><b>${esc(c.name)}</b><span>Started this crew. If that's you, open the menu on your usual device and use Link another device.</span></span></div>`;
+      <span class="txt"><b>${esc(c.name)}</b><span>Started this crew. If that's you, tap and type the code from Link another device on your usual one</span></span>
+      <span style="color:var(--muted)">→</span></button>`;
     return `<button class="cand" data-claim="${esc(c.member_id)}">
       <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
       <span class="txt"><b>${esc(c.name)}</b><span>${esc(bits.join(" · "))}</span></span>
@@ -4900,14 +4915,7 @@ function renderSheet(d){
     // whoever you tried to rename to goes first, it's almost certainly you
     const others = (S.members || []).filter(m => m.member_id !== myMemberId)
       .sort((a, b) => (b.member_id === sheet.first) - (a.member_id === sheet.first));
-    const row = c => c.member_id === admin
-      // whoever started the crew is only ever proven with a code from a device
-      // they already use, never picked by name, so nobody can take the crew over
-      ? `<button class="cand" data-swapstarter="${esc(c.member_id)}">
-          <span class="dot" style="background:hsl(${hueOf(c.name)} 58% 30%)">${esc(monogram(c.name))}</span>
-          <span class="txt"><b>${esc(c.name)}</b><span>Started this crew, so it takes a code from a device that's already them</span></span>
-          <span style="color:var(--muted)">→</span></button>`
-      : candRow(c);
+    const row = candRow;
     // what happens to the person this device is now, said before it happens
     const mine = id => (S.ballots || []).some(b => b.member_id === id && (b.picks || []).length)
       || (S.takes || []).some(t => t.member_id === id) || (S.owns || []).some(o => o.member_id === id)
@@ -5151,7 +5159,7 @@ function wirePairing(){
     pin.addEventListener("keydown", e => { if(e.key === "Enter" && !go.disabled) go.click(); });
   }
   const pb = document.getElementById("pairback");
-  if(pb) pb.onclick = () => { sheet = { kind: sheet.back }; render(); };
+  if(pb) pb.onclick = () => { sheet = sheet.back; render(); };
   if(go) go.onclick = async () => {
     go.disabled = true; go.textContent = "Linking…";
     try{
@@ -5163,7 +5171,8 @@ function wirePairing(){
         if(here){ myName = here.me; store.set("name", here.me); }
         sheet = null;
         await refresh();
-        render();   // refresh skips the redraw when the crew itself didn't change
+        const run = pending; pending = null;
+        if(run) run(); else render();   // refresh skips the redraw when the crew itself didn't change
         if(here && was !== myMemberId) toast(`You're ${here.me} on this device now`);
         else if(!here) toast("Linked, but the other device isn't in this crew", "bad");
         // linked fine, but this crew kept who the device already was (the server
@@ -5799,7 +5808,7 @@ function wireGroup(d, filtered){
   if(swb) swb.onclick = () => { sheet = { kind:"me" }; render(); };
   document.querySelectorAll("[data-swapstarter]").forEach(b => b.onclick = () => {
     const m = (S.members || []).find(x => String(x.member_id) === b.dataset.swapstarter);
-    sheet = { kind:"pair", who: m ? m.name : "them", back:"whoswap" }; render();
+    sheet = { kind:"pair", who: m ? m.name : "them", back: sheet }; render();
   });
   const tl = document.getElementById("tolanding");
   if(tl) tl.onclick = () => { sheet=null; S=null; myMemberId=null; location.hash=""; };
@@ -5871,7 +5880,16 @@ const NOT_TYPING = /^(checkbox|radio|button|submit|range|color|file)$/;
 function isTypingField(el){
   return !!el && TYPING.test(el.tagName) && !NOT_TYPING.test(el.type || "");
 }
+// A tap on a sheet's button blurs the field first, and if the sheet changed
+// shape right then, the tap would land on whatever moved under the finger
+// (the scrim, which closes the sheet). So nothing changes shape mid-press.
+let pressing = false;
+document.addEventListener("pointerdown", () => { pressing = true; }, true);
+const released = () => { pressing = false; setTimeout(syncKeyboard, 250); };
+document.addEventListener("pointerup", released, true);
+document.addEventListener("pointercancel", released, true);
 function syncKeyboard(){
+  if(pressing) return;
   const vv = window.visualViewport;
   // the part of the window the visual viewport no longer covers, from the bottom
   const kb = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
