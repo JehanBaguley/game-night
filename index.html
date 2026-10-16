@@ -788,6 +788,7 @@ td.r,th.r{text-align:right;white-space:nowrap}
 @keyframes spin{to{transform:rotate(360deg)}}
 .add .row .input{flex:1 1 220px;background:var(--surface-2)}
 .results{margin-top:9px;display:flex;flex-direction:column;gap:5px}
+.fld--take{margin-top:12px}
 .res{display:flex;align-items:center;gap:11px;padding:8px;min-height:52px;border-radius:var(--r-md);width:100%;background:var(--surface-2);flex-wrap:wrap}
 .res .nm{flex:1 1 130px}
 .resbtns{display:flex;gap:6px;flex:none;margin-left:auto}
@@ -2679,6 +2680,10 @@ let S = null, code = "", loading = false, busy = false;
 let flash = "", lastLeader = null, pulse = null;
 let pending = null, sheet = null;
 let addResults = [], addMsg = null, addBusy = false;
+/* The optional "sell it to us" line, typed in the add sheet itself. It used to be a
+   second sheet that opened after three round trips, which felt like the app had
+   stalled, and skipping it waited on two more before it went away. */
+let addTake = "";
 let addQ = "";   // what is typed in the Steam box, so a re-render never wipes it
 let expanded = new Set();
 
@@ -3528,6 +3533,7 @@ function customForm(){
       <button class="chip" data-cfree aria-pressed="${!!c.free}">Free to play</button>
       <label class="fld fld--cap"><span>Up to how many</span><input class="input" id="ccap" type="number" min="1" max="200" placeholder="?" value="${c.cap ?? ""}"></label>
     </div>
+    ${takeField()}
     <p class="hint hint--bad" id="cmsg" hidden></p>
     <div class="row"><button class="btn btn--ghost" id="cback">Back to Steam search</button><button class="btn" id="cgo">Add it</button></div>
   </div>`;
@@ -3563,11 +3569,18 @@ function wireCustom(){
     if(!c.name.trim()) return say("Give it a name first.");
     if(needName(() => { sheet = { kind:"add", custom: c }; render(); })) return;
     go.disabled = true; go.textContent = "Adding…";
+    const take = addTake.trim();
     try{
-      await rpc("add_custom_game", { p_code: code, p_device: deviceId, p_name: c.name.trim(), p_platform: c.plat || "other",
+      const appid = await rpc("add_custom_game", { p_code: code, p_device: deviceId, p_name: c.name.trim(), p_platform: c.plat || "other",
         p_url: asUrl(c.url) || null, p_free: !!c.free, p_crew_max: c.cap || null, p_energy: null });
-      addMsg = { kind:"ok", text: c.name.trim() + " is up for a vote" };
-      sheet.custom = null; await refresh(); render();
+      // a name that was already here comes back as the existing game; leave its takes alone
+      const fresh = appid && !(S.shelf||[]).find(x => x.appid === appid);
+      if(take && fresh) await rpc("set_take", { p_code: code, p_device: deviceId, p_appid: appid, p_body: take });
+      addTake = ""; addMsg = null; addResults = []; addQ = "";
+      closeSheet();
+      await refresh();
+      toast(c.name.trim() + (fresh ? " is up for a vote" : " was already on the shelf"));
+      if(appid) showCard(appid);
     }catch(err){ go.disabled = false; go.textContent = "Add it"; say(err.message); }
   };
 }
@@ -3595,22 +3608,43 @@ function submitAdd(){
 }
 async function addGame(appid){
   if(needName(() => addGame(appid))) return;
-  busy = true; addMsg = null; render();
+  const r = addResults.find(x => x.appid === appid) || {};
+  const nm = r.name || "That one";
+  const take = addTake.trim();
+  // Close straight away and do the work behind it. The card turns up when it lands.
+  addResults = []; addQ = ""; addTake = ""; addMsg = null;
+  closeSheet();
+  toast("Chucking " + nm + " on the shelf\u2026");
   try{
     const { game } = await callEnrich({action:"get", appid});
     // anything in the curated list arrives already knowing its cap and setup
     const f = curatedFor(appid);
+    const had = (S.shelf||[]).find(x => x.appid === appid);
     await rpc("add_game", {p_code:code, p_device:deviceId, p_appid:appid,
                            p_energy:f.energy, p_crew_max:f.crew_max,
                            p_setup:f.setup, p_crew_mod:f.crew_mod, p_crew_note:f.crew_note});
-    const had = (S.shelf||[]).find(x => x.appid === appid);
-    addMsg = {kind:"ok", text: had ? game.name + " was already on the shelf" + (had.added_name ? ", added by "+had.added_name : "") : game.name + " is up for a vote"};
-    addResults = [];
-    addQ = "";
+    // only a fresh add gets the line; never write over a take someone already has
+    if(take && !had) await rpc("set_take", {p_code:code, p_device:deviceId, p_appid:appid, p_body:take});
     await refresh();
-    sheet = { kind:"take", appid, fromAdd:true, gameName: game.name };
-  }catch(err){ addMsg = {kind:"bad", text:err.message}; }
-  finally{ busy = false; render(); }
+    toast(had ? game.name + " was already on the shelf" + (had.added_name ? ", added by " + had.added_name : "")
+              : game.name + " is up for a vote");
+    showCard(appid);
+  }catch(err){ toast(err.message, "bad"); }
+}
+/** Scroll a shelf card into view and give it a pulse, clearing whatever would hide it. */
+function showCard(id){
+  F.q = ""; if(F.benched) F.benched = false;
+  pulse = id; render();
+  const el = document.querySelector(`[data-pick="${id}"], [data-unbench="${id}"]`);
+  const card = el && el.closest(".card, tr");
+  if(card) card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+  setTimeout(() => { if(pulse === id){ pulse = null; render(); } }, 700);
+}
+/** The optional one-liner, shared by the Steam results and the add-it-yourself form. */
+function takeField(){
+  return `<label class="fld fld--take"><span>Sell it to us (optional)</span>
+    <input class="input" id="addtake" maxlength="140" autocomplete="off" enterkeyhint="done"
+           placeholder="e.g. peaks at 4, grindy after that" value="${esc(addTake)}"></label>`;
 }
 
 /* ---------- rounds ---------- */
@@ -4588,6 +4622,7 @@ function renderSheet(d){
               : `<button class="btn btn--ghost btn--sm" data-showcard="${r.appid}">Show it</button>`}
           </span>
         </div>`; }).join("")}</div>` : ""}
+      ${!sheet.custom && addResults.some(r => !(S.shelf||[]).find(x => x.appid === r.appid)) ? takeField() : ""}
       ${addMsg ? `<p class="msg msg--${addMsg.kind==="ok"?"ok":"bad"}">${esc(addMsg.text)}</p>` : ""}
       ${sheet.custom ? customForm() : `<button class="linkbtn" id="customopen">Not on Steam? Browser, Epic, console… add it yourself</button>`}`);
   }
@@ -5671,15 +5706,13 @@ function wireGroup(d, filtered){
   const addgo = document.getElementById("addgo");
   if(addgo) addgo.onclick = submitAdd;
   document.querySelectorAll("[data-add]").forEach(b => b.onclick = () => addGame(+b.dataset.add));
+  const atk = document.getElementById("addtake");
+  if(atk) atk.addEventListener("input", () => { addTake = atk.value; });
   document.querySelectorAll("[data-showcard]").forEach(b => b.onclick = () => {
     const id = +b.dataset.showcard;
-    // the card is on the shelf but may be filtered out; clear the search at least
-    F.q = ""; if(F.benched) F.benched = false;
-    sheet = null; addResults = []; addQ = ""; pulse = id; render();
-    const el = document.querySelector(`[data-pick="${id}"], [data-unbench="${id}"]`);
-    const card = el && el.closest(".card, tr");
-    if(card) card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
-    setTimeout(() => { if(pulse === id){ pulse = null; render(); } }, 700);
+    // the card is on the shelf but may be filtered out; showCard clears the search
+    addResults = []; addQ = ""; addTake = "";
+    closeSheet(); showCard(id);
   });
 
   // rail + bar
@@ -5706,8 +5739,9 @@ function wireGroup(d, filtered){
   const ti = document.getElementById("takeinput");
   if(ti && sheet.kind === "take"){
     ti.focus();
-    document.getElementById("takego").onclick   = () => { const a=sheet.appid,v=ti.value; sheet=null; saveTake(a,v); };
-    document.getElementById("takeclear").onclick = () => { const a=sheet.appid; sheet=null; saveTake(a,""); };
+    // close on the tap; the save and refresh happen behind it
+    document.getElementById("takego").onclick   = () => { const a=sheet.appid,v=ti.value; closeSheet(); saveTake(a,v); };
+    document.getElementById("takeclear").onclick = () => { const a=sheet.appid; closeSheet(); saveTake(a,""); };
   }
   document.querySelectorAll("[data-fe]").forEach(b => b.onclick = () => {
     sheet.e = +b.dataset.fe;

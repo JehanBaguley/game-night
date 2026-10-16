@@ -369,6 +369,8 @@ One button. It goes straight up for a vote:
 | --- | --- |
 | **Add it** | Onto the shelf, up for a vote, credited to you |
 
+**Sell it to us** is an optional line under the results (and in the add-it-yourself form). It goes in with the game in the same tap and shows on the card. It used to be a second sheet that opened after the add finished, which took three round trips to appear and two more to go away when you skipped it. The sheet now closes on the tap, the add happens behind it, and the new card scrolls into view with a pulse when it lands. A game that's already on the shelf never gets the line, so adding it again can't write over someone's take.
+
 **Two search boxes on one page was the single most confusing thing in the app.** The toolbar one filters the shelf you already have. The Steam one finds something you don't. For a while they sat on the same page, one at the top and one 6,000px down at the bottom, and renaming them only half fixed it. Now the Steam search lives in its own sheet behind **+**, so at any moment there is exactly one search box on screen and it is obvious which shelf it searches.
 
 The sheet also fixed a real bug: the Steam box used to sit inside the page, and the page re-renders on every keystroke and every poll, which emptied the field and dropped focus after the first character. Search looked broken because it was. The field now keeps its value in state and the renderer puts the caret back where it was, so a poll landing mid-word changes nothing.
