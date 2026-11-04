@@ -17,7 +17,7 @@ There is no build, test runner or package.json. Real commands only:
 - Preview: serve the folder statically (for example `python3 -m http.server`) and open `index.html`.
 - Deploy functions: `supabase functions deploy <name> --no-verify-jwt` (all four need `--no-verify-jwt`).
 - Set the share-link site URL: `supabase secrets set SITE_URL=...`
-- Schema changes: run `supabase/schema.sql` in the Supabase SQL editor.
+- Schema: `supabase/schema.sql` builds a fresh project and drops every table first, so never run the whole file against the live project. For a change, run only the new or changed `create or replace function` blocks (and any `alter table ... add column if not exists`) in the Supabase SQL editor.
 Read `README.md` (Setup, Changing things, When things break) before deploying or changing the backend.
 
 ## Rules

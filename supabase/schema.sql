@@ -988,7 +988,7 @@ revoke all on prices from anon, authenticated;
 -- scoreboard all work unchanged. Each one belongs to the crew that made it.
 -- fetched_at is 'infinity' so the Steam refresh never tries to re-fetch them.
 -- ---------------------------------------------------------------------------
-alter table games add column if not exists platform     text;     -- null = Steam; browser | epic | xbox | playstation | switch | other
+alter table games add column if not exists platform     text;     -- null = Steam; browser | battlenet | epic | ea | ubisoft | gog | xbox | playstation | switch | other
 alter table games add column if not exists play_url     text;     -- where to play it or buy it
 alter table games add column if not exists is_free      boolean not null default false;
 alter table games add column if not exists custom_group text;     -- the crew that added it, for custom games only
@@ -1003,7 +1003,7 @@ begin
   m := assert_member(p_code, p_device);
   nm := trim(coalesce(p_name, ''));
   if length(nm) < 1 or length(nm) > 60 then raise exception 'give it a name (up to 60 characters)'; end if;
-  if coalesce(p_platform, 'other') not in ('browser','epic','xbox','playstation','switch','other') then raise exception 'unknown platform'; end if;
+  if coalesce(p_platform, 'other') not in ('browser','battlenet','epic','ea','ubisoft','gog','xbox','playstation','switch','other') then raise exception 'unknown platform'; end if;
   if u is not null and u !~* '^https?://[^\s]+$' then raise exception 'that link needs to start with https://'; end if;
   if p_crew_max is not null and (p_crew_max < 1 or p_crew_max > 200) then raise exception 'player cap looks wrong'; end if;
   if p_energy is not null and (p_energy < 1 or p_energy > 3) then raise exception 'energy must be 1, 2 or 3'; end if;
@@ -1033,7 +1033,7 @@ declare nm text := trim(coalesce(p_name, '')); u text := nullif(trim(coalesce(p_
 begin
   perform assert_member(p_code, p_device);
   if length(nm) < 1 or length(nm) > 60 then raise exception 'give it a name (up to 60 characters)'; end if;
-  if coalesce(p_platform, 'other') not in ('browser','epic','xbox','playstation','switch','other') then raise exception 'unknown platform'; end if;
+  if coalesce(p_platform, 'other') not in ('browser','battlenet','epic','ea','ubisoft','gog','xbox','playstation','switch','other') then raise exception 'unknown platform'; end if;
   if u is not null and u !~* '^https?://[^\s]+$' then raise exception 'that link needs to start with https://'; end if;
   update games set name = nm, platform = coalesce(p_platform, 'other'), play_url = left(u, 300), is_free = coalesce(p_free, false)
    where appid = p_appid and custom_group = p_code;
@@ -1527,3 +1527,81 @@ begin
      where d.device_id = p_device), '[]'::json);
 end; $$;
 grant execute on function finish_pairing(text, uuid) to anon;
+
+-- ---------------------------------------------------------------------------
+-- COVER ART FOR GAMES THAT AREN'T ON STEAM
+-- Steam games get their header from Steam. A game added by hand can carry an
+-- image link instead, stored in the same header column so every place that
+-- shows art (cards, the strip, the snapshot, Discord) picks it up unchanged.
+-- https only, and nothing that could break out of a CSS url('...').
+-- ---------------------------------------------------------------------------
+create or replace function set_custom_image(p_code text, p_device uuid, p_appid int, p_url text)
+returns void language plpgsql security definer set search_path = public as $$
+declare u text := nullif(trim(coalesce(p_url, '')), '');
+begin
+  perform assert_member(p_code, p_device);
+  if u is not null and (length(u) > 500 or u !~* '^https://[^\s"''<>()\\]+$') then
+    raise exception 'the image link needs to be a plain https:// link';
+  end if;
+  update games set header = u where appid = p_appid and custom_group = p_code;
+  if not found then raise exception 'that game is not one this crew added'; end if;
+end; $$;
+revoke execute on function set_custom_image(text, uuid, int, text) from public;
+grant execute on function set_custom_image(text, uuid, int, text) to anon;
+
+-- ---------------------------------------------------------------------------
+-- SWAP THE MAIN GAME
+-- Make any game on the shelf (or one already on the side) the main game. What
+-- was main moves to the side with everyone in, keeping when it started and any
+-- nights already picked, so swapping back is lossless. p_appid null moves the
+-- main game to the side and reopens the vote.
+-- ---------------------------------------------------------------------------
+create or replace function set_main(p_code text, p_device uuid, p_appid int)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid; rn int; cur int; st timestamptz; sides int;
+begin
+  m := assert_member(p_code, p_device);
+  select round_no, locked_appid into rn, cur from groups where code = p_code for update;
+  if p_appid is not null then
+    if not exists (select 1 from shelf where group_code = p_code and appid = p_appid and not benched) then
+      raise exception 'that game is not on the shelf';
+    end if;
+    if p_appid = cur then return; end if;
+  elsif cur is null then
+    return;
+  end if;
+
+  -- the side lane holds three; the old main is about to join it
+  select count(*) into sides from side_games where group_code = p_code and appid is distinct from p_appid;
+  if cur is not null and sides >= 3 then
+    raise exception 'three side games is plenty, wrap one up first';
+  end if;
+
+  if cur is not null then
+    select started_at into st from plays
+     where group_code = p_code and appid = cur and round_no = rn and finished_at is null;
+    delete from plays where group_code = p_code and appid = cur and round_no = rn and finished_at is null;
+    insert into side_games(group_code, appid, started_by, started_at)
+    values (p_code, cur, m, coalesce(st, now())) on conflict do nothing;
+    insert into side_players(group_code, appid, member_id)
+    select p_code, cur, member_id from members where group_code = p_code on conflict do nothing;
+  end if;
+
+  if p_appid is null then
+    update groups set locked_appid = null where code = p_code;
+    insert into crew_log(group_code, member_id, kind, appid, round_no) values (p_code, m, 'reopened', cur, rn);
+    return;
+  end if;
+
+  -- a side game coming up keeps its start date; its nights carry over as they are
+  st := null;
+  select started_at into st from side_games where group_code = p_code and appid = p_appid;
+  delete from side_games where group_code = p_code and appid = p_appid;
+  update groups set locked_appid = p_appid where code = p_code;
+  insert into plays(group_code, appid, round_no, started_at)
+  values (p_code, p_appid, rn, coalesce(st, now()))
+  on conflict (group_code, appid, round_no) do update set finished_at = null;
+  insert into crew_log(group_code, member_id, kind, appid, round_no) values (p_code, m, 'called', p_appid, rn);
+end; $$;
+revoke execute on function set_main(text, uuid, int) from public;
+grant execute on function set_main(text, uuid, int) to anon;

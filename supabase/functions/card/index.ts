@@ -59,8 +59,10 @@ Deno.serve(async (req) => {
     if (data) {
       const g = data.group ?? {};
       const shelf = data.shelf ?? [];
-      const games: Record<number, { name?: string }> = {};
+      const games: Record<number, { name?: string; header?: string }> = {};
       for (const row of data.games ?? []) games[row.appid] = row;
+      // a game added by hand can carry its own cover; Steam games use Steam's header
+      const art = (a: number) => games[a]?.header || headerFor(a);
 
       // tally the same way the page does: approval voting, count the picks
       const counts: Record<number, number> = {};
@@ -85,11 +87,11 @@ Deno.serve(async (req) => {
         desc = ranked.length
           ? `On a break. ${games[ranked[0].appid]?.name ?? "Something"} is out in front when you're back`
           : "On a break. Chuck picks in whenever";
-        if (ranked.length) image = headerFor(ranked[0].appid);
+        if (ranked.length) image = art(ranked[0].appid);
       } else if (playing) {
         const nm = games[playing.appid]?.name ?? "something";
         desc = `Playing ${nm} right now`;
-        image = headerFor(playing.appid);
+        image = art(playing.appid);
         // where the next night is at: locked, pencilled in, or still collecting
         const appid = g.locked_appid ?? playing.appid;
         const today = todayAU();
@@ -115,7 +117,7 @@ Deno.serve(async (req) => {
           ? `Dead heat on ${top.n} ${top.n === 1 ? "vote" : "votes"}`
           : `${nm} leading with ${top.n} ${top.n === 1 ? "vote" : "votes"}`;
         desc += ` · ${voters} of ${members} in`;
-        image = headerFor(top.appid);
+        image = art(top.appid);
       } else {
         desc = `${shelf.length} games on the shelf, nobody has picked yet`;
       }

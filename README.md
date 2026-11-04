@@ -240,6 +240,8 @@ For when a few of you want something else going alongside the main game, without
 
 A separate crew is still right for a different friend group. Side games are for the same crew splitting for a bit.
 
+**Swapping main and side.** Any game's details has **Make it the main game**, and so does the **⋯** on a side game's strip. Whatever was main moves to the side with everyone in, keeping when it started and any nights already picked, so swapping back loses nothing. The main game's own details has **Move it to the side**, which keeps it going for whoever's keen and reopens the vote. A side game can also start before anything is called. All of it goes through `set_main`; the side lane still holds three.
+
 ### Games that aren't on Steam
 
 Browser games (skribbl.io), Epic (Fortnite), console games: **Add a game → Not on Steam? … add it yourself**. Type a web address like `skribbl.io` first and it fills the name and link and guesses Browser + free.
@@ -247,12 +249,13 @@ Browser games (skribbl.io), Epic (Fortnite), console games: **Add a game → Not
 | Field | Notes |
 | --- | --- |
 | Name | Up to 60 characters. The same name in the same crew puts the existing one back rather than doubling up |
-| Where you play it | Browser, Epic, Xbox, PlayStation, Switch, Elsewhere. Shows as a badge on the card |
+| Where you play it | Browser, Battle.net, Epic, EA app, Ubisoft, GOG, Xbox, PlayStation, Switch, Elsewhere. Shows as a badge on the card |
+| Cover image link | Optional. Any https image link (long-press an image, copy its address). Stored as the game's header, so cards, the strip, the snapshot, Discord and share links all use it. Blank keeps the coloured tile. `set_custom_image` |
 | Link | Optional. Details gets **Play ↗** (browser) or **Open ↗** instead of Steam ↗ |
 | Free to play | Free games count as everyone owns them, so they land in Ready to play straight away |
 | Up to how many | The player cap, same as Steam games |
 
-They're stored in the games table under a negative appid (`add_custom_game`), owned by the crew that added them, so voting, nights, side games, the Discord scoreboard and the snapshot all work unchanged. There's no Steam data, so no cover art (a coloured tile instead), reviews or sale price, and the weekly Steam refresh skips them. Fix a name, link or platform later from details (`update_custom_game`).
+They're stored in the games table under a negative appid (`add_custom_game`), owned by the crew that added them, so voting, nights, side games, the Discord scoreboard and the snapshot all work unchanged. There's no Steam data, so no reviews or sale price, and no cover art unless you give it an image link (a coloured tile otherwise), and the weekly Steam refresh skips them. Fix a name, link or platform later from details (`update_custom_game`).
 
 ### Details
 
@@ -598,6 +601,8 @@ Both are covered in steps 3 and 5 of the setup above.
 ---
 
 ## Changing things
+
+**Changing the database on a live crew.** `supabase/schema.sql` is for a fresh project: it drops every table before rebuilding, so running it again wipes every crew. For a change, paste only the new or changed functions into the SQL editor. Every function is `create or replace`, so that is safe to run twice.
 
 **Pre-filled facets for more games.** New crews start empty; nothing is seeded. To have a game arrive with its cap, energy and setup already set, add it to `CURATED` in `index.html` and to `data/curated.json` so the two stay in step.
 

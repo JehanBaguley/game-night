@@ -80,6 +80,8 @@ function buildEmbed(data: State) {
   const games: Record<number, { name?: string }> = {};
   for (const row of data.games ?? []) games[row.appid] = row;
   const gname = (a: number) => games[a]?.name ?? "something";
+  // a game added by hand can carry its own cover; Steam games fall back to Steam's header
+  const art = (a: number) => (games[a] as { header?: string } | undefined)?.header || headerFor(a);
 
   // the tally, same as the page: approval voting, count the picks
   const counts: Record<number, number> = {};
@@ -101,7 +103,7 @@ function buildEmbed(data: State) {
   } else if (playing) {
     const n = (data.sessions ?? []).filter((x: { appid: number }) => x.appid === playing).length;
     description = `▶ Playing **${gname(playing)}**` + (n ? ` · ${plural(n, "session")} so far` : "");
-    image = headerFor(playing);
+    image = art(playing);
     fields.push({ name: "Next sesh", value: seshLine(data, playing, members.map((m) => m.member_id), g, nameOf) });
     for (const sg of data.side ?? []) {
       fields.push({
@@ -138,7 +140,7 @@ function buildEmbed(data: State) {
     const waiting = members.filter((m) => !voted.has(m.member_id)).map((m) => m.name);
     if (waiting.length && total > 1) fields.push({ name: "Still to vote", value: listNames(waiting) });
     // a dead heat has no single face, so it gets no hero image either
-    if (tiers.length > 0 && tiers[0].appids.length === 1) image = headerFor(tiers[0].appids[0]);
+    if (tiers.length > 0 && tiers[0].appids.length === 1) image = art(tiers[0].appids[0]);
   }
 
   return {

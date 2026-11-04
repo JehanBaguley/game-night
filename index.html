@@ -1728,7 +1728,7 @@ function renderSides(d){
         </div>
         <div class="side-acts">
         <button class="btn btn--sm${x.iAmIn ? " btn--ghost" : ""}" data-sidejoin="${ip.appid}" data-on="${x.iAmIn ? 0 : 1}">${x.iAmIn ? "I'm out" : "I'm in"}</button>
-        <button class="iconbtn iconbtn--sm" data-sidemenu="${ip.appid}" aria-label="Wrap up ${esc(game.name || "")}"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>
+        <button class="iconbtn iconbtn--sm" data-sidemenu="${ip.appid}" aria-label="Options for ${esc(game.name || "")}"><svg viewBox="0 0 24 24" stroke-linecap="round"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg></button>
         </div>
       </div>
       ${x.iAmIn || x.lock ? seshLine(x) : ""}
@@ -2292,7 +2292,10 @@ function needWords(need, total){
    ========================================================================== */
 const RELEASE = { out: "Released", early: "Early access", soon: "Not out yet" };
 /* games that aren't on Steam: a negative appid, a platform, and a link */
-const PLATFORM = { browser: "Browser", epic: "Epic", xbox: "Xbox", playstation: "PlayStation", switch: "Switch", other: "Elsewhere" };
+const PLATFORM = { browser: "Browser", battlenet: "Battle.net", epic: "Epic", ea: "EA app", ubisoft: "Ubisoft", gog: "GOG",
+                   xbox: "Xbox", playstation: "PlayStation", switch: "Switch", other: "Elsewhere" };
+/** An image link we are happy to put in an <img> and a CSS url(): https, no quotes, brackets or spaces. Mirrors set_custom_image. */
+const okImage = u => !u || (u.length <= 500 && /^https:\/\/[^\s"'<>()\\]+$/i.test(u));
 const isCustom = g => !!(g && g.platform);
 /** "skribbl.io" -> "https://skribbl.io"; anything already a link is left alone */
 const asUrl = u => { u = String(u || "").trim(); return !u ? "" : /^https?:\/\//i.test(u) ? u : "https://" + u; };
@@ -2642,8 +2645,8 @@ async function rpc(fn, args){
    (a round called, a night locked, a new round) post a fresh message instead,
    which pings the channel and lands at the bottom. */
 const DISCORD_WRITES = new Set(["set_picks","add_game","bench_game","unbench_game","close_round","reopen_round","new_round",
-  "set_break","set_free","set_none","lock_sesh","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","update_group","rename_me","crew_remove_game","crew_remove_member","crew_merge_members"]);
-const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","start_side_game"]);
+  "set_break","set_free","set_none","lock_sesh","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","set_main","set_custom_image","update_group","rename_me","crew_remove_game","crew_remove_member","crew_merge_members"]);
+const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","start_side_game","set_main"]);
 let discordTimer = null, discordFresh = false;
 function queueDiscord(fresh){
   discordFresh = discordFresh || fresh;
@@ -3518,7 +3521,7 @@ async function runSearch(q){
 /** Chips in the custom-game editor re-render the sheet; keep what's typed in its fields. */
 function keepCedit(){
   const n = document.getElementById("cename"), u = document.getElementById("ceurl");
-  if(n){ sheet.cedit = true; sheet.cename = n.value; sheet.ceurl = u.value; }
+  if(n){ sheet.cedit = true; sheet.cename = n.value; sheet.ceurl = u.value; const im = document.getElementById("ceimg"); if(im) sheet.ceimg = im.value; }
 }
 /** The add-your-own form, for anything Steam doesn't have. */
 function customForm(){
@@ -3529,6 +3532,7 @@ function customForm(){
     <span class="fldlbl">Where you play it</span>
     <div class="fset">${Object.keys(PLATFORM).map(k => `<button class="chip" data-cplat="${k}" aria-pressed="${c.plat === k}">${esc(PLATFORM[k])}</button>`).join("")}</div>
     <label class="fld"><span>Link (optional)</span><input class="input" id="curl" maxlength="300" placeholder="e.g. skribbl.io or the store page" value="${esc(c.url || "")}" inputmode="url" autocapitalize="off" spellcheck="false"></label>
+    <label class="fld"><span>Cover image link (optional)</span><input class="input" id="cimg" maxlength="500" placeholder="Long-press an image online, copy its address" value="${esc(c.img || "")}" inputmode="url" autocapitalize="off" spellcheck="false"></label>
     <div class="row row--cf">
       <button class="chip" data-cfree aria-pressed="${!!c.free}">Free to play</button>
       <label class="fld fld--cap"><span>Up to how many</span><input class="input" id="ccap" type="number" min="1" max="200" placeholder="?" value="${c.cap ?? ""}"></label>
@@ -3545,6 +3549,7 @@ function readCustom(){
   if(v("cname") != null) c.name = v("cname");
   if(v("curl") != null) c.url = v("curl");
   if(v("ccap") != null) c.cap = v("ccap") ? Number(v("ccap")) : null;
+  if(v("cimg") != null) c.img = v("cimg").trim();
 }
 function wireCustom(){
   const open = document.getElementById("customopen");
@@ -3557,7 +3562,7 @@ function wireCustom(){
     render(); setTimeout(() => { const n = document.getElementById("cname"); if(n) n.focus(); }, 30);
   };
   if(!sheet || !sheet.custom) return;
-  ["cname","curl","ccap"].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener("input", readCustom); });
+  ["cname","curl","ccap","cimg"].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener("input", readCustom); });
   document.querySelectorAll("[data-cplat]").forEach(b => b.onclick = () => { readCustom(); sheet.custom.plat = b.dataset.cplat;
     if(b.dataset.cplat === "browser") sheet.custom.free = true; render(); });
   const fr = document.querySelector("[data-cfree]"); if(fr) fr.onclick = () => { readCustom(); sheet.custom.free = !sheet.custom.free; render(); };
@@ -3567,6 +3572,7 @@ function wireCustom(){
     readCustom();
     const c = sheet.custom, say = t => { const m = document.getElementById("cmsg"); m.textContent = t; m.hidden = false; };
     if(!c.name.trim()) return say("Give it a name first.");
+    if(!okImage(c.img)) return say("The cover needs to be a plain https:// image link.");
     if(needName(() => { sheet = { kind:"add", custom: c }; render(); })) return;
     go.disabled = true; go.textContent = "Adding…";
     const take = addTake.trim();
@@ -3576,6 +3582,7 @@ function wireCustom(){
       // a name that was already here comes back as the existing game; leave its takes alone
       const fresh = appid && !(S.shelf||[]).find(x => x.appid === appid);
       if(take && fresh) await rpc("set_take", { p_code: code, p_device: deviceId, p_appid: appid, p_body: take });
+      if(c.img && appid) await rpc("set_custom_image", { p_code: code, p_device: deviceId, p_appid: appid, p_url: c.img });
       addTake = ""; addMsg = null; addResults = []; addQ = "";
       closeSheet();
       await refresh();
@@ -3639,6 +3646,37 @@ function showCard(id){
   const card = el && el.closest(".card, tr");
   if(card) card.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
   setTimeout(() => { if(pulse === id){ pulse = null; render(); } }, 700);
+}
+/** The "main or side" part of a game's details: promote, demote, or start it on the side. */
+function mainSideBlock(s, d){
+  const a = s.appid, main = S.group.locked_appid, onSide = (S.side||[]).some(x => x.appid === a);
+  const mainName = main ? (d.gamesById[main] || {}).name || "the main game" : "";
+  if(main === a) return `
+          <span class="eyebrow">Main game</span>
+          <p class="fhint">Move it to the side to keep it going with whoever's still keen, and reopen the vote.</p>
+          <button class="btn btn--ghost" data-setmain="">Move it to the side</button>`;
+  if(stateOf(s, d) !== "open") return "";
+  const promote = `<button class="btn btn--ghost" data-setmain="${a}">Make it the main game</button>`;
+  if(onSide) return `
+          <span class="eyebrow">On the side</span>
+          <p class="fhint">${main ? esc(mainName) + " moves to the side with everyone in." : "It becomes what the crew is playing."} Nights already picked stay put.</p>
+          ${promote}`;
+  return `
+          <span class="eyebrow">Play it now</span>
+          <p class="fhint">${main ? `On the side runs it alongside ${esc(mainName)} with whoever's keen. Main swaps them, and ${esc(mainName)} goes on the side.`
+                               : "On the side gets its own strip and nights, while the vote keeps going."}</p>
+          <div class="row"><button class="btn btn--ghost" id="sidego">Play it on the side</button>${main ? promote : ""}</div>`;
+}
+async function setMain(a){
+  const nm = id => (S.games||[]).find(g => g.appid === id)?.name || "That one";
+  const was = S.group.locked_appid;
+  closeSheet();
+  try{
+    await rpc("set_main", { p_code: code, p_device: deviceId, p_appid: a });
+    toast(a == null ? nm(was) + " is on the side. The vote's open again."
+                    : nm(a) + " is the main game" + (was ? ", " + nm(was) + " is on the side" : ""));
+  }catch(err){ toast(err.message, "bad"); }
+  finally{ refresh(); }
 }
 /** The optional one-liner, shared by the Steam results and the add-it-yourself form. */
 function takeField(){
@@ -4279,8 +4317,9 @@ function pickersOf(d, appid){
 }
 /** Header art for the status strip; games added by hand have none. */
 function artOf(d, appid){
-  if(!appid || appid < 0) return null;
+  if(!appid) return null;
   const g = d.gamesById[appid] || {};
+  if(appid < 0) return g.header || null;   // added by hand: only if someone gave it a cover
   return g.header || `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`;
 }
 /** The strip's thumbnail plus a blurred wash of the same art behind it. */
@@ -4529,10 +4568,11 @@ function renderSheet(d){
         ${desc ? `<div class="dlong${sheet.more ? " open" : ""}" id="dlong">${desc.split(/\n+/).map(pp => pp.trim()).filter(Boolean).map(pp => `<p>${esc(pp)}</p>`).join("")}</div>
           <button class="linkbtn dmore" id="dmore" aria-expanded="${!!sheet.more}" aria-controls="dlong" hidden>${sheet.more ? "Show less" : "Read more"}</button>` : ""}
         ${isCustom(game) && game.custom_group === S.group.code ? `
-        <details class="cedit"${sheet.cedit ? " open" : ""}><summary>Not on Steam · edit name, link or platform</summary>
+        <details class="cedit"${sheet.cedit ? " open" : ""}><summary>Not on Steam · edit name, link, cover or platform</summary>
           <div class="cform">
             <label class="fld"><span>Name</span><input class="input" id="cename" maxlength="60" value="${esc(sheet.cename ?? game.name ?? "")}"></label>
             <label class="fld"><span>Link</span><input class="input" id="ceurl" maxlength="300" placeholder="e.g. skribbl.io" value="${esc(sheet.ceurl ?? game.play_url ?? "")}" inputmode="url" autocapitalize="off" spellcheck="false"></label>
+            <label class="fld"><span>Cover image link</span><input class="input" id="ceimg" maxlength="500" placeholder="https://… (blank for a coloured tile)" value="${esc(sheet.ceimg ?? game.header ?? "")}" inputmode="url" autocapitalize="off" spellcheck="false"></label>
             <div class="fset">${Object.keys(PLATFORM).map(k => `<button class="chip" data-ceplat="${k}" aria-pressed="${(sheet.ceplat ?? game.platform) === k}">${esc(PLATFORM[k])}</button>`).join("")}
               <button class="chip" data-cefree aria-pressed="${!!(sheet.cefree ?? game.is_free)}">Free to play</button></div>
           </div>
@@ -4571,10 +4611,7 @@ function renderSheet(d){
         </div>
         ${(() => { const ses = (S.sessions||[]).filter(x => x.appid === sheet.appid);
           return ses.length ? `<p class="notebox">${ses.length} ${ses.length === 1 ? "session" : "sessions"}: ${ses.map(x => esc(dayDate(x.day).toLocaleDateString("en-AU",{day:"numeric",month:"short"}))).join(", ")}</p>` : ""; })()}
-        ${S.group.locked_appid && stateOf(s, d) === "open" && !(S.side||[]).some(x => x.appid === sheet.appid) ? `
-          <span class="eyebrow">On the side</span>
-          <p class="fhint">Fewer of you, alongside ${esc((d.gamesById[S.group.locked_appid]||{}).name || "the main game")}. It gets its own strip and picks its own nights.</p>
-          <button class="btn btn--ghost" id="sidego">Play it on the side</button>` : ""}
+        ${mainSideBlock(s, d)}
         ${(() => {
           // bench is for everyone and undoable; removing for good is only for whoever started the crew
           const canBench = stateOf(s, d) === "open", canRemove = iRunCrew() && S.group.locked_appid !== sheet.appid;
@@ -4654,7 +4691,11 @@ function renderSheet(d){
 
   if(sheet.kind === "sidewrap"){
     const game = d.gamesById[sheet.appid] || {};
-    return shell(`<h3>Wrap up ${esc(game.name || "")}?</h3>
+    const mainName = S.group.locked_appid ? (d.gamesById[S.group.locked_appid] || {}).name || "the main game" : "";
+    return shell(`<h3>${esc(game.name || "")}</h3>
+      <button class="btn btn--ghost" data-setmain="${sheet.appid}">Make it the main game</button>
+      <p class="fhint">${mainName ? esc(mainName) + " moves to the side with everyone in. Nights already picked stay put." : "It becomes what the crew is playing, and the vote closes."}</p>
+      <span class="eyebrow">Or wrap it up</span>
       <p>It goes into play history like any other game. Nothing's deleted, and it can go on the side again later.</p>
       <div class="fset">${Object.keys(VERDICT).map(k => `<button class="chip" data-sv="${k}" aria-pressed="${sheet.verdict === k}">${VERDICT_ICON[k]} ${esc(VERDICT[k])}</button>`).join("")}</div>
       <div class="row"><button class="btn btn--ghost" data-dismiss>Not yet</button><button class="btn" id="sidewrapgo">Wrap it up</button></div>`);
@@ -5400,6 +5441,12 @@ function wireSesh(d){
   app.querySelectorAll(".railshare").forEach(b => b.onclick = () => { sheet = { kind:"share" }; render(); });
   const sg = document.getElementById("sidego");
   if(sg) sg.onclick = async () => { const a = sheet.appid; sheet = null; await act("start_side_game", { p_appid: a }, sg); };
+  // swap what's main: any shelf game or side game up, the old main down to the side
+  app.querySelectorAll("[data-setmain]").forEach(b => b.onclick = () => {
+    const a = b.dataset.setmain === "" ? null : +b.dataset.setmain;
+    if(needName(() => {})) return;
+    setMain(a);
+  });
 
   if(sheet && sheet.kind === "sidewrap"){
     app.querySelectorAll("[data-sv]").forEach(b => b.onclick = () => {
@@ -5771,8 +5818,13 @@ function wireGroup(d, filtered){
     const was = ((d.takesBy[a]||[]).find(t => t.mine) || {}).body || "";
     const ce = document.getElementById("cename");
     const g0 = d.gamesById[a] || {};
-    const cedit = ce && { name: ce.value.trim(), url: asUrl(document.getElementById("ceurl").value), plat: sheet.ceplat ?? g0.platform, free: !!(sheet.cefree ?? g0.is_free) };
+    const cedit = ce && { name: ce.value.trim(), url: asUrl(document.getElementById("ceurl").value), plat: sheet.ceplat ?? g0.platform, free: !!(sheet.cefree ?? g0.is_free),
+                          img: (document.getElementById("ceimg") || {}).value?.trim() ?? (g0.header || "") };
+    if(cedit && !okImage(cedit.img)){ toast("The cover needs to be a plain https:// image link.", "bad"); return; }
     sheet = null;
+    if(cedit && cedit.img !== (g0.header || ""))
+      rpc("set_custom_image", { p_code: code, p_device: deviceId, p_appid: a, p_url: cedit.img || null })
+        .then(() => refresh()).catch(err => { toast(err.message, "bad"); refresh(); });
     if(cedit && (cedit.name !== g0.name || cedit.url !== (g0.play_url || "") || cedit.plat !== g0.platform || cedit.free !== !!g0.is_free))
       rpc("update_custom_game", { p_code: code, p_device: deviceId, p_appid: a, p_name: cedit.name, p_platform: cedit.plat, p_url: cedit.url || null, p_free: cedit.free })
         .then(() => refresh()).catch(err => { console.warn("update_custom_game", err.message); refresh(); });
