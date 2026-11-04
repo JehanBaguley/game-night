@@ -2265,10 +2265,13 @@ function downloadIcs(game, day){
 }
 
 /** Copy-for-the-chat text: where every game in play is at, and who still owes nights. */
-function seshShareText(d){
+function seshShareText(d, only){
   const t = S.group.sesh_time || "8pm";
-  const lines = [(S.group.emoji || DEFAULT_EMOJI) + " " + S.group.name + ": next sesh", ""];
-  inPlay(d).forEach(ip => {
+  // from a side game's menu it's just that game; from the share sheet, everything in play
+  const games = inPlay(d).filter(ip => !only || ip.appid === only);
+  const title = only && games.length ? (d.gamesById[only] || {}).name || "next sesh" : "next sesh";
+  const lines = [(S.group.emoji || DEFAULT_EMOJI) + " " + S.group.name + ": " + (only ? title + ", when are we playing?" : title), ""];
+  games.forEach(ip => {
     const x = seshFor(d, ip), g = d.gamesById[ip.appid] || {};
     const name = (g.name || "") + (ip.side ? " (side game)" : "");
     if(x.lock){ lines.push(name + ": locked in for " + dayLong(x.lock.day) + ", " + t); return; }
@@ -3875,7 +3878,7 @@ function nudgeText(d){
 /** The text for each share mode; "link" is the bare crew link. */
 function shareBody(d, mode){
   const link = location.origin + location.pathname + "#/g/" + code;
-  return mode === "link" ? link : mode === "sesh" ? seshShareText(d) : mode === "nudge" ? nudgeText(d) : summaryText(d);
+  return mode === "link" ? link : mode === "sesh" ? seshShareText(d, sheet && sheet.only) : mode === "nudge" ? nudgeText(d) : summaryText(d);
 }
 async function copy(text, btn){
   try{
@@ -4739,7 +4742,7 @@ function renderSheet(d){
     const game = d.gamesById[sheet.appid] || {};
     const mainName = S.group.locked_appid ? (d.gamesById[S.group.locked_appid] || {}).name || "the main game" : "";
     return shell(`<h3>${esc(game.name || "")}</h3>
-      <button class="btn btn--ghost" data-setmain="${sheet.appid}">Make it the main game</button>
+      <div class="row"><button class="btn btn--ghost" data-sideshare="${sheet.appid}">Send to the chat</button><button class="btn btn--ghost" data-setmain="${sheet.appid}">Make it the main game</button></div>
       <p class="fhint">${mainName ? esc(mainName) + " moves to the side with everyone in. Nights already picked stay put." : "It becomes what the crew is playing, and the vote closes."}</p>
       <span class="eyebrow">Or wrap it up</span>
       <p>It goes into play history like any other game. Nothing's deleted, and it can go on the side again later.</p>
@@ -4947,7 +4950,7 @@ function renderSheet(d){
         ${window.ClipboardItem && navigator.clipboard && navigator.clipboard.write ? `<button class="btn${navigator.share ? " btn--ghost" : ""}" id="snapcopy">Copy image</button>` : ""}
         <a class="btn btn--ghost" id="snapsave" href="#" download>Save</a>
       </div>` : `
-      <p class="fhint">${mode === "link" ? "Just the link. Anyone with it can join the crew." : mode === "sesh" ? "Where the next night is at, and who still owes theirs." : mode === "nudge" ? "Names whoever hasn't voted yet." : "The leaderboard, plus the link."}</p>
+      <p class="fhint">${mode === "link" ? "Just the link. Anyone with it can join the crew." : mode === "sesh" ? (sheet.only ? "Where " + esc((d.gamesById[sheet.only] || {}).name || "this one") + "'s next night is at, and who still owes theirs." : "Where the next night is at, and who still owes theirs.") : mode === "nudge" ? "Names whoever hasn't voted yet." : "The leaderboard, plus the link."}</p>
       <pre class="sharepre">${esc(body)}</pre>
       <div class="row">${canNative ? `<button class="btn btn--ghost" id="nativeshare">Share…</button>` : ""}<button class="btn" id="copyshare">Copy it</button></div>`}`);
   }
@@ -5896,6 +5899,9 @@ function wireGroup(d, filtered){
   const cg = document.getElementById("closego");    if(cg) cg.onclick = () => closeRound(sheet.appid || d.ranked[0].appid);
   const nr = document.getElementById("newroundgo"); if(nr) nr.onclick = () => startRound(sheet.verdict, sheet.bench, false);
   const nb = document.getElementById("newroundbreak"); if(nb) nb.onclick = () => startRound(sheet.verdict, sheet.bench, true);
+  document.querySelectorAll("[data-sideshare]").forEach(b => b.onclick = () => {
+    sheet = { kind: "share", mode: "sesh", moreways: true, only: +b.dataset.sideshare }; render();
+  });
   document.querySelectorAll("[data-sharemode]").forEach(b => b.onclick = () => {
     sheet.mode = b.dataset.sharemode; render();
   });
