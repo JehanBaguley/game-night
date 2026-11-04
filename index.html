@@ -1765,18 +1765,24 @@ function whoPanel(d, h){
   h = h || "h3";
   // before you've said who you are, the list is how you claim yourself
   const claim = !myMemberId && d.members.length;
+  // Once a game's called, the vote is over and the question is nights, so the
+  // ticks follow who's picked nights for the main game, not who voted last round.
+  const main = S.group.locked_appid ? inPlay(d).find(ip => !ip.side) : null;
+  const sx = main ? seshFor(d, main) : null;
+  const count = sx ? `${sx.answered.size} of ${sx.total} picked nights` : `${d.votedCount} of ${d.lookedCount} picked`;
   return `<section class="panel whopanel">
-            <${h}>Who's in${d.lookedCount > 1 ? ` <span class="pcount">${d.votedCount} of ${d.lookedCount} picked</span>` : ""}</${h}>
+            <${h}>Who's in${d.lookedCount > 1 ? ` <span class="pcount">${count}</span>` : ""}</${h}>
             ${claim ? `<p class="pnote">Already in this list? Tap your name so your picks and nights stay yours.</p>` : ""}
             <div class="crew">${d.members.length ? d.members.map(mm => {
               // same rule as the count beside the heading, you included, so the ticks and
               // the "1 of 2 picked" can never disagree
-              const voted = mm.member_id === myMemberId ? d.myPicks.length > 0 : (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
+              const voted = sx ? sx.answered.has(mm.member_id)
+                : mm.member_id === myMemberId ? d.myPicks.length > 0 : (S.ballots||[]).some(b => b.member_id===mm.member_id && (b.picks||[]).length);
               const inner = `${isLive(mm.last_seen) ? `<span class="livedot" title="here now"></span>` : ""}
                 <span class="dot" style="background:hsl(${hueOf(mm.name)} 58% 30%)">${esc(mm.label[0].toUpperCase())}</span>${esc(mm.label)}${
                   voted && !claim ? `<span class="wtick" aria-hidden="true">✓</span>` : ""}`;
               const cls = `who${voted?"":" novote"}${claim ? " who--claim" : ""}`;
-              const tip = claim ? `That's me: ${esc(mm.name)}` : `${voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}`;
+              const tip = claim ? `That's me: ${esc(mm.name)}` : `${sx ? (voted ? "picked nights" : "no nights yet") : voted?"voted":"not voted yet"}${mm.device_count>1?" · "+mm.device_count+" devices":""}`;
               return claim
                 ? `<button class="${cls}" data-claimwho="${esc(mm.member_id)}" title="${tip}">${inner}</button>`
                 : `<span class="${cls}" title="${tip}">${inner}</span>`;
