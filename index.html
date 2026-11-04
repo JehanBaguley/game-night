@@ -3535,6 +3535,7 @@ function customForm(){
   return `<div class="cform" id="cform">
     <span class="eyebrow">Add it yourself</span>
     <label class="fld"><span>Name</span><input class="input" id="cname" maxlength="60" placeholder="e.g. skribbl.io, Fortnite" value="${esc(c.name || "")}" autocomplete="off"></label>
+    <div id="cdupe">${dupeHint(c.name)}</div>
     <span class="fldlbl">Where you play it</span>
     <div class="fset">${Object.keys(PLATFORM).map(k => `<button class="chip" data-cplat="${k}" aria-pressed="${c.plat === k}">${esc(PLATFORM[k])}</button>`).join("")}</div>
     <label class="fld"><span>Link (optional)</span><input class="input" id="curl" maxlength="300" placeholder="e.g. skribbl.io or the store page" value="${esc(c.url || "")}" inputmode="url" autocapitalize="off" spellcheck="false"></label>
@@ -3547,6 +3548,34 @@ function customForm(){
     <p class="hint hint--bad" id="cmsg" hidden></p>
     <div class="row"><button class="btn btn--ghost" id="cback">Back to Steam search</button><button class="btn" id="cgo">Add it</button></div>
   </div>`;
+}
+/** Words of a game name, lowercased, punctuation gone: "World of Warcraft: Forever" -> world of warcraft forever */
+const nameWords = n => String(n || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
+/** Could what's typed be this name? Exact words, one inside the other, or initials
+    standing in for a run of words: "wow forever" matches World of Warcraft: Forever. */
+function looseMatch(typed, name){
+  const t = nameWords(typed), w = nameWords(name);
+  if(!t.length || !w.length) return false;
+  const a = t.join(" "), b = w.join(" ");
+  if(a === b || (a.length >= 4 && b.includes(a)) || (b.length >= 4 && a.includes(b))) return true;
+  const go = (i, j) => {
+    if(i === t.length) return j === w.length;
+    if(j < w.length && t[i] === w[j] && go(i + 1, j + 1)) return true;
+    for(let k = 2; k <= Math.min(5, w.length - j) && k <= t[i].length; k++){
+      if(w.slice(j, j + k).map(x => x[0]).join("") === t[i] && go(i + 1, j + k)) return true;
+    }
+    return false;
+  };
+  return go(0, 0);
+}
+/** "Already on the shelf?" under the name, before someone adds a second copy. */
+function dupeHint(typed){
+  if(!S || nameWords(typed).join("").length < 3) return "";
+  const hit = (S.shelf || []).map(s => ({ s, g: (S.games || []).find(g => g.appid === s.appid) || {} }))
+    .find(x => x.g.name && looseMatch(typed, x.g.name));
+  if(!hit) return "";
+  return `<p class="hint">Already on the shelf? <b>${esc(hit.g.name)}</b>${hit.s.added_name ? ", added by " + esc(hit.s.added_name) : ""}${hit.s.benched ? " (on the bench)" : ""}
+    <button class="linkbtn" data-showcard="${hit.s.appid}">Show it</button></p>`;
 }
 /** Read the form into sheet.custom so a re-render keeps what's typed. */
 function readCustom(){
@@ -3569,6 +3598,11 @@ function wireCustom(){
   };
   if(!sheet || !sheet.custom) return;
   ["cname","curl","ccap","cimg"].forEach(id => { const el = document.getElementById(id); if(el) el.addEventListener("input", readCustom); });
+  // the dupe hint updates in place, so typing never loses the caret to a re-render
+  const cn = document.getElementById("cname");
+  if(cn) cn.addEventListener("input", () => { const box = document.getElementById("cdupe"); if(!box) return;
+    box.innerHTML = dupeHint(cn.value);
+    box.querySelectorAll("[data-showcard]").forEach(b => b.onclick = () => { const id = +b.dataset.showcard; addResults = []; addQ = ""; addTake = ""; closeSheet(); showCard(id); }); });
   document.querySelectorAll("[data-cplat]").forEach(b => b.onclick = () => { readCustom(); sheet.custom.plat = b.dataset.cplat;
     if(b.dataset.cplat === "browser") sheet.custom.free = true; render(); });
   const fr = document.querySelector("[data-cfree]"); if(fr) fr.onclick = () => { readCustom(); sheet.custom.free = !sheet.custom.free; render(); };
@@ -3879,6 +3913,7 @@ function render(){
     boxes.forEach(el => { if(el.scrollTop > 0) saved.push({ key: scrollKey(el), n: boxes.filter(b => scrollKey(b) === scrollKey(el)).indexOf(el), top: el.scrollTop }); });
   }
   renderNow();
+  syncStuck();
   // a sheet slides in when it first opens, not every time it re-renders
   if(sheet && sheet.kind !== lastSheetKind){ const w = document.querySelector(".sheetwrap"); if(w) w.classList.add("enter"); }
   lastSheetKind = sheet ? sheet.kind : null;
@@ -4347,7 +4382,12 @@ function renderStatus(d, g, call){
         <span class="st-k">▶ Playing</span>
         <span class="st-lead"><b class="leadname">${esc(game.name||"")}</b></span>
         <span class="st-sub">round ${g.round_no} · ${(() => { const n = (S.sessions||[]).filter(x => x.appid === g.locked_appid).length;
-          return n ? n + (n === 1 ? " night" : " nights") + " so far" : "started " + esc(ago((d.nowPlaying||{}).started_at)); })()}${
+          if(n) return n + (n === 1 ? " night" : " nights") + " so far";
+          // nothing played yet: say where the first night is at, not a clock that reads like a timer
+          const main = inPlay(d).find(ip => !ip.side), x = main && seshFor(d, main);
+          return x && x.lock ? "first night " + esc(dayLabel(x.lock.day))
+               : x && x.pencil ? esc(dayLabel(x.pencil)) + " pencilled in"
+               : "picking the first night"; })()}${
           streak >= 3 ? ` · <b>Again?!</b> ${streak} rounds running` : ""}</span>
       </div>
       <div class="st-acts">
@@ -6152,6 +6192,18 @@ document.addEventListener("visibilitychange", () => { if(!document.hidden) refre
 window.addEventListener("focus", () => refresh({ quiet: true }));
 /* The toolbar stays put. It used to slide away on scroll-down, which read as
    the page jumping around; a shadow when it is pinned is enough. */
+/* Every render replaces the header, so the glass has to be re-applied after it,
+   not only on scroll. Without this a vote or a refresh while scrolled left the
+   header see-through, with the crew name sitting on top of the banner. */
+function syncStuck(){
+    const top = document.querySelector(".top");
+    if(top) top.classList.toggle("is-stuck", window.scrollY > 0);
+    const bar = document.querySelector(".shelfbar");
+    if(bar){
+      const pin = parseFloat(getComputedStyle(bar).top) || 54;
+      bar.classList.toggle("is-stuck", window.scrollY > 0 && bar.getBoundingClientRect().top <= pin + 1);
+    }
+}
 (() => {
   let ticking = false;
   const apply = () => {
