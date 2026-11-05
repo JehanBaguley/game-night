@@ -393,8 +393,11 @@ begin
        select json_agg(json_build_object('appid', sn.appid, 'member_id', sn.member_id))
        from sesh_none sn where sn.group_code = p_code), '[]'::json),
     'sesh_lock', coalesce((
-       select json_agg(json_build_object('appid', sl.appid, 'day', sl.day, 'locked_by', sl.locked_by))
+       select json_agg(json_build_object('appid', sl.appid, 'day', sl.day, 'locked_by', sl.locked_by, 'at_time', sl.at_time))
        from sesh_lock sl where sl.group_code = p_code), '[]'::json),
+    'sesh_times', coalesce((
+       select json_agg(json_build_object('appid', st.appid, 'day', st.day, 'member_id', st.member_id, 'at_time', st.at_time))
+       from sesh_times st where st.group_code = p_code and st.day >= current_date - 1), '[]'::json),
     'sessions', coalesce((
        select json_agg(json_build_object('appid', se.appid, 'day', se.day) order by se.day)
        from sessions se where se.group_code = p_code), '[]'::json),
@@ -784,6 +787,7 @@ begin
   delete from sesh_lock where group_code = p_code and appid = p_appid;
   delete from sesh_free where group_code = p_code and appid = p_appid;
   delete from sesh_none where group_code = p_code and appid = p_appid;
+  delete from sesh_times where group_code = p_code and appid = p_appid;
 end; $$;
 
 -- the crew's rules: how many free makes a night, and the usual start time
@@ -1605,3 +1609,53 @@ begin
 end; $$;
 revoke execute on function set_main(text, uuid, int) from public;
 grant execute on function set_main(text, uuid, int) to anon;
+
+-- ---------------------------------------------------------------------------
+-- WHAT TIME
+-- Once a night pencils in, the people free that night can say which start
+-- times suit. Times are the crew's wall clock (Melbourne), "HH:MM". Locking
+-- can carry the time that won; without one the crew's usual time stands.
+-- ---------------------------------------------------------------------------
+alter table sesh_lock add column if not exists at_time text;
+create table if not exists sesh_times (
+  group_code text not null references groups(code) on delete cascade,
+  appid      int  not null,
+  day        date not null,
+  member_id  uuid not null,
+  at_time    text not null,
+  primary key (group_code, appid, day, member_id, at_time)
+);
+alter table sesh_times enable row level security;
+
+-- replace my times for one night
+create or replace function set_times(p_code text, p_device uuid, p_appid int, p_day date, p_times text[])
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid; t text;
+begin
+  m := assert_member(p_code, p_device);
+  if not in_play(p_code, p_appid) then raise exception 'that game is not on right now'; end if;
+  if coalesce(array_length(p_times, 1), 0) > 8 then raise exception 'too many times'; end if;
+  foreach t in array coalesce(p_times, '{}') loop
+    if t !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'times look like 19:30'; end if;
+  end loop;
+  delete from sesh_times where group_code = p_code and appid = p_appid and day = p_day and member_id = m;
+  insert into sesh_times(group_code, appid, day, member_id, at_time)
+  select p_code, p_appid, p_day, m, x from unnest(coalesce(p_times, '{}')) x on conflict do nothing;
+end; $$;
+
+-- lock a night at a time
+create or replace function lock_sesh_at(p_code text, p_device uuid, p_appid int, p_day date, p_at text)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid; a text := nullif(trim(coalesce(p_at, '')), '');
+begin
+  m := assert_member(p_code, p_device);
+  if not in_play(p_code, p_appid) then raise exception 'that game is not on right now'; end if;
+  if p_day < current_date - 1 then raise exception 'that night has been'; end if;
+  if a is not null and a !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'times look like 19:30'; end if;
+  insert into sesh_lock(group_code, appid, day, locked_by, at_time) values (p_code, p_appid, p_day, m, a)
+  on conflict (group_code, appid) do update set day = excluded.day, locked_by = excluded.locked_by, at_time = excluded.at_time, locked_at = now();
+end; $$;
+revoke execute on function set_times(text, uuid, int, date, text[]) from public;
+revoke execute on function lock_sesh_at(text, uuid, int, date, text) from public;
+grant execute on function set_times(text, uuid, int, date, text[]) to anon;
+grant execute on function lock_sesh_at(text, uuid, int, date, text) to anon;

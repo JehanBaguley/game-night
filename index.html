@@ -789,6 +789,12 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .add .row .input{flex:1 1 220px;background:var(--surface-2)}
 .results{margin-top:9px;display:flex;flex-direction:column;gap:5px}
 .fld--take{margin-top:12px}
+.trow{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.trow .tq{font-size:13px;font-weight:650;color:var(--ink)}
+.tchip{display:inline-flex;align-items:center;gap:6px;min-height:40px}
+.tchip small{font-size:11px;color:var(--muted);font-weight:500}
+.tchip[aria-pressed="true"] small{color:inherit;opacity:.85}
+.tchip .tn{font-size:11px;min-width:18px;height:18px;border-radius:999px;display:inline-grid;place-items:center;background:var(--surface-2);color:var(--ink-2)}
 .res{display:flex;align-items:center;gap:11px;padding:8px;min-height:52px;border-radius:var(--r-md);width:100%;background:var(--surface-2);flex-wrap:wrap}
 .res .nm{flex:1 1 130px}
 .resbtns{display:flex;gap:6px;flex:none;margin-left:auto}
@@ -1621,6 +1627,40 @@ function parseCode(raw){
    ========================================================================== */
 const SESH_DAYS = 10;
 const pad2 = n => String(n).padStart(2, "0");
+
+/* ---------- night times ----------
+   Times are stored as the crew's wall clock ("19:30", Melbourne). Anyone whose
+   phone is somewhere else sees their own time beside it. */
+const CREW_TZ = "Australia/Melbourne";
+/** "7:30pm", "20:00", "8pm" -> "19:30"-style */
+const hm = t => { const p = parseTime(t); return pad2(p.h) + ":" + pad2(p.m); };
+const usualHM = () => hm(S.group.sesh_time || "8pm");
+const addMins = (h, n) => { const [a, b] = h.split(":").map(Number); const t = Math.max(0, Math.min(23 * 60 + 30, a * 60 + b + n));
+  return pad2(Math.floor(t / 60)) + ":" + pad2(t % 60); };
+/** "19:30" -> "7:30pm" */
+const tLabel = h => { const [a, b] = h.split(":").map(Number); return (a % 12 || 12) + (b ? ":" + pad2(b) : "") + (a >= 12 ? "pm" : "am"); };
+/** Melbourne's offset from UTC, in ms, at a given instant */
+function crewOffset(ms){
+  const p = {};
+  new Intl.DateTimeFormat("en-AU", { timeZone: CREW_TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    .formatToParts(new Date(ms)).forEach(x => { if(x.type !== "literal") p[x.type] = +x.value; });
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute) - Math.floor(ms / 6e4) * 6e4;
+}
+/** The real instant a crew time on a crew day happens */
+function crewInstant(day, h){
+  const [y, mo, d] = day.split("-").map(Number), [a, b] = h.split(":").map(Number);
+  const guess = Date.UTC(y, mo - 1, d, a, b);
+  let t = guess - crewOffset(guess);
+  const again = guess - crewOffset(t); if(again !== t) t = again;     // across a daylight saving change
+  return new Date(t);
+}
+/** This device's own clock for a crew time, or null when it's the same */
+function yoursFor(day, h){
+  const at = crewInstant(day, h), mine = pad2(at.getHours()) + ":" + pad2(at.getMinutes());
+  return mine === h && isoDay(at) === day ? null : tLabel(mine);
+}
+/** "7pm", or "7pm Melb (6pm yours)" for someone in another timezone */
+const timeFor = (day, h) => { const y = yoursFor(day, h); return y ? tLabel(h) + " Melb (" + y + " yours)" : tLabel(h); };
 /** yyyy-mm-dd in local time (toISOString would shift it to UTC) */
 const isoDay = dt => dt.getFullYear() + "-" + pad2(dt.getMonth() + 1) + "-" + pad2(dt.getDate());
 const todayIso = () => isoDay(new Date());
@@ -1672,8 +1712,24 @@ function seshFor(d, ip){
   const lock = (S.sesh_lock || []).find(l => l.appid === appid) || null;
   const pencil = total ? days.find(x => byDay[x].length >= need) || null : null;
   const best = days.reduce((b, x) => byDay[x].length > (b ? byDay[b].length : 0) ? x : b, null);
+  // once a night pencils in, the people free that night can say what time suits;
+  // anyone who hasn't said counts for the usual time, and the earliest wins a tie
+  const usual = usualHM();
+  let timePick = null;
+  if(!lock && pencil){
+    const freeOn = byDay[pencil];
+    const picks = (S.sesh_times || []).filter(p => p.appid === appid && p.day === pencil && freeOn.includes(p.member_id));
+    const opts = [...new Set([-30, 0, 30, 60].map(n => addMins(usual, n)).concat(picks.map(p => p.at_time)))].sort();
+    const counts = {}; opts.forEach(h => { counts[h] = 0; });
+    freeOn.forEach(id => { const theirs = picks.filter(p => p.member_id === id).map(p => p.at_time);
+      (theirs.length ? theirs : [usual]).forEach(h => { counts[h] = (counts[h] || 0) + 1; }); });
+    const winner = opts.reduce((w, h) => counts[h] > counts[w] ? h : w, opts[0]);
+    timePick = { day: pencil, opts, counts, winner, usual,
+      mine: new Set(picks.filter(p => p.member_id === myMemberId).map(p => p.at_time)), canPick: freeOn.includes(myMemberId) };
+  }
+  const at = lock ? (lock.at_time || usual) : timePick ? timePick.winner : usual;
   return {
-    appid, side: ip.side, players: ip.players, total, need, days, byDay, none, answered, lock, pencil, best,
+    appid, side: ip.side, players: ip.players, total, need, days, byDay, none, answered, lock, pencil, best, timePick, at,
     mineDays: new Set(free.filter(f => f.member_id === myMemberId).map(f => f.day)),
     mineNone: none.has(myMemberId),
     past: !!(lock && lock.day < today),
@@ -1684,9 +1740,8 @@ function seshFor(d, ip){
 
 /** One sentence for where a game's next night is at. */
 function seshSummary(x){
-  const t = S.group.sesh_time || "8pm";
-  if(x.lock) return `<b>${esc(dayLong(x.lock.day))}, ${esc(t)}</b> · locked in`;
-  if(x.pencil) return `<b>${esc(dayLabel(x.pencil))}</b> pencilled in · ${x.byDay[x.pencil].length} of ${x.total} free · tap to lock it`;
+  if(x.lock) return `<b>${esc(dayLong(x.lock.day))}, ${esc(timeFor(x.lock.day, x.at))}</b> · locked in`;
+  if(x.pencil) return `<b>${esc(dayLabel(x.pencil))} · ${esc(timeFor(x.pencil, x.at))}</b> pencilled in · ${x.byDay[x.pencil].length} of ${x.total} free · tap to lock it`;
   if(!x.answered.size) return x.sessions.length ? "When's the next sesh? Tap your nights" : "When are we playing? Tap your nights";
   const b = x.best && x.byDay[x.best].length;
   const gap = b ? x.need - b : 0;
@@ -1976,7 +2031,7 @@ function snapshotData(d){
     cover = g.locked_appid;
     const main = inPlay(d).find(ip => !ip.side);
     if(main){
-      const x = seshFor(d, main), t = g.sesh_time || "8pm";
+      const x = seshFor(d, main), t = tLabel(x.at);
       let v;
       if(x.lock && !x.past) v = `✅ **${dayLong(x.lock.day)}, ${t}** · locked in`;
       else if(x.pencil) v = `✏️ **${dayLong(x.pencil)}** pencilled in · ${x.byDay[x.pencil].length} of ${x.total} free`;
@@ -2155,7 +2210,6 @@ function seshPanel(d, h){
 
 /** The day picker's body. Re-rendered on its own when you tap, so the sheet never jumps. */
 function seshBody(d, x){
-  const t = S.group.sesh_time || "8pm";
   const chips = x.days.map(day => {
     const n = x.byDay[day].length, mine = x.mineDays.has(day), locked = x.lock && x.lock.day === day;
     const names = x.byDay[day].map(id => nameOf(d, id));
@@ -2185,17 +2239,27 @@ function seshBody(d, x){
     const waiting = x.players.filter(id => !x.answered.has(id));
     if(waiting.length) who = `<p class="seshwho">Waiting on ${esc(people(waiting))}</p>`;
   }
+  // the time step: only once a night's pencilled in, one row, skippable
+  const tp = x.timePick;
+  const times = tp ? `<div class="trow">
+      <span class="tq">What time on ${esc(dayLabel(tp.day))}?</span>
+      <div class="fset">${tp.opts.map(h => { const y = yoursFor(tp.day, h), on = tp.mine.size ? tp.mine.has(h) : h === tp.usual;
+        return `<button class="chip tchip" data-stime="${h}" aria-pressed="${on}"${tp.canPick ? "" : " disabled"}
+          aria-label="${esc(tLabel(h))}${y ? " Melbourne, " + esc(y) + " your time" : ""}: ${tp.counts[h] || 0} can do it">
+          ${esc(tLabel(h))}${y ? `<small>${esc(y)} yours</small>` : ""}${tp.counts[h] ? `<span class="tn num">${tp.counts[h]}</span>` : ""}</button>`; }).join("")}</div>
+      <p class="fhint">${tp.canPick ? "Tap every time that works. Skip it and you're in for the usual " + esc(tLabel(tp.usual)) + "." : "Only people free that night pick the time."}</p>
+    </div>` : "";
   const acts = x.lock
     ? `<div class="row calrow"><a class="btn" id="gcalgo" href="${esc(gcalUrl({ ...(d.gamesById[x.appid] || {}), appid: x.appid }, x.lock.day))}" target="_blank" rel="noopener">Add to Google Cal</a>
          <button class="btn btn--ghost" id="unlockgo">Change night</button></div>
        <button class="linkbtn" id="icsgo">Apple or Outlook? Get a calendar file</button>`
     : x.pencil
-    ? `<div class="row"><button class="btn" id="lockgo" data-lday="${x.pencil}">Lock in ${esc(dayLabel(x.pencil))}, ${esc(t)}</button></div>`
+    ? `<div class="row"><button class="btn" id="lockgo" data-lday="${x.pencil}" data-lat="${x.at}">Lock in ${esc(dayLabel(x.pencil))}, ${esc(timeFor(x.pencil, x.at))}</button></div>`
     : "";
   const none = x.iAmIn && !x.lock
     ? `<button class="linkbtn" id="nonego"${x.mineNone ? " disabled" : ""}>${x.mineNone ? "You've said none of these work" : "Can't do any of these"}</button>`
     : !x.iAmIn ? `<p class="fhint">You're not in on this one. Tap I'm in on its strip to pick nights.</p>` : "";
-  return `<div class="dgrid">${chips}</div>${who}${acts}${none}`;
+  return `<div class="dgrid">${chips}</div>${who}${times}${acts}${none}`;
 }
 
 /* ---------- saving free nights: optimistic, debounced ----------
@@ -2218,6 +2282,18 @@ function queueFree(appid){
   }, 600);
 }
 
+let timesTimer = null;
+function queueTimes(appid, day){
+  seshDirty = true;
+  clearTimeout(timesTimer);
+  const id = timesTimer = setTimeout(async () => {
+    const times = (S.sesh_times || []).filter(p => p.appid === appid && p.day === day && p.member_id === myMemberId).map(p => p.at_time);
+    try{ await rpc("set_times", { p_code: code, p_device: deviceId, p_appid: appid, p_day: day, p_times: times }); }
+    catch(err){ console.warn("set_times", err && err.message); toast(saveProblem(err, "your times"), "bad"); }
+    if(timesTimer === id){ timesTimer = null; seshDirty = false; refresh(); }
+  }, 600);
+}
+
 /* ---------- calendar file ---------- */
 /** "8pm", "7:30pm", "20:00", "8.30 pm" -> {h, m}; anything else is 8pm */
 function parseTime(t){
@@ -2230,10 +2306,12 @@ function parseTime(t){
 }
 /** The night's start and end in local time, plus the crew link: shared by both calendar options. */
 function seshEvent(game, day){
-  const t = parseTime(S.group.sesh_time);
-  const start = dayDate(day); start.setHours(t.h, t.m, 0, 0);
+  // the night's own time if one was picked, as a real instant, so a phone in
+  // another timezone gets it at the right local time
+  const lock = (S.sesh_lock || []).find(l => l.appid === game.appid && l.day === day);
+  const start = crewInstant(day, (lock && lock.at_time) || usualHM());
   const end = new Date(start.getTime() + 3 * 36e5);                 // three hours, a normal night
-  const stamp = dt => isoDay(dt).replace(/-/g, "") + "T" + pad2(dt.getHours()) + pad2(dt.getMinutes()) + "00";
+  const stamp = dt => dt.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
   const link = location.origin + location.pathname + "#/g/" + S.group.code;
   const title = (S.group.emoji || DEFAULT_EMOJI) + " " + (game.name || "Game night") + " · " + S.group.name;
   return { start: stamp(start), end: stamp(end), link, title };
@@ -2246,7 +2324,7 @@ function gcalUrl(game, day){
 }
 const icsEsc = s => String(s).replace(/[\;,]/g, c => "\\" + c).replace(/\n/g, "\\n");
 function downloadIcs(game, day){
-  // floating local time: the calendar puts it at 8pm wherever the phone is
+  // UTC, so every calendar shows it at the right local time
   const e = seshEvent(game, day), link = e.link;
   const ics = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Game Night//EN", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
@@ -2274,9 +2352,9 @@ function seshShareText(d, only){
   games.forEach(ip => {
     const x = seshFor(d, ip), g = d.gamesById[ip.appid] || {};
     const name = (g.name || "") + (ip.side ? " (side game)" : "");
-    if(x.lock){ lines.push(name + ": locked in for " + dayLong(x.lock.day) + ", " + t); return; }
+    if(x.lock){ lines.push(name + ": locked in for " + dayLong(x.lock.day) + ", " + tLabel(x.at) + " Melb time"); return; }
     const focus = x.pencil || (x.best && x.byDay[x.best].length ? x.best : null);
-    lines.push(name + ": " + (focus ? dayLong(focus) + ": " + x.byDay[focus].length + " free, need " + x.need + (x.pencil ? ", pencilled in" : "") : "no night picked yet"));
+    lines.push(name + ": " + (focus ? dayLong(focus) + ": " + x.byDay[focus].length + " free, need " + x.need + (x.pencil ? ", pencilled in for " + tLabel(x.at) + " Melb time" : "") : "no night picked yet"));
     const waiting = x.players.filter(id => !x.answered.has(id)).map(id => nameOf(d, id));
     if(waiting.length) lines.push("still need nights from " + listNames(waiting));
   });
@@ -2654,8 +2732,8 @@ async function rpc(fn, args){
    (a round called, a night locked, a new round) post a fresh message instead,
    which pings the channel and lands at the bottom. */
 const DISCORD_WRITES = new Set(["set_picks","add_game","bench_game","unbench_game","close_round","reopen_round","new_round",
-  "set_break","set_free","set_none","lock_sesh","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","set_main","set_custom_image","update_group","rename_me","crew_remove_game","crew_remove_member","crew_merge_members"]);
-const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","start_side_game","set_main"]);
+  "set_break","set_free","set_none","lock_sesh","lock_sesh_at","set_times","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","set_main","set_custom_image","update_group","rename_me","crew_remove_game","crew_remove_member","crew_merge_members"]);
+const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","lock_sesh_at","start_side_game","set_main"]);
 let discordTimer = null, discordFresh = false;
 function queueDiscord(fresh){
   discordFresh = discordFresh || fresh;
@@ -5624,7 +5702,20 @@ function wireSeshBody(d){
     catch(err){ btn.disabled = false; console.warn(fn, err && err.message); }
     refresh();
   };
-  const lk = document.getElementById("lockgo");   if(lk) lk.onclick = () => run("lock_sesh", { p_day: lk.dataset.lday }, lk);
+  // tapping a time: same optimistic save as nights
+  body.querySelectorAll("[data-stime]").forEach(c => c.onclick = () => {
+    if(needName(() => {})) return;
+    const x = seshFor(d, ip), tp = x.timePick; if(!tp) return;
+    const mine = new Set(tp.mine.size ? tp.mine : [tp.usual]);
+    mine.has(c.dataset.stime) ? mine.delete(c.dataset.stime) : mine.add(c.dataset.stime);
+    S.sesh_times = (S.sesh_times || []).filter(p => !(p.appid === appid && p.day === tp.day && p.member_id === myMemberId))
+      .concat([...mine].map(h => ({ appid, day: tp.day, member_id: myMemberId, at_time: h })));
+    body.innerHTML = seshBody(d, seshFor(d, ip));
+    wireSeshBody(d);
+    const again = body.querySelector(`[data-stime="${c.dataset.stime}"]`); if(again) again.focus({ preventScroll: true });
+    queueTimes(appid, tp.day);
+  });
+  const lk = document.getElementById("lockgo");   if(lk) lk.onclick = () => run("lock_sesh_at", { p_day: lk.dataset.lday, p_at: lk.dataset.lat }, lk);
   const ul = document.getElementById("unlockgo"); if(ul) ul.onclick = () => run("unlock_sesh", {}, ul);
   const no = document.getElementById("nonego");   if(no) no.onclick = () => run("set_none", {}, no);
   const ic = document.getElementById("icsgo");

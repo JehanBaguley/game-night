@@ -39,6 +39,8 @@ const todayAU = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Me
 const dayName = (iso: string) =>
   new Date(iso + "T12:00:00Z").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).replace(",", "");
 
+/** "19:30" -> "7:30pm"; the crew's usual time is already words */
+const tLabel = (h: string) => { const [a, b] = h.split(":").map(Number); return (a % 12 || 12) + (b ? ":" + String(b).padStart(2, "0") : "") + (a >= 12 ? "pm" : "am"); };
 /** Steam hosts a 460x215 header for every app, so there is no image to render. */
 const headerFor = (appid: number) =>
   appid > 0 ? `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg` : "";
@@ -106,7 +108,7 @@ Deno.serve(async (req) => {
         }
         for (const n of data.sesh_none ?? []) if (n.appid === appid) answered.add(n.member_id);
         const pencil = Object.keys(byDay).sort().find((d) => byDay[d] >= need);
-        if (lock && lock.day >= today) desc += ` · next sesh ${dayName(lock.day)}, ${g.sesh_time ?? "8pm"}`;
+        if (lock && lock.day >= today) desc += ` · next sesh ${dayName(lock.day)}, ${lock.at_time ? tLabel(lock.at_time) : (g.sesh_time ?? "8pm")}`;
         else if (pencil) desc += ` · ${dayName(pencil)} pencilled in (${byDay[pencil]} of ${members} free)`;
         else desc += ` · next sesh: ${answered.size} of ${members} have picked their nights`;
       } else if (ranked.length) {

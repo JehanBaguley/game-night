@@ -37,6 +37,8 @@ const todayAU = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Australia/Me
 /** "Fri 26 Sept" from "2026-09-26" */
 const dayName = (iso: string) =>
   new Date(iso + "T12:00:00Z").toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }).replace(",", "");
+/** "19:30" -> "7:30pm"; the crew's usual time is already words */
+const tLabel = (h: string) => { const [a, b] = h.split(":").map(Number); return (a % 12 || 12) + (b ? ":" + String(b).padStart(2, "0") : "") + (a >= 12 ? "pm" : "am"); };
 /** Steam hosts a header for every app; games added by hand (negative appids) have none. */
 const headerFor = (appid: number) =>
   appid > 0 ? `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg` : undefined;
@@ -159,7 +161,7 @@ function seshLine(data: State, appid: number, ids: string[], g: State, nameOf: (
   const today = todayAU(), total = ids.length;
   const need = Math.max(1, Math.min(total, g.sesh_need ?? total));
   const lock = (data.sesh_lock ?? []).find((l: { appid: number }) => l.appid === appid);
-  if (lock && lock.day >= today) return `✅ **${dayName(lock.day)}, ${g.sesh_time ?? "8pm"}** · locked in`;
+  if (lock && lock.day >= today) return `✅ **${dayName(lock.day)}, ${lock.at_time ? tLabel(lock.at_time) : (g.sesh_time ?? "8pm")}** · locked in`;
   const byDay: Record<string, number> = {};
   const answered = new Set<string>();
   for (const f of data.sesh_free ?? []) {
