@@ -791,10 +791,12 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .fld--take{margin-top:12px}
 .trow{margin-top:12px;display:flex;flex-direction:column;gap:7px}
 .trow .tq{font-size:13px;font-weight:650;color:var(--ink)}
-.tchip{display:inline-flex;align-items:center;gap:6px;min-height:40px}
-.tchip small{font-size:11px;color:var(--muted);font-weight:500}
-.tchip[aria-pressed="true"] small{color:inherit;opacity:.85}
-.tchip .tn{font-size:11px;min-width:18px;height:18px;border-radius:999px;display:inline-grid;place-items:center;background:var(--surface-2);color:var(--ink-2)}
+.tchip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px}
+.tchip .tt{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
+.tchip .tt b{font-size:14px;font-weight:650}
+.tchip small{font-size:12px;color:var(--ink-2);font-weight:500}
+.tchip[aria-pressed="true"] small{color:inherit}
+.tchip .tn{font-size:12px;font-weight:650;min-width:20px;height:20px;border-radius:999px;display:inline-grid;place-items:center;background:var(--surface-2);color:var(--ink-2)}
 .res{display:flex;align-items:center;gap:11px;padding:8px;min-height:52px;border-radius:var(--r-md);width:100%;background:var(--surface-2);flex-wrap:wrap}
 .res .nm{flex:1 1 130px}
 .resbtns{display:flex;gap:6px;flex:none;margin-left:auto}
@@ -2246,7 +2248,7 @@ function seshBody(d, x){
       <div class="fset">${tp.opts.map(h => { const y = yoursFor(tp.day, h), on = tp.mine.size ? tp.mine.has(h) : h === tp.usual;
         return `<button class="chip tchip" data-stime="${h}" aria-pressed="${on}"${tp.canPick ? "" : " disabled"}
           aria-label="${esc(tLabel(h))}${y ? " Melbourne, " + esc(y) + " your time" : ""}: ${tp.counts[h] || 0} can do it">
-          ${esc(tLabel(h))}${y ? `<small>${esc(y)} yours</small>` : ""}${tp.counts[h] ? `<span class="tn num">${tp.counts[h]}</span>` : ""}</button>`; }).join("")}</div>
+          <span class="tt"><b>${esc(tLabel(h))}</b>${y ? `<small>${esc(y)} yours</small>` : ""}</span>${tp.counts[h] ? `<span class="tn num" aria-hidden="true">${tp.counts[h]}</span>` : ""}</button>`; }).join("")}</div>
       <p class="fhint">${tp.canPick ? "Tap every time that works. Skip it and you're in for the usual " + esc(tLabel(tp.usual)) + "." : "Only people free that night pick the time."}</p>
     </div>` : "";
   const acts = x.lock
