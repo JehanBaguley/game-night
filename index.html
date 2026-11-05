@@ -1627,7 +1627,8 @@ function parseCode(raw){
    happened. Days are local calendar dates, never UTC, so "Friday" means the
    crew's Friday.
    ========================================================================== */
-const SESH_DAYS = 10;
+const SESH_DAYS = 10;      // what the picker shows at first
+const SESH_MAX = 42;       // how far ahead nights can go: six weeks, a week or two at a time
 const pad2 = n => String(n).padStart(2, "0");
 
 /* ---------- night times ----------
@@ -1666,9 +1667,9 @@ const timeFor = (day, h) => { const y = yoursFor(day, h); return y ? tLabel(h) +
 /** yyyy-mm-dd in local time (toISOString would shift it to UTC) */
 const isoDay = dt => dt.getFullYear() + "-" + pad2(dt.getMonth() + 1) + "-" + pad2(dt.getDate());
 const todayIso = () => isoDay(new Date());
-function seshWindow(){
+function seshWindow(n = SESH_MAX){
   const t = new Date(); t.setHours(12, 0, 0, 0);          // midday: immune to DST edges
-  return Array.from({ length: SESH_DAYS }, (_, i) => { const d = new Date(t); d.setDate(t.getDate() + i); return isoDay(d); });
+  return Array.from({ length: n }, (_, i) => { const d = new Date(t); d.setDate(t.getDate() + i); return isoDay(d); });
 }
 function dayDate(iso){ const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d, 12); }
 const daysFromToday = iso => Math.round((dayDate(iso) - dayDate(todayIso())) / 864e5);
@@ -2197,7 +2198,7 @@ function seshPanel(d, h){
   if(!list.length) return "";
   return `<section class="panel seshpanel"><${h}>Next sesh</${h}>${list.map(ip => {
     const x = seshFor(d, ip), game = d.gamesById[ip.appid] || {};
-    const bars = x.days.map(day => {
+    const bars = x.days.slice(0, SESH_DAYS).map(day => {
       const n = x.byDay[day].length;
       const cls = [x.lock && x.lock.day === day ? "lk" : x.total && n >= x.need ? "hit" : "", x.mineDays.has(day) ? "me" : ""].join(" ").trim();
       return `<i class="${cls}" style="--h:${Math.min(1, n / Math.max(1, x.need)).toFixed(2)}" title="${esc(dayLabel(day))}: ${n} of ${x.need}"></i>`;
@@ -2212,7 +2213,12 @@ function seshPanel(d, h){
 
 /** The day picker's body. Re-rendered on its own when you tap, so the sheet never jumps. */
 function seshBody(d, x){
-  const chips = x.days.map(day => {
+  // starts at ten days; "Later dates" adds two weeks at a time. It always reaches far
+  // enough to show your own nights and whatever's pencilled or locked.
+  const reach = [...x.mineDays, x.pencil, x.lock && x.lock.day].filter(Boolean).map(day => x.days.indexOf(day) + 1);
+  const span = Math.min(x.days.length, Math.max((sheet && sheet.span) || SESH_DAYS, ...reach.map(i => Math.ceil(i / 5) * 5)));
+  const later = span < x.days.length ? `<button class="linkbtn" id="laterdays">Later dates ›</button>` : "";
+  const chips = x.days.slice(0, span).map(day => {
     const n = x.byDay[day].length, mine = x.mineDays.has(day), locked = x.lock && x.lock.day === day;
     const names = x.byDay[day].map(id => nameOf(d, id));
     return `<button class="dchip${mine ? " on" : ""}${x.total && n >= x.need ? " hit" : ""}${locked ? " locked" : ""}" data-dday="${day}"
@@ -2261,7 +2267,7 @@ function seshBody(d, x){
   const none = x.iAmIn && !x.lock
     ? `<button class="linkbtn" id="nonego"${x.mineNone ? " disabled" : ""}>${x.mineNone ? "You've said none of these work" : "Can't do any of these"}</button>`
     : !x.iAmIn ? `<p class="fhint">You're not in on this one. Tap I'm in on its strip to pick nights.</p>` : "";
-  return `<div class="dgrid">${chips}</div>${who}${times}${acts}${none}`;
+  return `<div class="dgrid">${chips}</div>${later}${who}${times}${acts}${none}`;
 }
 
 /* ---------- saving free nights: optimistic, debounced ----------
@@ -2273,7 +2279,7 @@ function queueFree(appid){
   seshDirty = true;
   clearTimeout(freeTimer);
   const id = freeTimer = setTimeout(async () => {
-    const days = seshWindow().filter(day => (S.sesh_free || []).some(f => f.appid === appid && f.day === day && f.member_id === myMemberId));
+    const days = seshWindow().filter(day => (S.sesh_free || []).some(f => f.appid === appid && f.day === day && f.member_id === myMemberId));  // the whole six weeks, not just what's showing
     try{ await rpc("set_free", { p_code: code, p_device: deviceId, p_appid: appid, p_days: days }); }
     catch(err){
       console.warn("set_free", err && err.message);
@@ -5717,6 +5723,9 @@ function wireSeshBody(d){
     const again = body.querySelector(`[data-stime="${c.dataset.stime}"]`); if(again) again.focus({ preventScroll: true });
     queueTimes(appid, tp.day);
   });
+  const ld = document.getElementById("laterdays");
+  if(ld) ld.onclick = () => { const x = seshFor(d, ip); sheet.span = Math.min(x.days.length, ((sheet.span) || SESH_DAYS) + 14);
+    body.innerHTML = seshBody(d, seshFor(d, ip)); wireSeshBody(d); };
   const lk = document.getElementById("lockgo");   if(lk) lk.onclick = () => run("lock_sesh_at", { p_day: lk.dataset.lday, p_at: lk.dataset.lat }, lk);
   const ul = document.getElementById("unlockgo"); if(ul) ul.onclick = () => run("unlock_sesh", {}, ul);
   const no = document.getElementById("nonego");   if(no) no.onclick = () => run("set_none", {}, no);

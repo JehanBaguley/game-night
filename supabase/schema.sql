@@ -732,11 +732,11 @@ declare m uuid; n int := coalesce(array_length(p_days, 1), 0);
 begin
   m := assert_member(p_code, p_device);
   if not in_play(p_code, p_appid) then raise exception 'that game is not on right now'; end if;
-  if n > 16 then raise exception 'too many days'; end if;
+  if n > 45 then raise exception 'too many days'; end if;
   delete from sesh_free where group_code = p_code and appid = p_appid and member_id = m;
   insert into sesh_free(group_code, appid, day, member_id)
        select p_code, p_appid, d, m from unnest(p_days) d
-        where d between current_date - 1 and current_date + 16
+        where d between current_date - 1 and current_date + 45
   on conflict do nothing;
   if n > 0 then
     delete from sesh_none where group_code = p_code and appid = p_appid and member_id = m;
@@ -773,7 +773,8 @@ begin
   delete from sesh_lock where group_code = p_code and appid = p_appid;
 end; $$;
 
--- after the night: did it happen? Either way the slate is wiped for the next one
+-- after the night: did it happen? The night and anything before it is cleared;
+-- nights people already ticked further ahead stay put, so nobody re-ticks them
 create or replace function resolve_sesh(p_code text, p_device uuid, p_appid int, p_played boolean)
 returns void language plpgsql security definer set search_path = public as $$
 declare d date;
@@ -785,9 +786,9 @@ begin
     insert into sessions(group_code, appid, day) values (p_code, p_appid, d) on conflict do nothing;
   end if;
   delete from sesh_lock where group_code = p_code and appid = p_appid;
-  delete from sesh_free where group_code = p_code and appid = p_appid;
+  delete from sesh_free where group_code = p_code and appid = p_appid and day <= d;
+  delete from sesh_times where group_code = p_code and appid = p_appid and day <= d;
   delete from sesh_none where group_code = p_code and appid = p_appid;
-  delete from sesh_times where group_code = p_code and appid = p_appid;
 end; $$;
 
 -- the crew's rules: how many free makes a night, and the usual start time

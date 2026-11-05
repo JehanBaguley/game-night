@@ -170,10 +170,10 @@ Picking the game and picking the nights are two separate decisions. A game like 
 | Step | What you see |
 | --- | --- |
 | A game gets called | A line on the status card: "When are we playing? Tap your nights" |
-| Tap it | The next 10 days as chips. Tap every night you're free; yours get a tick. Each chip says how many are free and fills towards the crew's number, and the line says how far off the best night is ("Thu 24 is 1 short"). **Can't do any of these** counts as an answer too |
+| Tap it | The next 10 days as chips, with **Later dates ›** adding two weeks at a time, up to six weeks out. Tap every night you're free; yours get a tick. Each chip says how many are free and fills towards the crew's number, and the line says how far off the best night is ("Thu 24 is 1 short"). **Can't do any of these** counts as an answer too |
 | A night reaches the number | It's **pencilled in**, and the line turns lilac. Anyone can tap **Lock in Thu 24, 8pm** to lock it |
 | Locked | The line goes solid. **Add to Google Cal** opens Google Calendar with the event filled in (no download); Apple or Outlook get a calendar file instead. **Change night** unlocks it |
-| The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 nights so far"). Either answer clears the slate for the next one |
+| The night passes | The line asks **Did you play Thursday 24 Sept?** "We did" logs a session and the card counts them ("3 nights so far"). Either answer clears that night; nights people already ticked further ahead stay ticked |
 
 **What time.** Once a night pencils in, the people free that night get one row of time chips around the crew's usual time ("What time on Thu 5?"). Tap every time that works; skip it and you count for the usual time. **Lock in** uses the time most people picked, earliest wins a tie, and that time goes on the locked line, the calendar invite, Discord and the share text. Times are Melbourne wall clock; a phone in another timezone sees its own time beside it ("7pm Melb (6pm yours)"). Stored per night in `sesh_times`, the lock in `sesh_lock.at_time`, so the crew's usual time never changes.
 
