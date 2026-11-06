@@ -790,6 +790,18 @@ td.r,th.r{text-align:right;white-space:nowrap}
 .results{margin-top:9px;display:flex;flex-direction:column;gap:5px}
 .fld--take{margin-top:12px}
 .trow{margin-top:12px;display:flex;flex-direction:column;gap:7px}
+.bets{margin-bottom:10px;display:flex;flex-direction:column;gap:6px}
+.bchip{min-height:40px}
+.bchip .num{font-size:12px;opacity:.85;margin-left:4px}
+.props{margin-top:14px;display:flex;flex-direction:column;gap:8px}
+.prop{border-radius:var(--r-md);background:var(--surface-2);padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.prop-t{display:flex;flex-direction:column;gap:2px;font-size:13px}
+.prop-t span{color:var(--ink-2);font-size:12.5px}
+.prop-a{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.prop-a .chip{min-height:40px}
+.propform{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.bets .tq,.props .tq{font-size:13px;font-weight:650;color:var(--ink)}
+.prop .chip{background:var(--surface)}
 .trow .tq{font-size:13px;font-weight:650;color:var(--ink)}
 .tchip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:6px 12px}
 .tchip .tt{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2}
@@ -1731,8 +1743,16 @@ function seshFor(d, ip){
       mine: new Set(picks.filter(p => p.member_id === myMemberId).map(p => p.at_time)), canPick: freeOn.includes(myMemberId) };
   }
   const at = lock ? (lock.at_time || usual) : timePick ? timePick.winner : usual;
+  // dates someone put up further out; only answers from people playing count
+  const props = (S.sesh_props || []).filter(q => q.appid === appid && q.day >= today).map(q => {
+    const yes = (q.yes || []).filter(id => pset.has(id)), no = (q.no || []).filter(id => pset.has(id));
+    return { ...q, yes, no, waiting: ip.players.filter(id => !yes.includes(id) && !no.includes(id)),
+             ready: total > 0 && yes.length >= (ip.side ? total : Math.max(1, Math.min(total, S.group.sesh_need || total))) };
+  });
+  // the few nights most people can already do: answered first, the research says
+  const bets = lock ? [] : days.filter(x => byDay[x].length).sort((a, b) => byDay[b].length - byDay[a].length || a.localeCompare(b)).slice(0, 3);
   return {
-    appid, side: ip.side, players: ip.players, total, need, days, byDay, none, answered, lock, pencil, best, timePick, at,
+    appid, side: ip.side, players: ip.players, total, need, days, byDay, none, answered, lock, pencil, best, timePick, at, props, bets,
     mineDays: new Set(free.filter(f => f.member_id === myMemberId).map(f => f.day)),
     mineNone: none.has(myMemberId),
     past: !!(lock && lock.day < today),
@@ -2267,7 +2287,29 @@ function seshBody(d, x){
   const none = x.iAmIn && !x.lock
     ? `<button class="linkbtn" id="nonego"${x.mineNone ? " disabled" : ""}>${x.mineNone ? "You've said none of these work" : "Can't do any of these"}</button>`
     : !x.iAmIn ? `<p class="fhint">You're not in on this one. Tap I'm in on its strip to pick nights.</p>` : "";
-  return `<div class="dgrid">${chips}</div>${later}${who}${times}${acts}${none}`;
+  const bets = x.bets.length > 1 ? `<div class="bets"><span class="tq">Best bets</span><div class="fset">${x.bets.map(day =>
+      `<button class="chip bchip" data-dday="${day}" aria-pressed="${x.mineDays.has(day)}"${x.iAmIn ? "" : " disabled"}>${esc(dayLabel(day))} <span class="num">${x.byDay[day].length} of ${x.total}</span></button>`).join("")}</div></div>` : "";
+  const askable = x.iAmIn && !x.lock && x.players.some(id => id !== myMemberId && !x.answered.has(id));
+  const ask = askable ? `<button class="linkbtn" id="askgo">Ask whoever's missing ›</button>` : "";
+  const max = isoDay(new Date(Date.now() + 365 * 864e5));
+  const tomorrow = isoDay(new Date(Date.now() + 864e5));
+  const props = x.props.length ? `<div class="props"><span class="tq">Dates put up</span>${x.props.map(q => {
+      const mineYes = q.yes.includes(myMemberId), mineNo = q.no.includes(myMemberId);
+      return `<div class="prop">
+        <div class="prop-t"><b>${esc(dayLong(q.day))}, ${esc(timeFor(q.day, q.at_time || usualHM()))}</b>
+          <span>${esc(nameOf(d, q.proposed_by))}'s idea · ${q.yes.length} in${q.no.length ? " · " + q.no.length + " can't" : ""}${q.waiting.length ? " · waiting on " + esc(listNames(q.waiting.map(id => id === myMemberId ? "you" : nameOf(d, id)))) : ""}</span></div>
+        <div class="prop-a">${x.iAmIn ? `<button class="chip" data-pyes="${q.day}" aria-pressed="${mineYes}">I'm in</button>
+          <button class="chip" data-pno="${q.day}" aria-pressed="${mineNo}">Can't</button>` : ""}
+          ${q.ready && !x.lock ? `<button class="btn btn--sm" data-plock="${q.day}" data-pat="${q.at_time || usualHM()}">Lock it in</button>` : ""}
+          ${q.proposed_by === myMemberId ? `<button class="linkbtn" data-pdrop="${q.day}">Take it down</button>` : ""}</div>
+      </div>`; }).join("")}</div>` : "";
+  const propose = x.iAmIn && !x.lock ? (sheet && sheet.proposing
+    ? `<div class="propform"><label class="fld"><span>Propose a date</span>
+         <input class="input" type="date" id="propday" min="${tomorrow}" max="${max}"></label>
+         <div class="row"><button class="btn btn--ghost btn--sm" id="propcancel">Cancel</button><button class="btn btn--sm" id="propgo">Put it up</button></div>
+         <p class="hint hint--bad" id="propmsg" hidden></p></div>`
+    : `<button class="linkbtn" id="propopen">Further out? Propose a date</button>`) : "";
+  return `${bets}<div class="dgrid">${chips}</div>${later}${who}${ask}${times}${acts}${props}${propose}${none}`;
 }
 
 /* ---------- saving free nights: optimistic, debounced ----------
@@ -2350,6 +2392,17 @@ function downloadIcs(game, day){
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 
+/** A pointed question beats "tick your nights": names who's missing and the night that's closest. */
+function askText(d, appid){
+  const ip = inPlay(d).find(z => z.appid === appid); if(!ip) return "";
+  const x = seshFor(d, ip), g = d.gamesById[appid] || {}, link = location.origin + location.pathname + "#/g/" + S.group.code;
+  const focus = x.pencil || x.bets[0] || null;
+  const who = x.players.filter(id => id !== myMemberId && !x.answered.has(id) && !(focus && x.byDay[focus].includes(id))).map(id => nameOf(d, id));
+  const names = who.length ? listNames(who) : "anyone keen";
+  return focus
+    ? `${names}, can you do ${dayLong(focus)} at ${tLabel(x.at)} (Melb) for ${g.name || "game night"}? ${x.byDay[focus].length} of ${x.total} are in.\nTap your nights: ${link}`
+    : `${names}, when are you free for ${g.name || "game night"}? Tap your nights: ${link}`;
+}
 /** Copy-for-the-chat text: where every game in play is at, and who still owes nights. */
 function seshShareText(d, only){
   const t = S.group.sesh_time || "8pm";
@@ -2740,8 +2793,8 @@ async function rpc(fn, args){
    (a round called, a night locked, a new round) post a fresh message instead,
    which pings the channel and lands at the bottom. */
 const DISCORD_WRITES = new Set(["set_picks","add_game","bench_game","unbench_game","close_round","reopen_round","new_round",
-  "set_break","set_free","set_none","lock_sesh","lock_sesh_at","set_times","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","set_main","set_custom_image","update_group","rename_me","crew_remove_game","crew_remove_member","crew_merge_members"]);
-const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","lock_sesh_at","start_side_game","set_main"]);
+  "set_break","set_free","set_none","lock_sesh","lock_sesh_at","set_times","propose_day","answer_day","drop_day","unlock_sesh","resolve_sesh","start_side_game","side_join","end_side_game","set_main","set_custom_image","update_group","rename_me","crew_remove_game","crew_remove_member","crew_merge_members"]);
+const DISCORD_BIG = new Set(["close_round","new_round","lock_sesh","lock_sesh_at","start_side_game","set_main","propose_day"]);
 let discordTimer = null, discordFresh = false;
 function queueDiscord(fresh){
   discordFresh = discordFresh || fresh;
@@ -3964,7 +4017,7 @@ function nudgeText(d){
 /** The text for each share mode; "link" is the bare crew link. */
 function shareBody(d, mode){
   const link = location.origin + location.pathname + "#/g/" + code;
-  return mode === "link" ? link : mode === "sesh" ? seshShareText(d, sheet && sheet.only) : mode === "nudge" ? nudgeText(d) : summaryText(d);
+  return mode === "link" ? link : mode === "ask" ? askText(d, sheet && sheet.only) : mode === "sesh" ? seshShareText(d, sheet && sheet.only) : mode === "nudge" ? nudgeText(d) : summaryText(d);
 }
 async function copy(text, btn){
   try{
@@ -5036,7 +5089,7 @@ function renderSheet(d){
         ${window.ClipboardItem && navigator.clipboard && navigator.clipboard.write ? `<button class="btn${navigator.share ? " btn--ghost" : ""}" id="snapcopy">Copy image</button>` : ""}
         <a class="btn btn--ghost" id="snapsave" href="#" download>Save</a>
       </div>` : `
-      <p class="fhint">${mode === "link" ? "Just the link. Anyone with it can join the crew." : mode === "sesh" ? (sheet.only ? "Where " + esc((d.gamesById[sheet.only] || {}).name || "this one") + "'s next night is at, and who still owes theirs." : "Where the next night is at, and who still owes theirs.") : mode === "nudge" ? "Names whoever hasn't voted yet." : "The leaderboard, plus the link."}</p>
+      <p class="fhint">${mode === "link" ? "Just the link. Anyone with it can join the crew." : mode === "ask" ? "Asks the people who haven't answered about the night that's closest to working." : mode === "sesh" ? (sheet.only ? "Where " + esc((d.gamesById[sheet.only] || {}).name || "this one") + "'s next night is at, and who still owes theirs." : "Where the next night is at, and who still owes theirs.") : mode === "nudge" ? "Names whoever hasn't voted yet." : "The leaderboard, plus the link."}</p>
       <pre class="sharepre">${esc(body)}</pre>
       <div class="row">${canNative ? `<button class="btn btn--ghost" id="nativeshare">Share…</button>` : ""}<button class="btn" id="copyshare">Copy it</button></div>`}`);
   }
@@ -5723,6 +5776,27 @@ function wireSeshBody(d){
     const again = body.querySelector(`[data-stime="${c.dataset.stime}"]`); if(again) again.focus({ preventScroll: true });
     queueTimes(appid, tp.day);
   });
+  const redraw = () => { body.innerHTML = seshBody(d, seshFor(d, ip)); wireSeshBody(d); };
+  const askb = document.getElementById("askgo");
+  if(askb) askb.onclick = () => { sheet = { kind: "share", mode: "ask", moreways: true, only: appid }; render(); };
+  const po = document.getElementById("propopen"); if(po) po.onclick = () => { sheet.proposing = true; redraw(); const i = document.getElementById("propday"); if(i) i.focus(); };
+  const pc = document.getElementById("propcancel"); if(pc) pc.onclick = () => { sheet.proposing = false; redraw(); };
+  const pg = document.getElementById("propgo");
+  if(pg) pg.onclick = async () => {
+    const v = (document.getElementById("propday") || {}).value, msg = document.getElementById("propmsg");
+    if(!v){ msg.textContent = "Pick a date first."; msg.hidden = false; return; }
+    if(needName(() => {})) return;
+    pg.disabled = true;
+    try{ await rpc("propose_day", { p_code: code, p_device: deviceId, p_appid: appid, p_day: v, p_at: null }); sheet.proposing = false; refresh(); }
+    catch(err){ pg.disabled = false; msg.textContent = err.message; msg.hidden = false; }
+  };
+  body.querySelectorAll("[data-pyes],[data-pno]").forEach(b => b.onclick = () => {
+    const day = b.dataset.pyes || b.dataset.pno, yes = !!b.dataset.pyes;
+    // tapping your current answer again takes it back
+    run("answer_day", { p_day: day, p_yes: b.getAttribute("aria-pressed") === "true" ? null : yes }, b);
+  });
+  body.querySelectorAll("[data-plock]").forEach(b => b.onclick = () => run("lock_sesh_at", { p_day: b.dataset.plock, p_at: b.dataset.pat }, b));
+  body.querySelectorAll("[data-pdrop]").forEach(b => b.onclick = () => run("drop_day", { p_day: b.dataset.pdrop }, b));
   const ld = document.getElementById("laterdays");
   if(ld) ld.onclick = () => { const x = seshFor(d, ip); sheet.span = Math.min(x.days.length, ((sheet.span) || SESH_DAYS) + 14);
     body.innerHTML = seshBody(d, seshFor(d, ip)); wireSeshBody(d); };

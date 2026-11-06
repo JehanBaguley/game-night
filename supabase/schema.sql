@@ -398,6 +398,13 @@ begin
     'sesh_times', coalesce((
        select json_agg(json_build_object('appid', st.appid, 'day', st.day, 'member_id', st.member_id, 'at_time', st.at_time))
        from sesh_times st where st.group_code = p_code and st.day >= current_date - 1), '[]'::json),
+    -- one-off dates someone put up, any distance out, with who said yes or no
+    'sesh_props', coalesce((
+       select json_agg(json_build_object('appid', sp.appid, 'day', sp.day, 'at_time', sp.at_time, 'proposed_by', sp.proposed_by,
+         'yes', coalesce((select json_agg(a.member_id) from sesh_prop_answers a where a.group_code = p_code and a.appid = sp.appid and a.day = sp.day and a.yes), '[]'::json),
+         'no',  coalesce((select json_agg(a.member_id) from sesh_prop_answers a where a.group_code = p_code and a.appid = sp.appid and a.day = sp.day and not a.yes), '[]'::json))
+         order by sp.day)
+       from sesh_props sp where sp.group_code = p_code and sp.day >= current_date - 1), '[]'::json),
     'sessions', coalesce((
        select json_agg(json_build_object('appid', se.appid, 'day', se.day) order by se.day)
        from sessions se where se.group_code = p_code), '[]'::json),
@@ -788,6 +795,7 @@ begin
   delete from sesh_lock where group_code = p_code and appid = p_appid;
   delete from sesh_free where group_code = p_code and appid = p_appid and day <= d;
   delete from sesh_times where group_code = p_code and appid = p_appid and day <= d;
+  delete from sesh_props where group_code = p_code and appid = p_appid and day <= d;
   delete from sesh_none where group_code = p_code and appid = p_appid;
 end; $$;
 
@@ -1660,3 +1668,80 @@ revoke execute on function set_times(text, uuid, int, date, text[]) from public;
 revoke execute on function lock_sesh_at(text, uuid, int, date, text) from public;
 grant execute on function set_times(text, uuid, int, date, text[]) to anon;
 grant execute on function lock_sesh_at(text, uuid, int, date, text) to anon;
+
+-- ---------------------------------------------------------------------------
+-- PROPOSE A DATE
+-- For the far-off stuff the night grid doesn't reach: someone puts up one date,
+-- any distance out, and everyone answers yes or no. One question beats a long
+-- grid. Up to five open per game; whoever put it up can take it down.
+-- ---------------------------------------------------------------------------
+create table if not exists sesh_props (
+  group_code  text not null references groups(code) on delete cascade,
+  appid       int  not null,
+  day         date not null,
+  at_time     text,
+  proposed_by uuid,
+  created_at  timestamptz not null default now(),
+  primary key (group_code, appid, day)
+);
+create table if not exists sesh_prop_answers (
+  group_code text not null,
+  appid      int  not null,
+  day        date not null,
+  member_id  uuid not null,
+  yes        boolean not null,
+  primary key (group_code, appid, day, member_id),
+  foreign key (group_code, appid, day) references sesh_props(group_code, appid, day) on delete cascade
+);
+alter table sesh_props enable row level security;
+alter table sesh_prop_answers enable row level security;
+
+create or replace function propose_day(p_code text, p_device uuid, p_appid int, p_day date, p_at text)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid; a text := nullif(trim(coalesce(p_at, '')), '');
+begin
+  m := assert_member(p_code, p_device);
+  if not in_play(p_code, p_appid) then raise exception 'that game is not on right now'; end if;
+  if p_day <= current_date or p_day > current_date + 365 then raise exception 'pick a date from tomorrow to a year out'; end if;
+  if a is not null and a !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$' then raise exception 'times look like 19:30'; end if;
+  if (select count(*) from sesh_props where group_code = p_code and appid = p_appid and day >= current_date) >= 5 then
+    raise exception 'five dates up already, sort one out first';
+  end if;
+  insert into sesh_props(group_code, appid, day, at_time, proposed_by) values (p_code, p_appid, p_day, a, m)
+  on conflict do nothing;
+  -- putting a date up counts as a yes from you
+  insert into sesh_prop_answers(group_code, appid, day, member_id, yes) values (p_code, p_appid, p_day, m, true)
+  on conflict (group_code, appid, day, member_id) do update set yes = true;
+end; $$;
+
+-- yes, no, or null to take your answer back
+create or replace function answer_day(p_code text, p_device uuid, p_appid int, p_day date, p_yes boolean)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  if not exists (select 1 from sesh_props where group_code = p_code and appid = p_appid and day = p_day) then
+    raise exception 'that date has been taken down';
+  end if;
+  if p_yes is null then
+    delete from sesh_prop_answers where group_code = p_code and appid = p_appid and day = p_day and member_id = m;
+  else
+    insert into sesh_prop_answers(group_code, appid, day, member_id, yes) values (p_code, p_appid, p_day, m, p_yes)
+    on conflict (group_code, appid, day, member_id) do update set yes = excluded.yes;
+  end if;
+end; $$;
+
+create or replace function drop_day(p_code text, p_device uuid, p_appid int, p_day date)
+returns void language plpgsql security definer set search_path = public as $$
+declare m uuid;
+begin
+  m := assert_member(p_code, p_device);
+  delete from sesh_props where group_code = p_code and appid = p_appid and day = p_day and proposed_by = m;
+  if not found then raise exception 'only whoever put the date up can take it down'; end if;
+end; $$;
+revoke execute on function propose_day(text, uuid, int, date, text) from public;
+revoke execute on function answer_day(text, uuid, int, date, boolean) from public;
+revoke execute on function drop_day(text, uuid, int, date) from public;
+grant execute on function propose_day(text, uuid, int, date, text) to anon;
+grant execute on function answer_day(text, uuid, int, date, boolean) to anon;
+grant execute on function drop_day(text, uuid, int, date) to anon;
